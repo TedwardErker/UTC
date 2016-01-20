@@ -1,0 +1,2859 @@
+#+TITLE: Urban FIA
+#+AUTHOR: Tedward Erker
+#+email: erker@wisc.edu
+#+PROPERTY:  header-args:R :session *R* :cache no :results output :exports both :tangle yes
+
+* Begin with end in mind
+npx = number of pixels in segmentation
+cpt = compactness parameter
+
+| Image       | Segmentation | Method | Pixel (Overall Accuracy) | Field Plot (RMSE) | Block (RMSE) |
+|-------------+--------------+--------+--------------------------+-------------------+--------------|
+| NAIP        | npxXcptY     | SVM    |                          |                   |              |
+|             | npxXcptY     | RF     |                          |                   |              |
+|             | npxWcptZ     | SVM    |                          |                   |              |
+|             | npxWcptZ     | RF     |                          |                   |              |
+|             | npxAcptB     | SVM    |                          |                   |              |
+|             | npxAcptB     | RF     |                          |                   |              |
+|             | no           | SVM    |                          |                   |              |
+|             | no           | RF     |                          |                   |              |
+|             |              |        |                          |                   |              |
+|             |              |        |                          |                   |              |
+|             |              |        |                          |                   |              |
+|             |              |        |                          |                   |              |
+|             |              |        |                          |                   |              |
+|             |              |        |                          |                   |              |
+| PAN_SPOT... |              |        |                          |                   |              |
+
+** Functions I'll need
+
+(use foreach and doParallel!)
+
+1) Point based accuracy
+2) Grid based accuracy
+3) Field plot based accuracy
+4) Random forest or SVM image classification
+
+** Accuracy Assessment
+Need to create functions for each of the accuracy assessments.
+
+Input:
+- Classified Raster Layer
+- The "ground truth" data
+
+Output:
+- Overall Accuracy
+- Confusion Matrix
+-
+
+*** Point based, google earth
+*** 100m2 grid, google earth
+*** Field Data
+
+For each accuracy assessment I need to save the output, especially the
+overall accuracy so I can include it in the final accuracy table at
+the end.
+
+** Classifications
+
+*** SVM or RF classification
+input:
+- SVM or RF, indicate which one to use
+- raster brick of bands to predict on
+- training data (points or polygons)
+- if segmented, the segment raster layer
+
+output:
+- raster layer
+- preserve name of segmentation method, bands that go into
+  classification, classification method and parameters
+
+** Segmentation
+input:
+- pca image
+- the bands to use in the pca
+- compactness
+- size of segments
+
+output:
+- raster of segmentations
+
+*
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+** Folders:
+*** Image (NAIP)
+- contains madison NAIP image
+*** Cropped Image
+*** NAIP training data (for non segmented image)
+**** Non segmented
+- make sure that there is equal effort spent making this
+- Should be a single shapefile, with attribute "Class" for each
+  feature
+**** Segmented
+- contains the training data (manually classified segments) shapefiles
+  for each segmentation
+*** WI water
+- shapefile with water features to mask out
+*** Cropland DataLayer
+- raster file to use for masking out agriculture from the NAIP image
+*** Urban Areas of WI
+- shapefile of urban areas in WI
+
+*** PCA
+- contains the results of the pca on the cropped image
+*** Ratios
+*** Texture
+*** Segmentation
+*** Classifications
+*** AccuracyAssessment
+
+* Workflow
+** Load Libraries
+#+BEGIN_SRC R
+  library(gdalUtils)
+  library(stringr)
+    library(rgdal)
+    library(raster)
+    library(rgeos)
+  #  library(glcm)
+  library(plyr)
+    library(dplyr)
+    library(doParallel)
+  library(parallel)
+  library(mlr)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Loading required package: sp
+rgdal: version: 1.0-4, (SVN revision 548)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.10.0, released 2013/04/24
+ Path to GDAL shared files: /usr/share/gdal/1.10
+ Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
+ Path to PROJ.4 shared files: (autodetected)
+ Linking to sp version: 1.1-1
+rgeos version: 0.3-11, (SVN revision 479)
+ GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
+ Linking to sp version: 1.1-1
+ Polygon checking: TRUE
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from ‘package:rgeos’:
+
+    intersect, setdiff, union
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+Loading required package: foreach
+foreach: simple, scalable parallel programming from Revolution Analytics
+Use Revolution R for scalability, fault tolerance and more.
+http://www.revolutionanalytics.com
+Loading required package: iterators
+Loading required package: parallel
+Loading required package: BBmisc
+
+Attaching package: ‘BBmisc’
+
+The following object is masked from ‘package:dplyr’:
+
+    collapse
+
+The following object is masked from ‘package:rgeos’:
+
+    symdiff
+
+Loading required package: ggplot2
+Loading required package: ParamHelpers
+
+Attaching package: ‘ParamHelpers’
+
+The following object is masked from ‘package:raster’:
+
+    getValues
+
+
+Attaching package: ‘mlr’
+
+The following object is masked from ‘package:raster’:
+
+    resample
+#+end_example
+
+** Load Functions
+#+BEGIN_SRC R
+      namedList <- function(...) {
+        L <- list(...)
+        snm <- sapply(substitute(list(...)),deparse)[-1]
+        if (is.null(nm <- names(L))) nm <- snm
+        if (any(nonames <- nm=="")) nm[nonames] <- snm[nonames]
+        setNames(L,nm)
+      }
+
+
+    ndvi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,...) {
+      red_band <- image_w4bands[[red_bandnumber]]
+      nir_band <- image_w4bands[[nir_bandnumber]]
+      ndvi <- (nir_band - red_band)/(nir_band + red_band)
+      return(ndvi)
+    }
+
+      savi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,L,...) {
+        red_band <- image_w4bands[,,red_bandnumber,drop=FALSE]
+        nir_band <- image_w4bands[,,nir_bandnumber,drop=FALSE]
+        savi <- (nir_band - red_band)/(nir_band + red_band + L) * (1+L)
+        return(savi)
+      }
+
+      ratio <- function(image_w4bands, numerator_bandNumber) {
+        r <- image_w4bands[,,numerator_bandNumber,drop = F] / sum(image_w4bands)
+        return(r)
+      }
+
+      create_GLCM_layers_parallel <- function(list_rasterlayers, vec_window_sizes, dir, cpus) {
+        cl <- makeCluster(spec = cpus, methods = FALSE)
+        # Register the cluster with foreach:
+        registerDoParallel(cl)
+        GLCM_rasters <- foreach(i = 1:length(list_rasterlayers), .packages = c('glcm','raster')) %:%
+          foreach (j = 1:length(window_sizes), .packages = c('glcm','raster')) %dopar% {
+            raster <- list_rasterlayers[[i]]
+            dir <- dir
+            window_size <- vec_window_sizes[j]
+            w_s <- c(window_size,window_size)
+            a <- glcm(raster,shift = dir, window = w_s,na_opt = "center", na_val = 0, asinteger = T)
+            names(a)<- paste0(names(list_rasterlayers[[i]]),"_",vec_window_sizes[j],"x",vec_window_sizes[j],"_",names(a))
+            a
+          }
+        stopCluster(cl) # Stops the cluster
+        registerDoSEQ()
+        return(unlist(GLCM_rasters))
+      }
+
+      # Function takes raster stack, samples data, performs pca and returns stack of first n_pcomp bands
+        predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
+            sr <- sampleRandom(stack,sampleNumber)
+            pca <- prcomp(sr, scale=T)
+            beginCluster()
+            r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
+            endCluster()
+            return(r)
+        }
+  predict_pca <- function(raster.path, pca, n.comps, out.path) {
+      s <- stack(raster.path)
+      names(s) <- c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
+      predict(s, pca, index = 1:n.comps, filename = out.path, overwrite=TRUE)
+  }
+
+
+
+
+    gdal_polygonizeR <- function(x, outshape=NULL, gdalformat = 'ESRI Shapefile',
+                                 pypath=NULL, readpoly=TRUE, quiet=TRUE) {
+      if (isTRUE(readpoly)) require(rgdal)
+      if (is.null(pypath)) {
+        pypath <- Sys.which('gdal_polygonize.py')
+      }
+      if (!file.exists(pypath)) stop("Can't find gdal_polygonize.py on your system.")
+      owd <- getwd()
+      on.exit(setwd(owd))
+      setwd(dirname(pypath))
+      if (!is.null(outshape)) {
+        outshape <- sub('\\.shp$', '', outshape)
+        f.exists <- file.exists(paste(outshape, c('shp', 'shx', 'dbf'), sep='.'))
+        if (any(f.exists))
+          stop(sprintf('File already exists: %s',
+                       toString(paste(outshape, c('shp', 'shx', 'dbf'),
+                                      sep='.')[f.exists])), call.=FALSE)
+      } else outshape <- tempfile()
+      if (is(x, 'Raster')) {
+        require(raster)
+        writeRaster(x, {f <- tempfile(fileext='.asc')})
+        rastpath <- normalizePath(f)
+      } else if (is.character(x)) {
+        rastpath <- normalizePath(x)
+      } else stop('x must be a file path (character string), or a Raster object.')
+      system2('python', args=(sprintf('"%1$s" "%2$s" -f "%3$s" "%4$s.shp"',
+                                      pypath, rastpath, gdalformat, outshape)))
+      if (isTRUE(readpoly)) {
+        shp <- readOGR(dirname(outshape), layer = basename(outshape), verbose=!quiet)
+        return(shp)
+      }
+      return(NULL)
+    }
+
+
+    # Create a function to split the raster using gdalUtils::gdal_translate
+    split_rast <- function(infile, outfile, llx, lly, win_width, win_height) {
+      library(gdalUtils)
+      gdal_translate(infile, outfile,
+                     srcwin=c(llx, lly - win_height, win_width, win_height))
+    }
+
+
+    Water_Urban_mask <- function(tile.path, tile.name, urban, water) {
+                                            # load image tile
+        tile <- stack(tile.path)
+                                            # get extent image and make sp object
+        et <- as(extent(tile), "SpatialPolygons")
+        proj4string(et) <- "+init=epsg:26916"
+                                            # Mask out non-urban areas
+        if(gContainsProperly(urban,et) & !gIntersects(water,et)){
+            writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+        } else if (gContainsProperly(urban,et) & gIntersects(water,et)) {
+            tile <- mask(tile, water, inverse = T)
+            writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+        } else if (gIntersects(urban, et) & !gIntersects(water,et)) {
+            tile <- mask(tile, urban)
+            writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+        } else if (gIntersects(urban, et) & gIntersects(water,et)) {
+            tile <- mask(tile, urban)
+            tile <- mask(tile, water, inverse = T)
+            writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+        }
+    }
+
+
+  Crop_mask <- function(tile.path, tile.name, CDL_stack){
+
+  tile <- stack(tile.path)
+  crops <- crop(CDL_stack, tile)
+
+        # These are the values in the CDL that correspond to non crop cover types and not water
+        NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
+        # open water is 111
+
+        # find cells that have been assigned crop all three years
+        crops[crops %in% NonCroppedValues] <- 0
+        crops[!(crops %in% NonCroppedValues)] <- 1
+        cropsum <- overlay(crops, fun = sum)
+
+        dis.cropsum <- disaggregate(cropsum, fact = 20)
+        dis.cropsum <- resample(dis.cropsum, tile, "ngb")
+        masked_tile <- mask(tile, dis.cropsum, maskvalue = 4)
+
+        #               Save Image
+        writeRaster(masked_tile, paste0(crop.masked.tiles.directory, "/", tile.name), overwrite = T)
+    }
+
+
+#+END_SRC
+
+#+RESULTS:
+
+** Set image name and directory and other variables
+#+BEGIN_SRC R
+
+      ##################
+      #################                Specify image name and directory
+      ##################
+
+    #  image.name <- "longMadison"
+
+      image.name <- "madison"
+      image.rd.directory <- "../RD_NAIP-imagery/"
+      image.dd.directory <- "../DD_NAIP-imagery/"
+
+  dir.create(image.dd.directory)
+
+
+#+END_SRC
+
+#+RESULTS:
+: Warning message:
+: In dir.create(image.dd.directory) : '../DD_NAIP-imagery' already exists
+
+
+** read in image
+#+BEGIN_SRC R
+    image <- str_c(image.rd.directory,image.name,".tif") %>%
+            stack()
+    plotRGB(image,4,3,2)
+#+END_SRC
+** Reproject image to epsg:26916
+#+BEGIN_SRC R
+
+  inFile <- str_c(image.rd.directory,image.name,".tif")
+  outFile <- str_c(image.dd.directory,image.name,".tif")
+  t_srs <- "EPSG:26916"
+
+  gdalwarp(inFile, outFile, t_srs)
+
+
+
+#+END_SRC
+
+
+** Crop image
+Crop image to the extent of the urban area of interest, Madison
+#+BEGIN_SRC R
+
+  ##################
+  #################                Specify WI Urban Area Shapefile name and directory (dsn)
+  ##################
+
+  US_UrbanAreas.name <- "cb_2013_us_ua10_500k"
+  US_UrbanAreas.dsn <- "../RD_US_UrbanAreasShapefile/"
+
+
+  US_UrbanAreas <- readOGR(dsn = US_UrbanAreas.dsn, layer = US_UrbanAreas.name)
+
+  #WI_UrbanAreas <- US_UrbanAreas[str_detect(US_UrbanAreas$NAME10, "WI"),]
+
+  Madison_UrbanArea <- US_UrbanAreas[str_detect(US_UrbanAreas$NAME10, "Madison, WI"), ]
+
+  Madison_UrbanArea <- spTransform(Madison_UrbanArea, CRS("+init=epsg:26916"))
+
+  # plot(Madison_UrbanArea)
+
+
+  # Crop image
+
+  e <- extent(Madison_UrbanArea)
+
+  inFile <- str_c(image.dd.directory,image.name,".tif")
+  outFile <- str_c(image.dd.directory,image.name,"-urbanExtent.tif")
+
+  gdal_translate(inFile, outFile,
+                 projwin = c(xmin(e), ymax(e), xmax(e), ymin(e)))
+
+
+  image <- stack(outFile)
+
+  plotRGB(image, 4, 3, 2)
+
+
+#+END_SRC
+
+#+RESULTS:
+: NULL
+: OGR data source with driver: ESRI Shapefile
+: Source: "../RD_US_UrbanAreasShapefile/", layer: "cb_2013_us_ua10_500k"
+: with 3601 features
+: It has 8 fields
+:  Warning: Computed -srcwin -366 -3350 39962 40594 falls partially outside raster extent. Going on however.
+: NULL
+
+** tile image
+#+BEGIN_SRC R
+    ##############
+    #######                     Split image for parallel masking
+  ##############
+
+  filename <- str_c(image.dd.directory,image.name,"-urbanExtent.tif")
+
+  dims <- as.numeric(
+    strsplit(gsub('Size is|\\s+', '', grep('Size is', gdalinfo(filename), value=TRUE)), ',')[[1]]
+  )
+
+
+
+  # Set the window increment, width and height
+  incr <- 1000
+  win_width <- 1000
+  win_height <- 1000
+
+  # Create a data.frame containing coordinates of the lower-left
+  #  corners of the windows, and the corresponding output filenames.
+  xy <- setNames(expand.grid(seq(0, dims[1], incr), seq(dims[2], 0, -incr)),
+                 c('llx', 'lly'))
+
+  xy$nm <- paste0(xy$llx, '-', dims[2] - xy$lly, '.tif')
+
+
+  dir.create(path = str_c(image.dd.directory,image.name,"-tiles"))
+
+  cores <- detectCores()
+  cl <- makeCluster(cores) # e.g. use 4 cores
+  clusterExport(cl, c('split_rast', 'xy','filename','win_width','win_height','image.dd.directory'))
+
+
+  system.time({
+    parLapply(cl, seq_len(nrow(xy)), function(i) {
+      split_rast(filename, paste0(image.dd.directory,"tiles/",xy$nm[i]), xy$llx[i], xy$lly[i], win_width, win_height)
+    })
+  })
+
+  stopCluster(cl)
+
+
+#+END_SRC
+
+#+RESULTS:
+: Error in get(name, envir = envir) : object 'split_rast' not found
+:  Error in checkForRemoteErrors(val) (from #2) :
+:   16 nodes produced errors; first error: could not find function "split_rast"
+: Timing stopped at: 0.008 0 0.009
+
+** Mask image
+- Use WI waterbodies, Urban area extent, and cropland datalayer to
+  mask out areas that are not of interest.
+- Save masked NAIP in masked_Image folder
+#+BEGIN_SRC R
+
+      ##################
+      #################                Specify US Urban Area Shapefile name and directory (dsn)
+      ##################
+
+      US_UrbanAreas.name <- "cb_2013_us_ua10_500k"
+      US_UrbanAreas.dsn <- "../RD_US_UrbanAreasShapefile/"
+
+
+      ##################
+      #################                Specify water shapefile name and directory (dsn)
+      ##################
+
+      water.name <- "WD-Hydro-Waterbody-WBIC-AR-24K"
+      water.dsn <- "../RD_WI-waterbody-24k"
+
+
+      ##################
+      #################                Specify Cropland Datalayer name and directory
+      ##################
+
+      crop.directory <- "../RD_CroplandDataLayer/"
+      crop2011.name <- "CDL_2011_clip_20160106190244_1504737741"
+      crop2012.name <- "CDL_2012_clip_20151229124713_1037776543"
+      crop2013.name <- "CDL_2013_clip_20151229123327_86558742"
+      crop2014.name <- "CDL_2014_clip_20151229123327_86558742"
+
+
+
+
+      ################# load urban area, watershapefile, crop land datalayer
+
+    US_UrbanAreas <- readOGR(dsn = US_UrbanAreas.dsn, layer = US_UrbanAreas.name)
+    Madison_UrbanArea <- US_UrbanAreas[str_detect(US_UrbanAreas$NAME10, "Madison, WI"), ]
+    Madison_UrbanArea <- spTransform(Madison_UrbanArea, CRS("+init=epsg:26916"))
+
+
+    water <- readOGR(dsn = water.dsn, layer = water.name)
+      water <- spTransform(water, CRS("+init=epsg:26916"))
+
+      crop2011 <- str_c(crop.directory, crop2011.name, ".tif") %>%
+          raster()
+
+      crop2012 <- str_c(crop.directory, crop2012.name, ".tif") %>%
+          raster()
+
+      crop2013 <- str_c(crop.directory, crop2013.name, ".tif") %>%
+          raster()
+
+      crop2014 <- str_c(crop.directory, crop2014.name, ".tif") %>%
+          raster()
+
+      crops <- stack(crop2011, crop2012, crop2013, crop2014)
+
+
+
+      ##############
+      #######              Masking non urban landcover
+      ##############
+
+
+                                            # For every tile of the raster, apply the mask
+
+    tiles_fullName<- list.files(path = str_c(image.dd.directory,image.name,"-tiles"), full.names = T)
+    tiles_shortName <- list.files(path = str_c(image.dd.directory,image.name,"-tiles"), full.names = F)
+
+    masked.tiles.directory <- str_c(image.dd.directory,image.name,"-MaskedTiles")
+    dir.create(path = masked.tiles.directory, showWarnings = F)
+
+                                            #Options
+    # contained urban, don't intersect water = as is
+    # contained urban, intersect water = mask water
+    # intersect urban, don't intersect water = mask urban
+    # intersect urban, intersect water = mask urban & water
+  # if none of the above, don't write the raster
+
+    cl <- makeCluster(detectCores())
+    registerDoParallel(cl)
+
+    foreach (i = seq_along(tiles_fullName), .packages = c("raster","sp","rgeos", "stringr")) %dopar% {
+        print(i)
+        Water_Urban_mask(tile.path = tiles_fullName[i],
+                         tile.name = tiles_shortName[i],
+                         urban = Madison_UrbanArea,
+                         water = water)
+    }
+
+
+
+
+  ######## Masking Crops
+
+
+
+                                            # For every tile of the raster, apply the mask
+  tiles_fullName<- list.files(path = str_c(image.dd.directory,image.name,"-MaskedTiles"), full.names = T)
+    tiles_shortName <- list.files(path = str_c(image.dd.directory,image.name,"-MaskedTiles"), full.names = F)
+
+    crop.masked.tiles.directory <- str_c(image.dd.directory,image.name,"-CropMaskedTiles")
+    dir.create(path = crop.masked.tiles.directory, showWarnings = F)
+
+
+  cl <- makeCluster(detectCores())
+    registerDoParallel(cl)
+
+    foreach (i = seq_along(tiles_fullName), .packages = c("raster","sp","rgeos", "stringr")) %dopar% {
+        print(i)
+        Crop_mask(tile.path = tiles_fullName[i],
+                  tile.name = tiles_shortName[i],
+                  CDL_stack = crops)
+    }
+
+
+
+
+
+
+
+  ######### Recombine tiles for a check
+
+  combined.masked.image.dir <- str_c(image.dd.directory, image.name, "-MaskedImage")
+  dir.create(combined.masked.image.dir)
+
+                                          # read in masked tiles
+  tiles.names <- list.files(crop.masked.tiles.directory, pattern = "*.tif$")
+  tiles.paths <- list.files(crop.masked.tiles.directory, full.names = T, pattern = "*.tif$")
+
+
+  r <- lapply(tiles.paths, stack)
+
+  r.args <- r
+  r.args$fun <- mean
+
+  combined.image <- do.call(mosaic,r.args)
+
+  writeRaster(combined.image, str_c(combined.masked.image.dir,"/",image.name,"-masked.tif")
+
+
+  ###############################################################################################################################################
+
+    ## # old way, not in function by tile or parallel
+
+
+    ##   ###### Mask out non-urban areas
+    ##   WI_UrbanAreas <- crop(WI_UrbanAreas, image)
+    ## urbanmasked_image <- mask(image, WI_UrbanAreas) %>%
+    ##     trim()
+
+
+    ##   ###### Mask out water
+    ##   water <- crop(water, urbanmasked_image)  # Crop the Wisconsin water to image extent
+    ## #  water_mask <- rasterize(water, urbanmasked_image, updateValue = NA)
+    ##   watermasked_image <- mask(urbanmasked_image, water, inverse = T) %>%
+    ##       trim()
+
+    ##   ###### Mask out croplayer
+    ## crops <- crop(crops, watermasked_image)
+    ## crops <- crop(crops, image)
+
+    ##   # These are the values in the CDL that correspond to non crop cover types and not water
+    ##   NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
+    ##   # open water is 111
+
+    ##   # find cells that have been assigned crop all three years
+    ##   crops[crops %in% NonCroppedValues] <- 0
+    ##   crops[!(crops %in% NonCroppedValues)] <- 1
+    ##   cropsum <- overlay(crops, fun = sum)
+
+    ##   dis.cropsum <- disaggregate(cropsum, fact = 20)
+    ##   dis.cropsum <- resample(dis.cropsum, watermasked_image, "ngb")
+    ##   cropped_image <- mask(watermasked_image, dis.cropsum, maskvalue = 4)
+
+
+    ##   ################################
+    ##   ########################               Save Image
+    ##   ################################
+
+    ##                                           # create directory in which to save cropped image
+
+    ##   dir.create(path = "CroppedImage", showWarnings = F)
+
+    ##                                           # name of cropped image
+
+    ##   cropped_image.name <- str_c("CroppedImage/cropped_",image.name,".tif")
+
+
+    ##                                           # save cropped image
+
+    ##   writeRaster(cropped_image, cropped_image.name)
+
+
+
+
+
+
+
+
+
+      ## Attempt at faster way to rasterize using gdalUtils
+
+
+
+
+
+      ##                                         # create directory in which to save cropped image
+
+      ## dir.create(path = "CroppedImage", showWarnings = F)
+
+      ##                                         # name of cropped image
+
+      ## cropped_image.name <- str_c("CroppedImage/cropped_",image.name,".tif")
+
+      ##                                         # Save copy of image that we can burn into
+      ## writeRaster(image, cropped_image.name, overwrite = TRUE)
+
+
+
+
+      ## urbanAreas <- system.file("../RD_WI_UrbanAreasShapefile/cb_2013_us_ua10_500k.shp", package = "gdalUtils")
+
+      ## urban_mask <- gdal_rasterize(urbanAreas,
+      ##                              cropped_image.name,
+      ##                              b = c(1,2,3,4),
+      ##                              i = T,
+      ##                             output_Raster = T)
+
+
+
+      ## water <- system.file("../RD_WI-waterbody-24k/WD-Hydro-Waterbody-WBIC-AR-24K.shp", package = "gdalUtils")
+
+      ## water <- "../RD_WI-waterbody-24k/WD-Hydro-Waterbody-WBIC-AR-24K.shp"
+
+
+      ## water_mask <- gdal_rasterize(water,
+      ##                              cropped_image.name,
+      ##                              b = c(1),
+      ##                              burn = 1,
+      ##                              i = T,
+      ##                             output_Raster = T)
+
+
+
+
+
+#+END_SRC
+
+#+RESULTS:
+
+
+** Add Ratios of image
+- Read in Cropped_Image
+- Save results in Ratios folder
+*** for tiled image
+#+BEGIN_SRC R
+  # load masked tiles names
+  tile.paths <- list.files(str_c(image.dd.directory,image.name,"-CropMaskedTiles"), pattern = "*.tif$", full.names = T)
+  tile.names <- list.files(str_c(image.dd.directory,image.name,"-CropMaskedTiles"), pattern = "*.tif$", full.names = F)
+
+
+                                          # Create directory
+  ratio.dir <- str_c(image.dd.directory,image.name,"-RatioTiles")
+  dir.create(path = ratio.dir)
+
+  add_ratios.ndvi <- function(tile.path,tile.name) {
+      tile <- stack(tile.path)
+      names(tile) <- c("red","green","blue","nir")
+
+      # Create a ratio image for each band
+      ratio.brick <- ratio(tile)
+      names(ratio.brick) <- paste0(c("blue","green","red","nir"),rep("_ratio",times = 4))
+
+      ndvi <- ndvi_nodrop(tile, 3, 4)
+
+      ratio.tile <- raster::stack(tile, ratio.brick, ndvi)
+      writeRaster(ratio.tile, filename = paste0(ratio.dir,"/",tile.name))
+
+  }
+
+
+  cl <- makeCluster(detectCores())
+  registerDoParallel(cl)
+
+  foreach (i = seq_along(tile.paths), .packages = c("raster")) %dopar% {
+      add_ratios.ndvi(tile.paths[i], tile.names[i])
+  }
+
+
+
+
+
+
+#+END_SRC
+
+*** For untiled image
+#+BEGIN_SRC R
+    cropped_image.name <- str_c("CroppedImage/cropped_",image.name,".tif")
+
+    image <- stack(cropped_image.name)
+    names(image) <- c("red","green","blue","nir")
+
+    # Create a ratio image for each band
+    ratios <- lapply(1:4, function(x){
+        ratio(image, x)
+    })
+
+  ratio.brick <- ratio(image)
+  names(ratio.brick) <- str_c(c("blue","green","red","nir"),rep("_ratio",times = 4))
+
+                                              # save ratios
+  dir.create("RatiosImage")
+  writeRaster(ratio.brick, str_c("RatiosImage/ratios_",image.name,".tif"), overwrite = T)
+
+
+
+                                          # Create NDVI image
+
+
+  ndvi <- ndvi_nodrop(image, 3, 4)
+
+  dir.create("NDVIImage")
+  writeRaster(ndvi, str_c("NDVIImage/ndvi_",image.name,".tif"), overwrite = T)
+#+END_SRC
+
+#+RESULTS:
+: Warning message:
+: In dir.create("RatiosImage") : 'RatiosImage' already exists
+: Error in .getGDALtransient(x, filename = filename, options = options,  :
+:   filename exists; use overwrite=TRUE
+: Warning message:
+: In dir.create("NDVIImage") : 'NDVIImage' already exists
+: Error in .getGDALtransient(x, filename = filename, options = options,  :
+:   filename exists; use overwrite=TRUE
+
+** Add Texture to image?
+- Read in Cropped_Image
+- Save results in texture folder
+
+
+** Perform PCA
+*** For Tiled image
+I need to sample from the entire image to perform the pca, not each
+tile separately.
+#+BEGIN_SRC R
+                                          # make directory for PCA tiles
+  dir.create(path = str_c(image.dd.directory,image.name,"-PCATiles"))
+
+                                          # Sample from every raster
+  tile.paths <- list.files(str_c(image.dd.directory,image.name,"-RatioTiles"), pattern = "*.tif$", full.names = T)
+  tile.names <- list.files(str_c(image.dd.directory,image.name,"-RatioTiles"), pattern = "*.tif$", full.names = F)
+
+
+  cl <- makeCluster(detectCores())
+  registerDoParallel(cl)
+
+  sr <- foreach (i = seq_along(tile.names), .packages = c("raster"), .combine ="rbind") %dopar% {
+      tile <- stack(tile.paths[i])
+      s <- sampleRandom(tile, 100)
+  }
+
+  colnames(sr) <- c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
+
+                                          # Perform PCA on sample
+  pca <- prcomp(sr, scale = T)
+
+                                          # Apply PC rotation to each tile
+  cl <- makeCluster(detectCores())
+  registerDoParallel(cl)
+
+  foreach (i = seq_along(tile.paths), .packages = c("raster")) %dopar% {
+      predict_pca(tile.paths[i],
+                  pca,
+                  n.comps = 3,
+                  out.path = paste0(image.dd.directory,image.name,"-PCATiles/",tile.names[i])
+                  )
+  }
+
+                                          # scale pca tiles between 0 and 255
+  dir.create(str_c(image.dd.directory,image.name,"-ScaledPCATiles"))
+                                          # find min and max
+  tile.paths <- list.files(str_c(image.dd.directory,image.name,"-PCATiles"), pattern = "*.tif$", full.names = T)
+  tile.names <- list.files(str_c(image.dd.directory,image.name,"-PCATiles"), pattern = "*.tif$", full.names = F)
+
+                                          #get min and max
+
+  getRasterMinMax <- function(t.path) {
+      tile <- stack(t.path)
+      mn <- cellStats(tile, stat = "min")
+      mx <- cellStats(tile, stat = "max")
+      mnmx <- c(mn,mx)
+      return (mnmx)
+  }
+
+  cl <- makeCluster(detectCores())
+  registerDoParallel(cl)
+
+  minmax <- foreach(i = seq_along(tile.paths), .packages = "raster", .combine = "rbind") %dopar% {
+      getRasterMinMax(tile.paths[i])
+  }
+
+  mn <- apply(minmax, 2, min, na.rm = T)[1:3]
+  mx <- apply(minmax, 2, max, na.rm = T)[4:6]
+
+
+  registerDoParallel(cl)
+
+  foreach (i = seq_along(tile.paths), .packages = "raster") %dopar% {
+      range0255(tile.paths[i], tile.names[i])
+  }
+
+
+  range0255 <- function(tile.path, tile.name){
+      r <- stack(tile.path)
+      r <- (r - mn)/(mx-mn) * 255
+      writeRaster(r, paste0(image.dd.directory, image.name,"-ScaledPCATiles/",tile.name), overwrite=TRUE)
+    }
+
+
+
+
+
+
+#+END_SRC
+
+*** Merge All PCA into one image (mainly to look at)
+Again, I'm having issues running this from org mode.  Just copy in
+command line.
+#+BEGIN_SRC sh
+
+# make list of files to merge
+ls -1 ../DD_NAIP-imagery/madison-ScaledPCATiles/*.tif
+
+# Merge tiles
+gdal_merge.py -n 0 -v -o ../DD_NAIP-imagery/madison-ScaledPCA.tif --optfile tiff_list.txt
+
+#+END_SRC
+
+#+RESULTS:
+
+*** For untiled image
+- Read in Cropped_Image (specify NAIP)
+- Save results in PCA folder
+
+#+BEGIN_SRC R
+                                            # Read in Cropped Image
+
+
+  ratios <-str_c("RatiosImage/ratios_",image.name,".tif") %>%
+      stack()
+  ndvi <- str_c("NDVIImage/ndvi_",image.name,".tif") %>%
+      stack()
+  image <- cropped_image.name <- str_c("CroppedImage/cropped_",image.name,".tif") %>%
+      stack()
+
+
+  combined.image <- stack(image, ratios, ndvi)
+
+
+                                            # Perform PCA
+  pca.image <- predict_pca_wSampling_parallel(stack = combined.image,
+                                              sampleNumber = 10000,
+                                              n_pcomp =  5)
+
+  # plot(pca.image)
+
+
+  range0255 = function(raster){
+      mn <- cellStats(raster, stat = "min")
+      mx <- cellStats(raster, stat = "max")
+      (raster - mn)/(mx-mn) * 255
+  }
+
+  pca.image <- range0255(pca.image)
+
+
+  # plotRGB(pca.image, 1,2,3, stretch = "lin")
+
+
+
+
+                                            # Save PCA
+
+
+  dir.create("PCAImage")
+    writeRaster(pca.image,str_c("PCAImage/pca_",image.name,".tif"), overwrite = T)
+#+END_SRC
+
+
+
+** Segment image
+*** For Tiles
+#+BEGIN_SRC sh
+
+python fia_segment1.py &
+python fia_segment2.py &
+python fia_segment3.py &
+python fia_segment4.py &
+
+#+END_SRC
+
+In the terminal I run the scripts fia_segmentX.py.
+
+There are four scripts, one for each average pixel size and
+compactness combination that I want to investigate.  This saves time,
+by running four scripts at once.  Don't forget to run them in
+background with "&"
+
+
+
+*** Smaller image (longMadison) to determine the best parameters for segmentation
+for x number of segmentation parameter combinations
+- Read in PCA_image
+-  Save results in segmentation folder
+
+As of now (2016-01-06) I haven't been able to run this script within
+org mode.  Instead I open the script separately and run it.  I think
+there are memory issues that cause the segmentation to fail with
+certain combinations of number of pixels per segment and compactness values.
+
+#+BEGIN_SRC sh
+  python Python/fia_segment.py
+#+END_SRC
+
+** Polygonize Segments
+*** of a subset of tiles for training
+#+BEGIN_SRC R
+                                            # make directory for Polygonized Segments
+  PolygonDir <- str_c(image.dd.directory,image.name,"-PolygonizedSegTiles")
+  dir.create(path = PolygonDir)
+
+                                            # Sample from every raster
+    tile.paths <- list.files(str_c(image.dd.directory,image.name,"-SegTiles"), pattern = "*.tif$", full.names = T)
+    tile.names <- list.files(str_c(image.dd.directory,image.name,"-SegTiles"), pattern = "*.tif$", full.names = F)
+
+
+  # I'm going to sample from these to polygonize and use for training
+
+                                          # get just the tile name
+  b <- str_extract(tile.names,"[0-9]+-[0-9]+.tif")
+  c <- unique(b)
+                                          # randomly sample from those
+  set.seed(3)
+  d <- sample(c, 10)
+  # select the segmentations of the sample of segmentations
+
+  index <- sapply(d, function(d) grepl(d, x = tile.paths))
+  index <- apply(index, MARGIN = 1, FUN = sum)
+  tile.pathsToSample <- tile.paths[as.logical(index)]
+  tile.namesToSample <- tile.names[as.logical(index)]
+
+  cl <- makeCluster(detectCores())
+  registerDoParallel(cl)
+
+  foreach (i = seq_along(tile.pathsToSample), .packages = c("raster","sp","gdalUtils")) %dopar% {
+      seg <- raster(tile.pathsToSample[i])
+      segPoly <- gdal_polygonizeR(seg)
+      segPoly$Class <- "N"
+      writeOGR(obj = segPoly,
+               dsn = PolygonDir,
+               layer = tile.namesToSample[i],
+               driver = "ESRI Shapefile",
+               overwrite = T)
+  }
+
+#+END_SRC
+*** of a single small scene
+#+BEGIN_SRC R
+  segPath <- paste0("SegmentationImage/")
+  segNames <- list.files(path = segPath)
+
+  lapply(segNames, function(x) {
+      seg <- raster(paste0(segPath,x))
+      s <- gdal_polygonizeR(seg)
+      writeOGR(obj = s, dsn = paste0("Seg_Shapefiles"), layer = x,
+               driver = "ESRI Shapefile",
+               overwrite=TRUE)
+  })
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+ Creating output /var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T//RtmpiEs2yf/filea9c33dcf239.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T//RtmpiEs2yf/filea9c74595d36.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T//RtmpiEs2yf/filea9c21b0e278.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+[[1]]
+NULL
+
+[[2]]
+NULL
+
+[[3]]
+NULL
+#+end_example
+
+Segmentations that I will use:
+
+
+
+|   | Average Pixel number | Compactness |
+|---+----------------------+-------------|
+|   |                   15 |          10 |
+|   |                   30 |          15 |
+|   |                   45 |          31 |
+|   |                   60 |          30 |
+|   |                  105 |          32 |
+|   |                      |             |
+
+
+think I'll try the best compactness from pixel number 15, 30, 60,
+and 105.  Other sizes looked good too, but I think 105 is near the
+upper limit.  Smaller than 15 doesn't make much sense either.
+
+
+** Manually classify segments for training data in qgis
+Note on Google Earth and the NAIP image:
+- While the surface of the two images agree (ground cover, grass,
+  roads etc), objects that have height such as trees and buildings are
+  not in the same location. Parallax.  The errors are often pretty
+  high, around 10m or more.
+- This is easily seen by loading the image into Google earth using qgis.
+- Implication:
+  - When using google earth to assess accuracy, there will errors at
+    scales smaller than this error.  However if aggregated over larger
+    area (the 100m blocks) the accuracy should be relatively high.
+    This is because the relative cover of the two images is very
+    similar over the whole extent, however there is shift.
+
+*** Load Segments and original image into qgis
+
+*** classify features
+*** Save results in TrainingData folder
+#+BEGIN_SRC R
+
+  dir.create(path = str_c(image.dd.directory,image.name, "-TrainingPolygons")
+
+#+END_SRC
+names are the same as the segmentation polygons, but they have
+additional Classes in their attributes
+
+** Classify Image
+*** Calculate zonal statistics for each segment for each tile.
+#+BEGIN_SRC R
+  # Create Directory to store features (inputs I will use to predict on)
+  segment.features.path <- str_c(image.dd.directory, image.name,"-SegmentFeatureDFs/")
+
+  dir.create(path = segment.features.path)
+
+  seg.tile.paths <- list.files(str_c(image.dd.directory, image.name, "-SegTiles"), full.names = T)
+
+  seg.tile.paths <- seg.tile.paths[str_detect(seg.tile.paths, "\\.tif$")]
+
+
+  seg.tile.names <- list.files(str_c(image.dd.directory, image.name, "-SegTiles"), full.names = F)
+  seg.tile.names <- seg.tile.names[str_detect(seg.tile.names, "\\.tif$")]
+
+  #remove ".tif"
+  seg.tile.names <- sapply(seg.tile.names, function(s) str_sub(s, end = nchar(s) - 4))
+
+
+  tiles <- str_extract(seg.tile.paths, "[0-9]+-[0-9]+\\.tif")
+
+  ratio.tile.paths <- sapply(tiles, function(t) {
+                                str_c(image.dd.directory, image.name, "-RatioTiles/", t)
+                            })
+
+  extract_segment_features <- function(ratios.tile.path, seg.tile.path, seg.tile.name) {
+      r.tile <- stack(ratios.tile.path)
+      names(r.tile) <- c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
+      s.tile <- raster(seg.tile.path)
+
+  # Create a data_frame where mean and variances are calculated by zone
+      # calculate means
+      means <- zonal(x = r.tile, z = s.tile, 'mean', na.rm = F, digits = 1)
+      colnames(means)[2:ncol(means)] <- paste0(colnames(means)[2:ncol(means)], "_mean")
+
+                                              # calculate sd
+      sds <- zonal(x = r.tile, z = s.tile, 'sd', na.rm = F)
+      colnames(sds)[2:ncol(sds)] <- paste0(colnames(sds)[2:ncol(sds)], "_sd")
+
+      d <- merge(means,sds)
+      saveRDS(d, file = paste0(segment.features.path, seg.tile.name,".rds"))
+      print(seg.tile.name)
+  }
+
+    cl <- makeCluster(detectCores())
+    registerDoParallel(cl)
+
+  foreach (i = seq_along(ratio.tile.paths), .packages = c("raster")) %dopar% {
+      extract_segment_features(ratio.tile.paths[i], seg.tile.paths[i], seg.tile.names[i])
+  }
+
+
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Warning message:
+In dir.create(path = segment.features.path) :
+  '../DD_NAIP-imagery/madison-SegmentFeatureDFs' already exists
+ Error in stri_detect_regex(string, pattern, opts_regex = attr(pattern,  :
+  object 'seg.tile.names' not found
+ Error in stri_detect_regex(string, pattern, opts_regex = attr(pattern,  :
+  object 'seg.tile.names' not found
+Error in lapply(X = X, FUN = FUN, ...) :
+  object 'seg.tile.names' not found
+Error in stri_extract_first_regex(string, pattern, opts_regex = attr(pattern,  :
+  object 'seg.tile.paths' not found
+ Error in lapply(X = X, FUN = FUN, ...) : object 'tiles' not found
+ Error in eval(expr, envir, enclos) : object 'ratio.tile.paths' not found
+#+end_example
+
+*** Read in Training Polygons and Create DF to build models
+
+reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingModels"
+
+#+BEGIN_SRC R
+                                          # Read in the training data from the shapefiles
+  trainingDSN <- str_c(image.dd.directory, image.name, "-TrainingPolygons")
+  trainingShapefiles <- list.files(trainingDSN) %>%
+      str_sub(.,end = nchar(.)-4) %>%
+          unique()
+
+                                          # Get the tiles from the shapefiles
+  tiles <- str_extract(trainingShapefiles, pattern = "[0-9]+-[0-9]+")
+
+
+  # load training data from shapefiles into memory
+  shapelist.data <- lapply(trainingShapefiles, function(shp) {
+                          readOGR(dsn = trainingDSN, layer = shp)@data %>%
+                                             na.omit() %>%
+                                                 rename(zone = DN) %>%
+                                                     filter(Class != "N")
+                      })
+  names(shapelist.data) <- trainingShapefiles
+
+
+  training.tile.names <- str_extract(trainingShapefiles, "[0-9]+-[0-9]+.tif_N-[0-9]+_C-[0-9]+")
+
+  # Join Training Shapefile Data with extracted features from polygons
+
+  # List all dataframes of extracted features
+  extractedFeatures.files <- list.files(str_c(image.dd.directory,image.name, "-SegmentFeatureDFs"), full.names = T)
+
+  # Select the feature dataframes that have training data
+  index <- mapply(training.tile.names, FUN = function(x) str_detect(extractedFeatures.files, x))
+  index <- apply(index, MARGIN = 1, FUN = sum) %>% as.logical()
+  extractedFeatures <- extractedFeatures.files[index]
+
+
+  # Group data by segmentation parameters
+
+  uniqueSegParameterSets <- str_extract(trainingShapefiles, pattern = "N-[0-9]+_C-[0-9]+") %>% unique()
+
+  # Create Training Data DF by merging polygon classification with polygon features
+  TrainingData <- foreach (i = seq_along(uniqueSegParameterSets)) %do% {
+      trn <- shapelist.data[str_detect(names(shapelist.data), uniqueSegParameterSets[i])]
+      d.path <- extractedFeatures[str_detect(extractedFeatures, uniqueSegParameterSets[i])]
+      trainingData <- list()
+      foreach(j = seq_along(d.path)) %do% {
+          d <- readRDS(d.path[j])
+          trainingData[[j]] <- left_join(trn[[j]],d)
+      }
+      do.call("rbind",trainingData)
+  }
+
+  names(TrainingData) <- uniqueSegParameterSets
+
+                                          # Save this list of dataframes
+  dir.create(str_c(image.dd.directory, image.name, "-DataForBuildingModel"))
+  saveRDS(TrainingData, file = str_c(image.dd.directory, image.name, "-DataForBuildingModel/trainingData.rds"))
+#+END_SRC
+
+*** Build SVM and RF models
+#+BEGIN_SRC R
+
+  # For each combination of segmentation parameters:
+
+
+
+
+  # Read in data
+  pathToTrainingDFs <-  str_c(image.dd.directory, image.name, "-DataForBuildingModel/trainingData.rds")
+
+  dat.list <- readRDS(pathToTrainingDFs)
+
+  # Copy Data for Cover specfic models
+  dat.list_T <- lapply(dat.list, function(d) {
+                           mutate(d, Class = as.character(Class)) %>%
+                           mutate(Class = ifelse(Class == "T", Class, "O"))
+                       })
+
+  dat.list_G <- lapply(dat.list, function(d) {
+                           mutate(d, Class = as.character(Class)) %>%
+                           mutate(Class = ifelse(Class == "G", Class, "O"))
+                       })
+
+  dat.list_I <- lapply(dat.list, function(d) {
+                           mutate(d, Class = as.character(Class)) %>%
+                           mutate(Class = ifelse(Class == "I", Class, "O"))
+                       })
+
+
+  # Create Tasks
+
+  task.list <- lapply(seq_along(dat.list), function(i) {
+      makeClassifTask(id = paste0(image.name,"_",names(dat.list)[[i]],"_all"), data = dat.list[[i]], target = "Class") %>%
+          dropFeatures("zone")
+  })
+
+  tree.task.list <- lapply(seq_along(dat.list_T), function(i) {
+      makeClassifTask(id = paste0(image.name,"_",names(dat.list_T)[[i]],"_tree"), data = dat.list_T[[i]], target = "Class", positive = "T") %>%
+          dropFeatures("zone")
+  })
+
+  grass.task.list <- lapply(seq_along(dat.list_G), function(i) {
+      makeClassifTask(id = paste0(image.name,"_",names(dat.list_G)[[i]],"_grass"), data = dat.list_G[[i]], target = "Class", positive = "G") %>%
+          dropFeatures("zone")
+  })
+
+  impervious.task.list <- lapply(seq_along(dat.list_I), function(i) {
+      makeClassifTask(id = paste0(image.name,"_",names(dat.list_I)[[i]],"_impervious"), data = dat.list_I[[i]], target = "Class", positive = "I") %>%
+          dropFeatures("zone")
+  })
+
+  task.list <- list(all = task.list, tree = tree.task.list, grass = grass.task.list, impervious = impervious.task.list) %>%
+      unlist(recursive = F)
+
+
+                                            # Make Learners
+    # RF
+    RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
+    RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
+    SVM_prob <- makeLearner(id = "svm_prob", "classif.svm", predict.type = "prob", fix.factors.prediction = TRUE)
+    SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
+
+    learner_list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_prob = SVM_prob, SVM_response = SVM_response)
+
+
+                                            # Train Learners on Tasks, Make models
+  nCores <- detectCores()
+    cl<-makeCluster(nCores)
+    registerDoParallel(cl)
+
+
+    models <- foreach(task = task.list, .packages = "mlr") %:%
+        foreach(learner = learner_list) %dopar% {
+            train(learner, task)
+        }
+
+  dir.create(str_c(image.dd.directory,image.name, "-Models"))
+  saveRDS(models, file = paste0(image.dd.directory,image.name,"-Models/models.rds"))
+
+#+END_SRC
+
+*** Apply models to create classifications
+#+BEGIN_SRC R
+        #load models
+  models <- readRDS(paste0(image.dd.directory,image.name,"-Models/models.rds"))
+
+  # unlist models
+  models <- unlist(models, recursive = F)
+
+
+                                          # Apply each model to each Tile
+
+  seg.files <- list.files(str_c(image.dd.directory,image.name,"-SegTiles"), full.names = T) %>%
+      str_extract(., ".*.tif$") %>%
+          na.omit()
+
+  tile.names <- list.files(str_c(image.dd.directory,image.name,"-SegTiles")) %>%
+      str_extract(., "[0-9]+-[0-9]+")
+
+  features.files <- list.files(str_c(image.dd.directory,image.name,"-SegmentFeatureDFs"), full.names = T) %>%
+      str_extract(., ".*rds$") %>%
+          na.omit()
+
+
+
+  # Create directories to save tiles into
+  # Segmentation Parameters
+  foreach(i = seq_along(models)) %do% {
+          directory.path <- paste0(image.dd.directory,image.name,"-ClassifiedTiles/",models[[i]]$task.desc$id)
+          dir.create(directory.path)
+      }
+
+  # Target (all classes, grass, tree, or impervious)
+  foreach(i = seq_along(models)) %do% {
+      directory2.path <- paste0(image.dd.directory,image.name,"-ClassifiedTiles/",models[[i]]$task.desc$id,"/",models[[i]]$learner$id)
+      dir.create(directory2.path)
+  }
+
+
+
+  # I have to apply the correct model to each segmentation
+  PredictOnSegmentedRaster <- function(seg.file.path, feature.file.path, tile.name, models) {
+      seg <- raster(seg.file.path)
+      features <- readRDS(feature.file.path)
+      # get models that were built on this set of segmentation parameters
+      seg.params <- str_extract(seg.file.path,"N-[0-9]+_C-[0-9]+")
+      index <- sapply(models, FUN = function(mod) {
+                          str_detect(mod$task.desc$id, pattern = seg.params)
+                      })
+      mods <- models[index]
+      featuresRowsWithNA <- which(is.na(features[,2]))
+      complete.features <- features[complete.cases(features),] # svm can't predict with NAs
+      foreach(j = seq_along(mods)) %do% {
+          mod <- mods[[j]]
+          pred <- predict(mod, newdata = complete.features[2:19])
+          response <- factor(as.character(pred$data$response), levels = c("G","I","T","O"))
+          m <- cbind(zone = complete.features$zone, response)
+          m <- left_join(as.data.frame(features["zone"]), as.data.frame(m))
+          r <- reclassify(seg, m)
+          x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
+              filter(LandCover %in% levels(factor(response)))
+          levels(r) <- x
+          path <- paste0(image.dd.directory,image.name,"-ClassifiedTiles/",mods[[j]]$task.desc$id,"/",mods[[j]]$learner$id,"/",tile.name,".tif")
+          writeRaster(r, path, overwrite=TRUE)
+      }
+  }
+
+  dir.create(paste0(image.dd.directory, image.name, "-ClassifiedTiles"))
+
+  cl<-makeCluster(detectCores())
+  registerDoParallel(cl)
+
+  foreach(i = seq_along(seg.files), .packages = c("raster","dplyr","stringr","foreach","mlr")) %dopar% {
+      PredictOnSegmentedRaster(seg.files[i], features.files[i], tile.names[i], models)
+  }
+
+
+  foreach(i = 55:length(seg.files), .packages = c("raster","dplyr","stringr","foreach","mlr")) %dopar% {
+      PredictOnSegmentedRaster(seg.files[i], features.files[i], tile.names[i], models)
+      i
+  }
+#+END_SRC
+
+*** merge classifications into single images
+Again, I'm having issues running this from org mode.  Just copy in
+command line.
+#+BEGIN_SRC sh
+
+  # make list of files to merge
+  #ls -1 ../DD_NAIP-imagery/madison-ScaledPCATiles/*.tif > tiff_list.txt
+
+  # Merge tiles
+  #gdal_merge.py -n 0 -v -o ../DD_NAIP-imagery/madison-ScaledPCA.tif --optfile tiff_list.txt
+
+  for r in */*
+   do
+   ls -1 $r/*.tif > tiff_list.txt
+   gdal_merge.py -n 0 -v -o $r/combinedClassification.tif --optfile tiff_list.txt
+   done
+
+#+END_SRC
+
+#+RESULTS:
+
+* Delete this scratch
+#+BEGIN_SRC R
+
+  r <- raster()
+
+  r[] <- runif(ncell(r))
+
+  r[r[] < .5] <- 2
+  plot(r)
+  summary(values(r))
+#+END_SRC
+
+
+
+
+** Assess Accuracy of image
+*** Load Classifications
+*** Assess Accuracy, 3 methods
+*** Save results in Accuracy Assessments folder
+consider cases with different numbers of classes
+
+** Compare methods
+*** Load Accuracy Assessments
+*** Make table of accuracy assessments
+- this should be a function
+
+
+
+* Old way
+--------------------------------------------------------------------------------
+** Load Libraries
+
+** beginning
+** Read in Image
+*** NAIP
+    #+BEGIN_SRC R :results graphics :file naip.png
+  naip <- stack("../RD_NAIP-imagery/madison.tif")
+#  plotRGB(naip,4,3,2, stretch = "lin")
+    #+END_SRC
+
+    #+RESULTS:
+    [[file:naip.png]]
+
+**** Crop NAIP
+     #+BEGIN_SRC R
+       ##   plotRGB(naip,4,3,2, stretch = "lin")
+       ## e <- drawExtent()
+       ## med_naip <- crop(naip, e)
+       ## plotRGB(med_naip, 4,3,2, stretch = "lin")
+       ## writeRaster(x = med_naip, filename= "NAIP/med_Mad.tif")
+       small_naip <- stack("NAIP/small_Mad.tif")
+       med_naip <- stack("NAIP/med_Mad.tif")
+     #+END_SRC
+
+     #+RESULTS:
+
+
+*** PAN_SPOT
+    #+BEGIN_SRC R :results graphics :file panspot.png
+  panspot <- stack("../RD_PansharpenedSPOT/geomatica_SPOT_panshp.tif")
+  plotRGB(panspot,4,3,2, stretch = "lin")
+    #+END_SRC
+
+    #+RESULTS:
+    [[file:panspot.png]]
+
+** Read in Municipal boundaries or Urban Census Tract boundaries
+   #+BEGIN_SRC R :exports both :results graphics :file studycities.png :tangle yes
+  panspot_path <- "../RD_PansharpenedSPOT/geomatica_SPOT_panshp.tif"
+  municipalities <- readOGR("../RD_WI-Municipalities-Shapefiles", "MCD")
+
+                                          # Filter out Madison, Middleton, and Shorewood hills
+  study.cities <- municipalities[municipalities$NAME10 == "MADISON" | municipalities$NAME10 == "Madison" | municipalities$NAME10 == "Shorewood Hills" | municipalities$NAME10 == "Middleton", ]
+  study.cities <- spTransform(study.cities, CRS("+init=epsg:26916"))
+  plot(study.cities)
+   #+END_SRC
+
+   #+RESULTS:
+   [[file:studycities.png]]
+
+** Processing NAIP
+   #+BEGIN_SRC R
+     image <- small_naip
+     image <- stack("NAIP/madison_naip_croppedToCityExtent.tif")
+     directory <- "NAIP/"
+     imagename <- "small_naip"
+     names(image) <- c("blue", "green", "red", "nir")
+   #+END_SRC
+
+   #+RESULTS:
+
+*** crop naip image
+    #+BEGIN_SRC R :exports both
+  urban.image <- crop(image, study.cities)
+  png(paste0(directory,"madison_",imagename))
+  plotRGB(urban.image,4,3,2, stretch = "lin")
+  dev.off()
+    #+END_SRC
+
+    #+RESULTS:
+    : Warning message:
+    : closing unused connection 3 (/private/var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T/R_raster_tedward/r_tmp_2015-11-02_103202_3700_41559.gri)
+    : Error in paste0(directory, "madison_", imagename) :
+    :   object 'directory' not found
+    : Error in plotRGB(urban.image, 4, 3, 2, stretch = "lin") :
+    :   error in evaluating the argument 'x' in selecting a method for function 'plotRGB': Error: object 'urban.image' not found
+    : null device
+    :           1
+
+*** save cropped naip image
+    #+BEGIN_SRC R :exports both :tangle yes
+  ## library(raster)
+  ## writeRaster(x = urban.naip, "NAIP/madison_naip_croppedToCityExtent.tif")
+    #+END_SRC
+
+    #+RESULTS:
+
+*** Add Layers to image
+**** add ratios
+     #+BEGIN_SRC R
+       ## namedList <- function(...) {
+       ##   L <- list(...)
+       ##   snm <- sapply(substitute(list(...)),deparse)[-1]
+       ##   if (is.null(nm <- names(L))) nm <- snm
+       ##   if (any(nonames <- nm=="")) nm[nonames] <- snm[nonames]
+       ##   setNames(L,nm)
+       ## }
+
+       ## savi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,L,...) {
+       ##   red_band <- image_w4bands[,,red_bandnumber,drop=FALSE]
+       ##   nir_band <- image_w4bands[,,nir_bandnumber,drop=FALSE]
+       ##   savi <- (nir_band - red_band)/(nir_band + red_band + L) * (1+L)
+       ##   return(savi)
+       ## }
+
+       ## ratio <- function(image_w4bands, numerator_bandNumber) {
+       ##   r <- image_w4bands[,,numerator_bandNumber,drop = F] / sum(image_w4bands)
+       ##   return(r)
+       ## }
+
+       calc_ndvi <- function(x){(x$nir - x$red)/(x$nir + x$red)}
+
+       beginCluster()
+       ndvi <- clusterR(x = image, fun = calc_ndvi)
+       endCluster()
+
+       writeRaster(x = ndvi, paste0(directory,"NDVI_",imagename,".tif"), overwrite = T)
+
+
+
+     #+END_SRC
+
+     #+RESULTS:
+     : 4cores detected
+     : [1] "invalid layer names"
+     : attr(,"class")
+     : [1] "snow-try-error" "try-error"
+     : Error in clusterR(x = image, fun = calc_ndvi) : cluster error
+     : Error in .getGDALtransient(x, filename = filename, options = options,  :
+     :   filename exists; use overwrite=TRUE
+
+**** add texture (glcm)
+     #+BEGIN_SRC R
+       ndvi <- raster("NAIP/NDVI_madison_naip.tif")
+       imagename <- "madison_naip"
+       statistics <- c("variance", "homogeneity", "contrast",
+                       "dissimilarity", "entropy","second_moment",
+                       "correlation")
+
+       shift <- list(c(1,-1))
+       window <- list(c(3,3),c(5,5))
+
+
+       cl <- makeCluster(4 )
+
+       registerDoParallel(cl)
+
+
+       # I changed the code from %dopar% to %do% because I don't think I'll have enough memory to run in parallel.  Running on the server, I'll need to change back to %dopar%
+       foreach(j = 1:length(statistics), .packages=c('raster', 'glcm')) %do% {
+         for (i in 1:length(window)) {
+             GLCM <- glcm(ndvi, window=window[[i]], statistics=statistics[j],
+                          shift = shift, na_opt="ignore")
+             file <- paste0(directory,"texture/",imagename,"_",names(GLCM),"_window",window[[i]][1],".tif")
+             writeRaster(GLCM, filename = file, type = "GTIFF")
+           }
+         }
+
+       stopCluster(cl)
+
+
+
+
+     #+END_SRC
+
+     #+RESULTS:
+     #+begin_example
+     [[1]]
+     NULL
+
+     [[2]]
+     NULL
+
+     [[3]]
+     NULL
+
+     [[4]]
+     NULL
+
+     [[5]]
+     NULL
+
+     [[6]]
+     NULL
+
+     [[7]]
+     NULL
+
+     Warning messages:
+     1: closing unused connection 8 (<-localhost:11575)
+     2: closing unused connection 7 (<-localhost:11575)
+     3: closing unused connection 6 (<-localhost:11575)
+#+end_example
+
+*** Perform PCA and select vegetation/urban related components
+*** Segment Image
+*** In QGIS spend X amount of time finding training segments for classification
+
+
+    #+BEGIN_SRC python
+
+  from skimage.segmentation import slic, mark_boundaries
+  import gdal
+  import numpy as np
+  import matplotlib.pyplot as plt
+  from skimage.util import img_as_float
+  from skimage import io
+
+  image_path = r"C:\_urban_fia\fia_data\SPOT_subset_subset_rgb.tif"
+  image = io.imread(image_path)
+  image = image[:, : , 0:-1]
+  print image
+
+  def build_tiff(source_raster_path, target_raster_path, image_array):
+
+      source_raster = gdal.Open(source_raster_path)
+      bands = source_raster.RasterCount
+      columns = source_raster.RasterXSize
+      rows = source_raster.RasterYSize
+      driver = gdal.GetDriverByName("GTiff")
+      new_image = driver.Create(target_raster_path, columns, rows, 1, gdal.GDT_Float64)
+      new_image.SetGeoTransform(source_raster.GetGeoTransform())
+      new_image.SetProjection(source_raster.GetProjectionRef())
+
+      new_image.GetRasterBand(1).WriteArray(image_array)
+      '''
+      for band in range(bands):
+          new_image.GetRasterBand(band+1).WriteArray(image_array[band, :, :])
+      '''
+
+      return
+
+  source_raster = gdal.Open('pca_data.tif')
+  bands = source_raster.RasterCount
+  columns = source_raster.RasterXSize
+  rows = source_raster.RasterYSize
+  data_type = source_raster.GetRasterBand(1).DataType  # 2 = UInt16
+
+  array = source_raster.ReadAsArray()
+
+  array = array.transpose(1, 2, 0)
+
+  array = array[:, :, 1:]  # Use only principal components 2-4
+  num_segs = rows * columns / 20
+
+  print 'Making segments'
+  segments = slic(array, n_segments=num_segs, compactness=10.0, enforce_connectivity=True)
+  print 'Made dem segments'
+
+  build_tiff('pca_data.tif', 'segments.tif', segments)
+  print 'Tiff made successfully'
+
+  fig = plt.figure('%d Segments' % num_segs)
+  ax = fig.add_subplot(1,1,1)
+  ax.imshow(mark_boundaries(image, segments))
+  plt.axis("off")
+  plt.show()
+
+
+    #+END_SRC
+
+    #+RESULTS:
+
+    #+BEGIN_SRC R
+
+  2*pt(q= 2, df = 1, lower.tail = T, )
+
+
+    #+END_SRC
+
+
+
+
+
+
+
+
+
+
+
+** Functions
+  #+BEGIN_SRC R
+extract_bind_df_addclass <- function(x) {
+  w <- raster::extract(image,x)
+  w <- do.call("rbind",w)
+  w <- data.frame(w)
+  w$Class <- names(x)
+  return(w)
+}
+
+clip<-function(raster,shape) {
+          a1_crop<-crop(raster,shape)
+          step1<-rasterize(shape,raster)
+          a1_crop*step1}
+
+namedList <- function(...) {
+  L <- list(...)
+  snm <- sapply(substitute(list(...)),deparse)[-1]
+  if (is.null(nm <- names(L))) nm <- snm
+  if (any(nonames <- nm=="")) nm[nonames] <- snm[nonames]
+  setNames(L,nm)
+}
+
+ndvi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,...) {
+  red_band <- image_w4bands[,,red_bandnumber,drop=FALSE]
+  nir_band <- image_w4bands[,,nir_bandnumber,drop=FALSE]
+  ndvi <- (nir_band - red_band)/(nir_band + red_band)
+  return(ndvi)
+}
+
+savi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,L,...) {
+  red_band <- image_w4bands[,,red_bandnumber,drop=FALSE]
+  nir_band <- image_w4bands[,,nir_bandnumber,drop=FALSE]
+  savi <- (nir_band - red_band)/(nir_band + red_band + L) * (1+L)
+  return(savi)
+}
+
+ratio <- function(image_w4bands, numerator_bandNumber) {
+  r <- image_w4bands[,,numerator_bandNumber,drop = F] / sum(image_w4bands)
+  return(r)
+}
+
+create_GLCM_layers_parallel <- function(list_rasterlayers, vec_window_sizes, dir, cpus) {
+  cl <- makeCluster(spec = cpus, methods = FALSE)
+  # Register the cluster with foreach:
+  registerDoParallel(cl)
+  GLCM_rasters <- foreach(i = 1:length(list_rasterlayers), .packages = c('glcm','raster')) %:%
+    foreach (j = 1:length(window_sizes), .packages = c('glcm','raster')) %dopar% {
+      raster <- list_rasterlayers[[i]]
+      dir <- dir
+      window_size <- vec_window_sizes[j]
+      w_s <- c(window_size,window_size)
+      a <- glcm(raster,shift = dir, window = w_s,na_opt = "center", na_val = 0, asinteger = T)
+      names(a)<- paste0(names(list_rasterlayers[[i]]),"_",vec_window_sizes[j],"x",vec_window_sizes[j],"_",names(a))
+      a
+    }
+  stopCluster(cl) # Stops the cluster
+  registerDoSEQ()
+  return(unlist(GLCM_rasters))
+}
+
+
+  #+END_SRC
+
+  #+RESULTS[f676795e5bdb01071b7541e4c3bc4d7e7accdc05]:
+
+
+
+
+** Read in images
+** NAIP
+   #+BEGIN_SRC R :results graphics :file naip.png
+  naip <- stack("../RD_NAIP-imagery/madison.tif")
+  plotRGB(naip,4,3,2, stretch = "lin")
+   #+END_SRC
+
+   #+RESULTS[0b6a364abc01cec6311ce205731e5e4ecfd9816a]:
+   [[file:naip.png]]
+
+** Pansharpened SPOT
+   #+BEGIN_SRC R :exports both :results graphics :file panspot.png :tangle yes
+  panspot <- stack("../RD_PansharpenedSPOT/geomatica_SPOT_panshp.tif")
+  plotRGB(panspot,4,3,2, stretch = "lin")
+   #+END_SRC
+
+   #+RESULTS[3f8460f5aa7d3945cbc618e8f19dd2067f46b454]:
+   [[file:panspot.png]]
+
+
+** Read in training data
+** ROI from ENVI
+   #+BEGIN_SRC R :tangle yes
+  ## Lei's ROIs for training data
+  l_water <- readOGR(dsn = "../RD_UFIA_leiROI", layer = "pan_spot_lei_water", encoding = "ESRI Shapefile")
+  l_grass <- readOGR(dsn = "../RD_UFIA_leiROI", layer = "pan_spot_lei_grass", encoding = "ESRI Shapefile")
+  l_tree <- readOGR(dsn = "../RD_UFIA_leiROI", layer = "pan_spot_lei_tree", encoding = "ESRI Shapefile")
+  l_soil <- readOGR(dsn = "../RD_UFIA_leiROI", layer = "pan_spot_lei_soil", encoding = "ESRI Shapefile")
+  l_impervious <- readOGR(dsn = "../RD_UFIA_leiROI", layer = "pan_spot_lei_impervious", encoding = "ESRI Shapefile")
+  names(l_water) <- "water"
+  names(l_grass) <- "grass"
+  names(l_tree) <- "tree"
+  names(l_soil) <- "soil"
+  names(l_impervious) <- "impervious"
+   #+END_SRC
+
+   #+RESULTS[800a276a92887b137cf87799208df96325424faf]:
+   : impervious
+
+
+
+** Read in accuracy assessment regions
+** Points that Robi created
+   #+BEGIN_SRC R :exports both :results graphics :file point_assessment_points.png :tangle yes
+  rand_points <- readOGR("../RD_UFIA_RobiAccuracyCover", "accuracy_cover_2500")
+
+   #+END_SRC
+
+   #+RESULTS[1dcf7f92808a72865cd34272621aa98f1f18864e]:
+   [[file:point_assessment_points.png]]
+
+** Field data Points
+   #+BEGIN_SRC R :exports both :results graphics :file field_assessment_points.png :tangle yes
+  centers <- readOGR(dsn = "../Urban FIA/PlotCenter",layer = 'plotCenter')
+  centers <- spTransform(centers,CRSobj = CRS("+proj=utm +zone=16 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"))
+  # Each field plot is 50 feet by 50 feet diamond
+  # 5 feet is 1.524 meters
+  # 1 foot is .3048 m
+  # that means the distance from center to a corner is 25 ft, 25*.3048 = 7.62m
+
+  # I need to add a buffer of 3 pixels, or 3m in the case of naip to the boundary of the plot
+
+  rad <- 25*.3048+3
+  # Make Diamond polygons around each plot
+  dia <- list()
+  for (i in seq_along(centers)) {
+    dia[i] <- gBuffer(centers[i,], width = rad,quadsegs = 1)
+  }
+  dia <-do.call(bind,dia)
+  plot(dia)
+   #+END_SRC
+
+   #+RESULTS[b4d1a82548fef0c96bda9b97185ad3341a870089]:
+   [[file:field_assessment_points.png]]
+
+** Boxs around grids of points that Andy created
+   #+BEGIN_SRC R :exports both :results output graphics :file grid_assessment_points.png :tangle yes
+  grd_ass <- readOGR( dsn = "../RD_UFIA_GridAccuracy", layer = "ufia-grid-points", drop_unsupported_fields = T, pointDropZ = T, )
+  grd_ass <- spTransform(grd_ass, CRS("+init=epsg:26916"))
+  grd_box <- gBuffer(grd_ass, width = 8)
+   #+END_SRC
+
+   #+RESULTS[482fde121da7fe7869b6842729f9c8aebdea67a7]:
+   [[file:grid_assessment_points.png]]
+
+
+** Add buffers to the training data regions and the accuracy assessment
+  Buffers needed so that we can see context of areas we are trying to
+  predict and to get proper texture variables
+** Lei's Training data
+   #+BEGIN_SRC R :tangle yes
+  l_water_buf <- gBuffer(l_water, width = 10)
+  l_grass_buf <- gBuffer(l_grass, width = 10)
+  l_tree_buf <- gBuffer(l_tree, width = 10)
+  l_soil_buf <- gBuffer(l_soil, width = 10)
+  l_impervious_buf <- gBuffer(l_impervious, width = 10)
+   #+END_SRC
+
+   #+RESULTS[131af1e0788873664c39f0e0465d3fae6682ae72]:
+
+** Robi's Points
+   #+BEGIN_SRC R :exports both :results graphics :file point_assessment_points_wBuffer.png :tangle yes
+  rand_points_buffer <- gBuffer(rand_points, width = 10)
+  plot(rand_points_buffer)
+   #+END_SRC
+
+   #+RESULTS[22fac1ef1a235dadd855ef8c4bbf2f35c2a2a103]:
+   [[file:point_assessment_points_wBuffer.png]]
+
+** Field data
+   #+BEGIN_SRC R :tangle yes
+  dia_buf <- gBuffer(dia, width = 10)
+
+   #+END_SRC
+
+   #+RESULTS[28eea615354878d94de7dc054f1a47ac1daa9f8e]:
+
+
+** Crop images to the extents of the merged training and testing/accuracy assessment data locations
+** Cropping images to the extent of training and testing locations
+   #+BEGIN_SRC R :tangle
+#  naip_randpoints_clip <- clip(naip, rand_points_buffer)
+#  plot(naip_randpoints_clip)
+
+#  naip_fielddata_clip <- clip(naip, dia_buf)
+
+   #+END_SRC
+
+
+
+*** merge training and testing polygons
+    #+BEGIN_SRC R :exports both :results graphs :file combined_training_and_testing_locations.png :tangle yes
+
+
+    #+END_SRC
+
+
+** Save cropped images
+** Read back in the cropped images
+** Stack derived layers with original layers
+
+** NAIP Train and create models
+** create the object image called by extract_bind_df_addclass
+   #+BEGIN_SRC R
+image
+   #+END_SRC
+** convert the training data into dataframe
+   #+BEGIN_SRC R
+
+  ## Lei's ROIs for training data
+  l_water <- readOGR(dsn = "../PAN_SPOT/ROIs/lei", layer = "pan_spot_lei_water", encoding = "ESRI Shapefile")
+  l_grass <- readOGR(dsn = "../PAN_SPOT/ROIs/lei", layer = "pan_spot_lei_grass", encoding = "ESRI Shapefile")
+  l_tree <- readOGR(dsn = "../PAN_SPOT/ROIs/lei", layer = "pan_spot_lei_tree", encoding = "ESRI Shapefile")
+  l_soil <- readOGR(dsn = "../PAN_SPOT/ROIs/lei", layer = "pan_spot_lei_soil", encoding = "ESRI Shapefile")
+  l_impervious <- readOGR(dsn = "../PAN_SPOT/ROIs/lei", layer = "pan_spot_lei_impervious", encoding = "ESRI Shapefile")
+  names(l_water) <- "water"
+  names(l_grass) <- "grass"
+  names(l_tree) <- "tree"
+  names(l_soil) <- "soil"
+  names(l_impervious) <- "impervious"
+
+  list_classes <- list(l_water, l_grass, l_tree, l_soil, l_impervious)
+
+  beginCluster()
+  b <- lapply(list_classes, function(x) extract_bind_df_addclass(x))
+  endCluster()
+
+
+  classified_px <- do.call("rbind", b)
+
+  classified_px$Class %<>% as.factor()
+
+  lei_df <- classified_px
+   #+END_SRC
+*** Ted's ROI's, not using but in here in case I want to
+    #+BEGIN_SRC R
+  ## Ted's ROIs for training data
+  ## t_water <- readOGR(dsn = "../PAN_SPOT/ROIs", layer = "pan_spot_subset_water", encoding = "ESRI Shapefile")
+  ## t_grass <- readOGR(dsn = "../PAN_SPOT/ROIs", layer = "pan_spot_subset_grass", encoding = "ESRI Shapefile")
+  ## t_tree <- readOGR(dsn = "../PAN_SPOT/ROIs", layer = "pan_spot_subset_tree", encoding = "ESRI Shapefile")
+  ## t_soil <- readOGR(dsn = "../PAN_SPOT/ROIs", layer = "pan_spot_subset_soil", encoding = "ESRI Shapefile")
+  ## t_impervious <- readOGR(dsn = "../PAN_SPOT/ROIs", layer = "pan_spot_subset_impervious", encoding = "ESRI Shapefile")
+  ## names(t_water) <- "water"
+  ## names(t_grass) <- "grass"
+  ## names(t_tree) <- "tree"
+  ## names(t_soil) <- "soil"
+  ## names(t_impervious) <- "impervious"
+
+  ## list_classes <- list(t_water, t_grass, t_tree, t_soil, t_impervious)
+
+
+  ## beginCluster()
+  ## b <- lapply(list_classes, function(x) extract_bind_df_addclass(x))
+  ## endCluster()
+
+  ## classified_px <- do.call("rbind", b)
+  ## classified_px$Class %<>% as.factor()
+
+  ## ted_df <- classified_px
+  ## write.table(ted_df, paste0("../",image_directory,"/ExtractedTrainingDataFrames/ted_roi_train_df.txt"))
+
+    #+END_SRC
+
+
+
+
+
+
+
+    ----
+
+
+** Once I find the best overall classification and image, I want to predict on the entire urban area
+** Clip image to urban areas
+   Cropping images to extent of Madison, ShorewoodHills, and Middleton, the places where we have field data.
+
+*** Read in shapefile of municipalities extent
+    #+BEGIN_SRC R :exports both :results graphics :file studycities.png :tangle yes
+  ## panspot_path <- "../RD_PansharpenedSPOT/geomatica_SPOT_panshp.tif"
+  ## municipalities <- readOGR("../RD_WI-Municipalities-Shapefiles", "MCD")
+
+  ##                                         # Filter out Madison, Middleton, and Shorewood hills
+  ## study.cities <- municipalities[municipalities$NAME10 == "MADISON" | municipalities$NAME10 == "Madison" | municipalities$NAME10 == "Shorewood Hills" | municipalities$NAME10 == "Middleton", ]
+  ## study.cities <- spTransform(study.cities, CRS("+init=epsg:26916"))
+  ## plot(study.cities)
+    #+END_SRC
+
+*** crop naip image
+    #+BEGIN_SRC R :exports both :results graphics :file urban_naip.png :tangle yes
+  ## urban.naip <- crop(naip, study.cities)  # I need to get them in same projection!
+  ## plotRGB(urban.naip,4,3,2, stretch = "lin")
+    #+END_SRC
+
+*** save cropped naip image
+    #+BEGIN_SRC R :exports both :tangle yes
+  ## library(raster)
+  ## writeRaster(x = urban.naip, "NAIP/madison_naip_croppedToCityExtent.tif")
+    #+END_SRC
+
+    #+RESULTS:
+
+
+** Add Layers to Image
+** Classify image
+* Another Old way, "Small Urban FIA"
+** Load Libraries
+  #+BEGIN_SRC R :results silent
+    library(parallel)
+    library(plyr)
+    library(mlr)
+    library(scales)
+    library(rgdal)
+    library(raster)
+    library(rgeos)
+    library(glcm)
+    library(spatial.tools)
+    library(dplyr)
+    library(doParallel)
+    library(rasterVis)
+    library(devtools)
+      #devtools::install_github('walkerke/tigris')
+    library(tigris)
+    library(leaflet)
+    library(htmlwidgets)
+
+  #+END_SRC
+
+** Functions
+#+BEGIN_SRC R
+
+  gdal_polygonizeR <- function(x, outshape=NULL, gdalformat = 'ESRI Shapefile',
+                               pypath=NULL, readpoly=TRUE, quiet=TRUE) {
+    if (isTRUE(readpoly)) require(rgdal)
+    if (is.null(pypath)) {
+      pypath <- Sys.which('gdal_polygonize.py')
+    }
+    if (!file.exists(pypath)) stop("Can't find gdal_polygonize.py on your system.")
+    owd <- getwd()
+    on.exit(setwd(owd))
+    setwd(dirname(pypath))
+    if (!is.null(outshape)) {
+      outshape <- sub('\\.shp$', '', outshape)
+      f.exists <- file.exists(paste(outshape, c('shp', 'shx', 'dbf'), sep='.'))
+      if (any(f.exists))
+        stop(sprintf('File already exists: %s',
+                     toString(paste(outshape, c('shp', 'shx', 'dbf'),
+                                    sep='.')[f.exists])), call.=FALSE)
+    } else outshape <- tempfile()
+    if (is(x, 'Raster')) {
+      require(raster)
+      writeRaster(x, {f <- tempfile(fileext='.asc')})
+      rastpath <- normalizePath(f)
+    } else if (is.character(x)) {
+      rastpath <- normalizePath(x)
+    } else stop('x must be a file path (character string), or a Raster object.')
+    system2('python', args=(sprintf('"%1$s" "%2$s" -f "%3$s" "%4$s.shp"',
+                                    pypath, rastpath, gdalformat, outshape)))
+    if (isTRUE(readpoly)) {
+      shp <- readOGR(dirname(outshape), layer = basename(outshape), verbose=!quiet)
+      return(shp)
+    }
+    return(NULL)
+  }
+
+
+#+END_SRC
+
+#+RESULTS[e063be2c8f59c1c3c05194a96351868188647301]:
+
+** Wisconsin Urban Areas
+#+BEGIN_SRC R
+
+  ua <- urban_areas(cb = T) # Download genearlized (1:500k) boundary file of all US urban areas
+
+  WI <- states(cb = T, ) %>%                 # Download WI shapefile
+       subset(NAME == "Wisconsin") %>%
+       gBuffer(width = .0001)
+
+
+  ua_wi <- crop(x = ua, y = WI)  # Crop urban areas to Wisconsin
+
+
+  factpal <- colorFactor(topo.colors(50), ua_wi$NAME10)
+  ua_map <- ua_wi %>% leaflet() %>% addTiles() %>% addPolygons(color = ~factpal(NAME10), popup = ~NAME10)
+  ua_map
+
+  ua_map %>% saveWidget(file = "WisconsinUrbanAreas.html", selfcontained = FALSE)
+
+  ua_wi
+
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+Warning message:
+In readOGR(dsn = cache_dir, layer = shape, encoding = "UTF-8", verbose = FALSE,  :
+  Z-dimension discarded
+ Warning messages:
+1: In readOGR(dsn = cache_dir, layer = shape, encoding = "UTF-8", verbose = FALSE,  :
+  Z-dimension discarded
+2: In gBuffer(., width = 1e-04) :
+  Spatial object is not projected; GEOS expects planar coordinates
+class       : SpatialPolygonsDataFrame
+features    : 124
+extent      : -92.80608, -87.33629, 42.48958, 46.75224  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0
+variables   : 8
+names       : UACE10,     AFFGEOID10, GEOID10,          NAME10, LSAD10, UATYP10,    ALAND10,  AWATER10
+min values  :  00091, 400C100US00091,   00091,  Abbotsford, WI,     75,       C,    2639602,         0
+max values  :  97359, 400C100US97359,   97359, Wrightstown, WI,     76,       U, 6325855004, 231673974
+#+end_example
+
+There are 124 urban areas in the state of Wisconsin
+
+** Naip seamlines
+#+BEGIN_SRC R
+
+  seams <- readOGR(dsn = "../RD_NAIP-imagery/SeamLines", layer = "ortho_naip_seamline-naipseamlines2013_a_wi")
+
+  seams_html <- seams %>% leaflet %>% addTiles() %>% addPolygons()
+  seams_html %>% saveWidget(file = "NAIP_seams.html")
+
+
+  # Add column that identifies each polygon by start and end date/time
+  seams@data <- seams@data %>%
+      mutate(uid = as.factor(paste0(SDATE,"_",EDATE)))
+
+  #crop seams by urban areas
+  seams_by_ua <- crop(seams,ua_wi)
+
+
+
+  factpal <- colorFactor(topo.colors(50), seams_by_ua$uid)
+  seams_by_ua_html <- seams_by_ua %>%
+      leaflet() %>%
+      addTiles() %>%
+      addPolygons(color = ~factpal(uid), popup = paste("Date", seams_by_ua$IDATE, "<br>",
+                                                         "Start Date", seams_by_ua$SDATE,"<br>",
+                                                         "End Date", seams_by_ua$EDATE))
+
+
+  seams_by_ua_html
+
+  seams_by_ua_html %>% saveWidget(file = "seams_by_urbanArea.html", selfcontained = FALSE)
+
+  seams_by_ua
+
+  str(seams_by_ua@data$uid))
+  n_distinct(seams_by_ua@data$uid)
+#+END_SRC
+
+#+RESULTS:
+: OGR data source with driver: ESRI Shapefile
+: Source: "../RD_NAIP-imagery/SeamLines", layer: "ortho_naip_seamline-naipseamlines2013_a_wi"
+: with 243 features and 12 fields
+: Feature type: wkbPolygon with 2 dimensions
+:  Error: unexpected symbol in:
+: "
+: seams"
+
+There appear to be 96 NAIP seams over urban areas.  Do we need to
+build a model for each one?  Probably not, but training data should
+come from all of them if we are going to build on large classification model.
+
+
+** Specifiy parameters
+#+BEGIN_SRC R
+  RD_imagePath <-"../RD_NAIP-imagery/small_Mad.tif"
+  imageName <- "small_Mad"
+  imageDirectory <- "NAIP/"
+  nCores <- detectCores()
+  segName <- "segRasterN10579C300"
+#+END_SRC
+
+#+RESULTS[2ac825db2000268ca8e2c207dd6674d0e969e09f]:
+
+** Classify Image
+
+*** Read in Image
+  #+BEGIN_SRC R :results graphics :file (org-babel-temp-file "./Figs-" ".png")
+    image <- stack(RD_imagePath)
+    names(image) <- c("blue", "green", "red", "nir")
+    plotRGB(image,4,3,2, stretch = "lin")
+  #+END_SRC
+
+  #+RESULTS:
+  [[file:/var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T/babel-6372oS/Figs-637DzY.png]]
+
+*** Add Layers to image
+**** add ndvi
+     #+BEGIN_SRC R :results graphics :exports both :file (org-babel-temp-file "./Figs-" ".png")
+       calc_ndvi <- function(x){(x$nir - x$red)/(x$nir + x$red)}
+
+       beginCluster()
+       ndvi <- clusterR(x = image, fun = calc_ndvi)
+       endCluster()
+       names(ndvi) <- "NDVI"
+       dir.create(paste0(imageDirectory,"NDVI"))
+       writeRaster(x = ndvi, paste0(imageDirectory,"NDVI/",imageName,"_NDVI.tif"), overwrite = T)
+
+       ndvi_plot <- gplot(ndvi)+ geom_tile(aes(fill = value)) +
+           scale_fill_gradient2(low = muted("red"), mid = "white", high = muted('green')) +
+           ggtitle("NDVI") + coord_equal()
+
+       ggsave(filename = paste0("Figs/",imageName,"_ndvi.png"))
+#       print(ndvi_plot)
+       ndvi_plot
+#+END_SRC
+
+     #+RESULTS[5e623183070d2c0c3a6ba5fa3f3baa414b0ef396]:
+     [[file:/var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T/babel-6372oS/Figs-637Q9e.png]]
+
+
+**** add texture (glcm)
+     #+BEGIN_SRC R
+        statistics <- c("mean","variance", "homogeneity", "contrast",
+                        "dissimilarity", "entropy","second_moment",
+                        "correlation")
+
+        shift <- list(c(1,1)) # 135 degree,
+        window <- list(c(3,3))
+
+
+       dir.create(path = paste0(imageDirectory,"texture_",imageName))
+
+        cl <- makeCluster(2)
+
+       registerDoParallel(cl)
+
+
+        # I changed the code from %dopar% to %do% because I don't think I'll have enough memory to run in parallel.  Running on the server, I'll need to change back to %dopar%
+        foreach(j = 1:length(statistics), .packages=c('raster', 'glcm')) %dopar% {
+          for (i in 1:length(window)) {
+              GLCM <- glcm(ndvi, window=window[[i]], statistics=statistics[j],
+                           shift = shift, na_opt="ignore")
+              file <- paste0(imageDirectory,"texture_",imageName,"/",imageName,"_",names(GLCM),"_window",window[[i]][1],".tif")
+              writeRaster(GLCM, filename = file, type = "GTIFF", overwrite = T)
+            }
+          }
+
+        stopCluster(cl)
+
+     #+END_SRC
+
+     #+RESULTS[3883f7544e7fbc95662b9950eeb0f50c8c48de67]:
+     #+begin_example
+     Warning message:
+     In dir.create(path = paste0(imageDirectory, "texture_", imageName)) :
+       'NAIP/texture_small_Mad' already exists
+     [[1]]
+     NULL
+
+     [[2]]
+     NULL
+
+     [[3]]
+     NULL
+
+     [[4]]
+     NULL
+
+     [[5]]
+     NULL
+
+     [[6]]
+     NULL
+
+     [[7]]
+     NULL
+
+     [[8]]
+     NULL
+#+end_example
+
+*** Perform PCA and select vegetation/urban related components
+#+BEGIN_SRC R
+    all <- stack(image, ndvi)
+
+  # Function takes raster stack, samples data, performs pca and returns stack of first n_pcomp bands
+  predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
+      sr <- sampleRandom(stack,sampleNumber)
+      pca <- prcomp(sr, scale.=T)
+      beginCluster()
+      r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
+      endCluster()
+      return(r)
+  }
+
+
+  # perform PCA with 4 original bands and ndvi
+  rgbnn_pca <- predict_pca_wSampling_parallel(all, 10000, 5)
+
+
+
+
+  # Save these PCA's
+  PCA_directory <- paste0(imageDirectory,"PCA_",imageName)
+  dir.create(path = PCA_directory)
+  writeRaster(rgbnn_pca, paste0(PCA_directory,"/",imageName,"rgbnn_pca.tif"), overwrite = T)
+#+END_SRC
+
+#+RESULTS:
+: 2cores detected
+: Warning message:
+: In dir.create(path = PCA_directory) : 'NAIP/PCA_small_Mad' already exists
+
+*** plotting PCA's
+**** PCA rgbn, bands r=2, g=1, b=3
+#+BEGIN_SRC R :results graphics :exports both :file (org-babel-temp-file "./Figs-" ".png")
+plotRGB(rgbnn_pca,2,1,3, stretch = "lin")
+#+END_SRC
+
+#+RESULTS:
+[[file:/var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T/babel-5167QoP/Figs-5167ezc.png]]
+
+**** PCA rgbn, bands r=2, g=4, b=3
+#+BEGIN_SRC R :results graphics :exports both :file (org-babel-temp-file "./Figs-" ".png")
+plotRGB(rgbnn_pca,4,2,3, stretch = "lin")
+#+END_SRC
+
+#+RESULTS:
+[[file:/var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T/babel-5167QoP/Figs-5167r9i.png]]
+
+
+
+
+*** Segment Image
+
+#+BEGIN_SRC sh :eval no
+  python Python/fia_segment.py
+#+END_SRC
+
+#+RESULTS:
+: python Python
+
+#+BEGIN_SRC python :eval yes
+  from skimage.segmentation import slic, mark_boundaries
+  import gdal
+  import os
+  import numpy as np
+  import matplotlib.pyplot as plt
+  # from skimage.util import img_as_float
+  from skimage import io
+
+  # image_path = r"C:\_urban_fia\fia_data\SPOT_subset_subset_rgb.tif"
+  # image = io.imread(image_path)
+  # image = image[:, : , 0:-1]
+  # print image
+
+  number_pixels_per_seg = 20
+  source_raster_path = os.path.expanduser('~/GoogleDrive/Pjt_UFIA/NAIP/PCA_small_Mad/small_Madrgbnn_pca.tif')
+  target_raster_path = os.path.expanduser('~/GoogleDrive/Pjt_UFIA/NAIP/Seg/seg_raster.tif')
+
+  def build_tiff(source_raster_path, target_raster_path, image_array):
+
+      source_raster = gdal.Open(source_raster_path)
+      bands = source_raster.RasterCount
+      columns = source_raster.RasterXSize
+      rows = source_raster.RasterYSize
+      driver = gdal.GetDriverByName("GTiff")
+      new_image = driver.Create(target_raster_path, columns, rows, 1, gdal.GDT_Float64)
+      new_image.SetGeoTransform(source_raster.GetGeoTransform())
+      new_image.SetProjection(source_raster.GetProjectionRef())
+
+      new_image.GetRasterBand(1).WriteArray(image_array)
+      '''
+      for band in range(bands):
+          new_image.GetRasterBand(band+1).WriteArray(image_array[band, :, :])
+      '''
+      return
+
+  # Grab Raster metadata using GDAL
+  source_raster = gdal.Open(source_raster_path)
+  bands = source_raster.RasterCount
+  columns = source_raster.RasterXSize
+  rows = source_raster.RasterYSize
+  data_type = source_raster.GetRasterBand(1).DataType  # 2 = UInt16
+
+  array = source_raster.ReadAsArray()
+
+  array = array.transpose(1, 2, 0)  # Transpose TIFF space to a more sensible numpy array orientation
+
+  array = array[:, :, 0:3]  # Can be used to constrain number of principal components to use (change final list term)
+
+  number_pixels_per_seg = np.array(100)
+  num_segs = rows * columns / number_pixels_per_seg
+
+  compactness = [20,25,30,35]
+  print 'Making segments'
+
+  n = num_segs
+  c = 300
+
+  target_raster_path = '/Users/tedward/GoogleDrive/Pjt_UFIA/NAIP/Seg/segRasterN%sC%s.tif' %(n,c)
+  segments = slic(array, n_segments=n, compactness=c, enforce_connectivity=True)
+  print 'Made dem segments'
+  build_tiff(source_raster_path, target_raster_path, segments)
+  print 'Tiff made successfully'
+
+
+  #for n in num_segs :
+  #    for c in compactness :
+          # target_raster_path = '/Users/tedward/GoogleDrive/Pjt_UFIA/NAIP/Seg/segRasterN%sC%s.tif' %(n,c)
+          # segments = slic(array, n_segments=n, compactness=c, enforce_connectivity=True)
+          # print 'Made dem segments'
+          # build_tiff(source_raster_path, target_raster_path, segments)
+          #print 'Tiff made successfully'
+
+    #+END_SRC
+
+    #+RESULTS:
+    : None
+
+
+
+*** Polygonize Segments
+#+BEGIN_SRC R
+  segPath <- paste0(imageDirectory,"/Seg")
+  segNames <- list.files(path = segPath)
+
+  lapply(segNames, function(x) {
+      seg <- raster(paste0("NAIP/Seg/",x))
+      s <- gdal_polygonizeR(seg)
+      writeOGR(obj = s, dsn = paste0(imageDirectory,"/Seg_Shapefiles"), layer = x, driver = "ESRI Shapefile")
+  })
+#+END_SRC
+
+#+RESULTS:
+:  Creating output /var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T//Rtmpbyxm9p/file199a5a9c8fc4.shp of format ESRI Shapefile.
+: 0...10...20...30...40...50...60...70...80...90...100 - done.
+: [[1]]
+: NULL
+
+
+Segmentation parameters that I think are good:
+
+|   | size | compactness |      |                                                                                                 |
+|---+------+-------------+------+-------------------------------------------------------------------------------------------------|
+|   |    7 |          30 | good |                                                                                                 |
+|   |    5 |          30 | good | This is the one I'm going to try to use.                                                        |
+|   |  100 |         300 | good | I've made training data for this one. The segments are bigger, but maybe better.  Need to test. |
+|   |      |             |      |                                                                                                 |
+
+
+
+
+*** In QGIS spend X amount of time finding training segments for classification
+I spend 20 min classifying polygons in shapefile with size:100,
+compactness 300.  Classes: Tree, Grass, Impervious
+
+shapefile name is segRasterN10579C300.tif.shp
+
+*** Calculate zonal statistics for image based on segmentation, extract features from segments
+
+#+BEGIN_SRC R
+  segName <- "segRasterN10579C300"
+
+  segDirectory <- paste0(imageDirectory,"Seg/")
+
+  segmentationLayerPath <- paste0(segDirectory,segName,".tif")
+
+  image <- stack(RD_imagePath)
+  names(image) <- c("blue", "green", "red", "nir")
+
+  ndvi <- raster(paste0(imageDirectory,"NDVI/",imageName,"_NDVI.tif"))
+  names(ndvi) <- "ndvi"
+
+  r <- stack(image, ndvi)
+
+  seg <- raster(segmentationLayerPath)
+
+
+
+                                          # Create a data_frame where mean and variances are calculated by zone
+  # calculate means
+  means <- zonal(x = r, z = seg, 'mean')
+  colnames(means)[2:6] <- paste0(colnames(means)[2:6], "_mean")
+
+                                          # calculate sd
+  sds <- zonal(x = r, z = seg, 'sd')
+  colnames(sds)[2:6] <- paste0(colnames(sds)[2:6], "_sd")
+
+  d <- merge(means,sds)
+
+  write.csv(d, paste0(imageDirectory, "SegmentFeatureDataFrames/",imageName,"_",segName,"_features.csv"))
+
+                                          # Read in the training data from the shapefile
+  DSN <- paste0(imageDirectory,"Seg_Shapefiles/")
+
+  train <- readOGR(dsn = DSN, layer = paste0(segName,".tif"))@data %>%
+                                             na.omit() %>%
+                                             rename(zone = DN)
+
+  dat <- left_join(train,d)
+
+                                          # Save this dataframe
+
+
+  write.csv(dat, paste0(imageDirectory,"TrainingDataFrames/",imageName,"_",segName,"TrainData.csv"))
+#+END_SRC
+
+#+RESULTS:
+:  OGR data source with driver: ESRI Shapefile
+: Source: "NAIP/Seg_Shapefiles/", layer: "segRasterN10579C300.tif"
+: with 10553 features and 2 fields
+: Feature type: wkbPolygon with 2 dimensions
+: Joining by: "zone"
+
+
+
+
+*** Create Model
+#+BEGIN_SRC R
+  # Read in data
+  trainingDataPath <- paste0(imageDirectory,"TrainingDataFrames/",imageName,"_",segName,"TrainData.csv")
+  dat <- read.csv(trainingDataPath, header = T, stringsAsFactors = F)
+
+  dat_T <- dat %>%
+      mutate(LandClass = ifelse(LandClass == "T", LandClass, "O"))
+
+  dat_G <- dat %>%
+      mutate(LandClass = ifelse(LandClass == "G", LandClass, "O"))
+
+  dat_I <- dat %>%
+      mutate(LandClass = ifelse(LandClass == "I", LandClass, "O"))
+
+
+  dropXandZone <- function(x) {dropFeatures(x, c("X","zone"))}
+
+  # Create Tasks
+  task <- makeClassifTask(id = paste0(imageName,"_",segName,"_all"), data = dat, target = "LandClass") %>%
+      dropXandZone
+  task_tree <- makeClassifTask(id = paste0(imageName,"_",segName,"_tree"), data = dat_T, target = "LandClass", positive = "T") %>%
+      dropXandZone
+  task_grass <- makeClassifTask(id = paste0(imageName,"_",segName,"_grass"), data = dat_G, target = "LandClass", positive = "G") %>%
+      dropXandZone
+  task_impervious <- makeClassifTask(id = paste0(imageName,"_",segName,"_impervious"), data = dat_I, target = "LandClass", positive = "I") %>%
+      dropXandZone
+
+  task_list <- list(all = task, tree = task_tree, grass = task_grass, impervious = task_impervious)
+
+  # snippets of code that I don't think I'll need to use, but might
+  # task = normalizeFeatures(task, method = "range")
+  # summary(getTaskData(task))
+
+
+
+                                          # Make Learners
+  # RF
+  RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
+  RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
+  SVM_prob <- makeLearner(id = "svm_prob", "classif.svm", predict.type = "prob", fix.factors.prediction = TRUE)
+  SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
+
+  learner_list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_prob = SVM_prob, SVM_response = SVM_response)
+
+
+                                          # Train Learners on Tasks, Make models
+
+
+  library(foreach)
+
+
+  cl<-makeCluster(nCores)
+  registerDoParallel(cl)
+
+
+  models <- foreach(task = task_list, .packages = "mlr") %:%
+      foreach(learner = learner_list) %dopar% {
+          train(learner, task)
+      }
+
+  endCluster()
+
+  save(models, file = paste0(imageDirectory, "Models/",imageName, "_", segName,".Rdata"))
+  save(models, file = paste0(imageDirectory, "Models/",imageName, "_", segName,".rda"))
+
+
+
+
+
+
+
+#+END_SRC
+
+#+RESULTS:
+
+*** Predict
+#+BEGIN_SRC R
+        #load models
+        modelsPath <- paste0(imageDirectory, "Models/",imageName, "_", segName,".Rdata")
+    load(file = modelsPath)
+    models <- unlist(models, recursive = F)
+
+                                                #load segmenation
+        seg <- raster(paste0("NAIP/Seg/",segName,".tif"))
+
+        imgdata <- read.csv(paste0(imageDirectory, "SegmentFeatureDataFrames/",imageName,"_",segName,"_features.csv"))
+
+
+  # Write Classified Rasters
+    cl<-makeCluster(nCores)
+    registerDoParallel(cl)
+  #  mod <- models[[5]]
+    foreach(mod = models, .packages = c("leaflet", "mlr", "raster", "htmlwidgets", "dplyr")) %dopar% {
+        predicted <- predict(mod, newdata = imgdata[3:12])  # predict model on image segments df
+        # create reclassification, reclassify and assign levels
+        response <- factor(as.character(predicted$data$response), levels = c("G","I","T","O"))
+        m <- cbind(imgdata$zone,response)
+        r <- reclassify(seg, m)
+        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
+            filter(LandCover == levels(factor(response)))
+        levels(r) <- x
+        writeRaster(r, paste0("ClassifiedRasters",mod$task.desc$id,"_",mod$learner$id,".tif")
+    }
+
+        setwd("/Users/tedward/GoogleDrive/Pjt_UFIA")
+
+    endCluster()
+
+                                          # Send Raster to Leaflet
+
+  rasterFileNames <- list.files("ClassifiedRasters", pattern = ".+tif$", full.names = T)
+  r <- lapply(rasterFileNames, raster)
+
+
+
+  setwd("LeafletMaps")
+
+      coldf <- data_frame(colors = c("#ffff99", "#beaed4", "#7fc97f", "#7e7e7e"), LandCover = c("G","I","T","O"))
+       cols <- coldf %>%
+            filter(LandCover %in% levels(r[[13]])[[1]]$category) %>%
+            select(colors)
+
+        types1 <- levels(r[[13]])[[1]][,1]
+        pal1 <- colorFactor(cols$colors, types1)
+
+        types2 <- levels(r[[14]])[[1]][,1]
+        pal2 <- colorFactor(cols$colors, types2)
+
+        types3 <- levels(r[[15]])[[1]][,1]
+        pal3 <- colorFactor(cols$colors, types3)
+
+        types4 <- levels(r[[16]])[[1]][,1]
+        pal4 <- colorFactor(cols$colors, types3)
+
+        map <- leaflet() %>% addProviderTiles("Esri.WorldImagery", group = "ESRI") %>%
+            addRasterImage(r[[13]], group = names(r[[13]]), colors = pal1, opacity = 0.6) %>%
+            addRasterImage(r[[14]], group = names(r[[14]]), colors = pal2, opacity = 0.6) %>%
+            addRasterImage(r[[15]], group = names(r[[15]]), colors = pal1, opacity = 0.6) %>%
+            addRasterImage(r[[16]], group = names(r[[16]]), colors = pal2, opacity = 0.6) %>%
+            addLayersControl(
+                overlayGroups = c("ESRI",names(r[[13]]),names(r[[14]]), names(r[[15]]), names(r[[16]])),
+                options = layersControlOptions(collapsed = FALSE)
+            )
+
+
+  map
+
+        saveWidget(map, file = "tree.html", selfcontained = F)
+
+        saveWidget(map, file = paste0(mod$task.desc$id,mod$l,"_",mod$learner$id,".html"),selfcontained = F)
+
+
+
+
+
+
+
+        predicted <- predict(mod, newdata = imgdata[3:12])
+
+        m <- cbind(imgdata$zone,predicted$data$response)
+        r <- reclassify(seg, m)
+
+
+
+        x <- levels(as.factor(r))[[1]]
+        x$LandCover <- levels(predicted$data$response)
+
+        levels(r) <- x
+
+        cols <- coldf %>%
+            filter(LandCover == levels(predicted$data$response)) %>%
+            select(colors)
+
+        ## m <- data.frame(zone = imgdata$zone,predicted$data$response)
+        ## str(m)
+        ## rdf <- as.data.frame(seg, xy  = T)
+        ## names(rdf)[3] <- "zone"
+        ## dat <- left_join(rdf, m)
+
+      # Send Raster to Leaflet
+
+        types <- levels(r)[[1]][,1]
+        pal <- colorFactor(cols, types)
+        map <- leaflet() %>% addProviderTiles("Esri.WorldImagery", group = "ESRI") %>%
+            addRasterImage(r, group = "r", colors = pal, opacity = 0.6) %>%
+            addLayersControl(
+                overlayGroups = c("ESRI","r"),
+                options = layersControlOptions(collapsed = FALSE)
+                )
+
+
+        saveWidget(map, file = paste0(mod$task.desc$id,mod$l,"_",mod$learner$id,".html"),selfcontained = F)
+    }
+        setwd("/Users/tedward/GoogleDrive/Pjt_UFIA")
+
+
+    endCluster()
+
+
+
+
+     types <- levels(r)[[1]][,2]
+        pal <- colorFactor(c("#ffff99", "#beaed4", "#7fc97f"), types)
+    pal <- colorFactor(c("#ffff99", "#beaed4", "#7fc97f","#7e7e7e"), types, levels = c("G","I","T","O"))
+        #pal <- colorFactor(c("#ffff99", "#beaed4", "#7fc97f","#7e7e7e"), c("G","I","T","O"))
+
+        map <- leaflet() %>% addProviderTiles("Esri.WorldImagery", group = "ESRI") %>%
+            addRasterImage(r, group = "r", colors = pal, opacity = 0.6) %>%
+            addLayersControl(
+                overlayGroups = c("ESRI","r"),
+                options = layersControlOptions(collapsed = FALSE)
+                )
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+ Error: unexpected '}' in:
+"      writeRaster(r, paste0("ClassifiedRasters",mod$task.desc$id,"_",mod$learner$id,".tif")
+  }"
+ Warning messages:
+1: closing unused connection 6 (<-localhost:11247)
+2: closing unused connection 5 (<-localhost:11247)
+3: In colors(.) :
+  Some values were outside the color scale and will be treated as NA
+ Error in levels(predicted$data$c(4L, 4L, 4L, 4L, 4L, 4L, 4L, 4L, 4L, 4L,  :
+  error in evaluating the argument 'x' in selecting a method for function 'levels': Error in predicted$data$c(4L, 4L, 4L, 4L, 4L, 4L, 4L, 4L, 4L, 4L, 4L,  :
+  invalid subscript type 'integer'
+Error in UseMethod("toPaletteFunc") :
+  no applicable method for 'toPaletteFunc' applied to an object of class "c('tbl_df', 'tbl', 'data.frame')"
+ Warning message:
+In colors(.) :
+  Some values were outside the color scale and will be treated as NA
+Error: unexpected '}' in "  }"
+ Warning message:
+In colors(.) :
+  Some values were outside the color scale and will be treated as NA
+#+end_example
+
+
+
+
+
+
+
+
+
+
+
