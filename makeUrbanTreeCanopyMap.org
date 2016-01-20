@@ -9770,7 +9770,7 @@ tile separately.
       return (mnmx)
   }
 
-  cl <- makeCluster(detectCores())
+  cl <- makeCluster(cores)
   registerDoParallel(cl)
 
   minmax <- foreach(i = seq_along(tile.paths), .packages = "raster", .combine = "rbind") %dopar% {
@@ -9781,18 +9781,20 @@ tile separately.
   mx <- apply(minmax, 2, max, na.rm = T)[4:6]
 
 
-  registerDoParallel(cl)
-
-  foreach (i = seq_along(tile.paths), .packages = "raster") %dopar% {
-      range0255(tile.paths[i], tile.names[i])
-  }
-
 
   range0255 <- function(tile.path, tile.name){
       r <- stack(tile.path)
       r <- (r - mn)/(mx-mn) * 255
       writeRaster(r, paste0(image.dd.directory, image.name,"-ScaledPCATiles/",tile.name), overwrite=TRUE)
     }
+
+
+  registerDoParallel(cl)
+
+  foreach (i = seq_along(tile.paths), .packages = "raster") %dopar% {
+      range0255(tile.paths[i], tile.names[i])
+  }
+
 
 
 
@@ -9803,14 +9805,14 @@ tile separately.
 
 *** Merge All PCA into one image (mainly to look at)
 Again, I'm having issues running this from org mode.  Just copy in
-command line.
+command line. from the directory that contains the tiffs you want to merge
 #+BEGIN_SRC sh
 
 # make list of files to merge
-ls -1 ../DD_NAIP-imagery/madison-ScaledPCATiles/*.tif
+ls -1 *.tif > tiff_list.txt
 
 # Merge tiles
-gdal_merge.py -n 0 -v -o ../DD_NAIP-imagery/madison-ScaledPCA.tif --optfile tiff_list.txt
+gdal_merge.py -n 0 -v -o ../wausau-ScaledPCA.tif --optfile tiff_list.txt
 
 #+END_SRC
 
