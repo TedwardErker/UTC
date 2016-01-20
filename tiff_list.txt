@@ -1,0 +1,5 @@
+../DD_NAIP-imagery/wausau-CropMaskedTiles/16000-14000.tif
+../DD_NAIP-imagery/wausau-CropMaskedTiles/16000-15000.tif
+../DD_NAIP-imagery/wausau-CropMaskedTiles/16000-16000.tif
+../DD_NAIP-imagery/wausau-CropMaskedTiles/16000-17000.tif
+../DD_NAIP-imagery/wausau-CropMaskedTiles/16000-18000.tif
