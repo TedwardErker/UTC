@@ -40,27 +40,21 @@ def seg_tiff(RowsColumnsArray, PixPerSeg, compactness):
     print 'Made dem segments'
     return segments
 
-# SegDirectory = '~/mydata/DD_NAIP-imagery/madison-SegTiles'
+SegDirectory = '../../../data2/erker-data2/DD_NAIP-imagery/wausau-SegTiles'
 
-# os.mkdir(SegDirectory)
+os.mkdir(SegDirectory)
 
 bandsToUse = slice(0,3) # Use only principal components 1-3
 
-files = os.listdir("../DD_NAIP-imagery/madison-ScaledPCATiles")
+files = os.listdir("../../../data2/erker-data2/DD_NAIP-imagery/wausau-ScaledPCATiles")
 
-#num_pix = np.array([[15,10], [30, 15], [60, 30], [105,32]])
+num_pix = np.array([[60, 30]])
 
-#num_pix = np.array([[15,10],[105,32]])
-
-#num_pix = np.array([[16,10]])
-#num_pix = np.array([[30, 15]])
-#num_pix = np.array([[60, 30]])
-#num_pix = np.array([[105,32]])
 for f in files :
     for pc in num_pix :
-        source_raster_path = os.path.expanduser('~/mydata/DD_NAIP-imagery/madison-ScaledPCATiles/' + f)
-        target_raster_path = os.path.expanduser('~/mydata/DD_NAIP-imagery/madison-SegTiles/madison-' + f + '_N-%s_C-%s.tif') %(pc[0],pc[1])
-        RowsColumnsArray = create_array_forSeg_fromTiff("../DD_NAIP-imagery/madison-ScaledPCATiles/" + f, bandsToUse)
+        source_raster_path = os.path.expanduser('../../../data2/erker-data2/DD_NAIP-imagery/wausau-ScaledPCATiles/' + f)
+        target_raster_path = os.path.expanduser('../../../data2/erker-data2/DD_NAIP-imagery/wausau-SegTiles/madison-' + f + '_N-%s_C-%s.tif') %(pc[0],pc[1])
+        RowsColumnsArray = create_array_forSeg_fromTiff("../../../data2/erker-data2/DD_NAIP-imagery/wausau-ScaledPCATiles/" + f, bandsToUse)
         segments = seg_tiff(RowsColumnsArray, PixPerSeg = pc[0], compactness = pc[1])
         build_tiff(source_raster_path, target_raster_path, segments)
 

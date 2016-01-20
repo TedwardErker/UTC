@@ -9824,35 +9824,12 @@ gdal_merge.py -n 0 -v -o ../wausau-ScaledPCA.tif --optfile tiff_list.txt
 *** For Tiles
 #+BEGIN_SRC sh
 
-python fia_segment1.py &
-python fia_segment2.py &
-python fia_segment3.py &
-python fia_segment4.py &
+python fia_segment.py
 
 #+END_SRC
 
-In the terminal I run the scripts fia_segmentX.py.
+In the terminal I run the scripts fia_segment.py.
 
-There are four scripts, one for each average pixel size and
-compactness combination that I want to investigate.  This saves time,
-by running four scripts at once.  Don't forget to run them in
-background with "&"
-
-
-
-*** Smaller image (longMadison) to determine the best parameters for segmentation
-for x number of segmentation parameter combinations
-- Read in PCA_image
--  Save results in segmentation folder
-
-As of now (2016-01-06) I haven't been able to run this script within
-org mode.  Instead I open the script separately and run it.  I think
-there are memory issues that cause the segmentation to fail with
-certain combinations of number of pixels per segment and compactness values.
-
-#+BEGIN_SRC sh
-  python Python/fia_segment.py
-#+END_SRC
 
 ** Polygonize Segments
 *** of a subset of tiles for training
