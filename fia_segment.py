@@ -53,7 +53,7 @@ num_pix = np.array([[60, 30]])
 for f in files :
     for pc in num_pix :
         source_raster_path = os.path.expanduser('../../../data2/erker-data2/DD_NAIP-imagery/wausau-ScaledPCATiles/' + f)
-        target_raster_path = os.path.expanduser('../../../data2/erker-data2/DD_NAIP-imagery/wausau-SegTiles/madison-' + f + '_N-%s_C-%s.tif') %(pc[0],pc[1])
+        target_raster_path = os.path.expanduser('../../../data2/erker-data2/DD_NAIP-imagery/wausau-SegTiles/' + f + '_N-%s_C-%s.tif') %(pc[0],pc[1])
         RowsColumnsArray = create_array_forSeg_fromTiff("../../../data2/erker-data2/DD_NAIP-imagery/wausau-ScaledPCATiles/" + f, bandsToUse)
         segments = seg_tiff(RowsColumnsArray, PixPerSeg = pc[0], compactness = pc[1])
         build_tiff(source_raster_path, target_raster_path, segments)
