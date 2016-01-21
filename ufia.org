@@ -4,6 +4,18 @@
 #+PROPERTY:  header-args:R :session *R* :cache no :results output :exports both :tangle yes
 
 * Begin with end in mind
+** End Product:
+A map of urban cover with associated model uncertainty.  For the
+Madison Area.
+
+A reproducible workflow to apply this to any city in WI (or perhaps
+country) with minimal work from user.
+
+** Best Classifer
+To make this map I need to find the best classifier to apply to the
+maps.  To know the best classifier I need to perform an accuracy assessment.
+
+
 npx = number of pixels in segmentation
 cpt = compactness parameter
 
@@ -123,6 +135,9 @@ output:
 *** AccuracyAssessment
 
 * Workflow
+** Find best classifier, Madison Specific
+** Apply best classifier
+
 ** Load Libraries
 #+BEGIN_SRC R
   library(gdalUtils)

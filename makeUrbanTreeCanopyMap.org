@@ -19,8 +19,76 @@
 #+END_SRC
 
 #+RESULTS:
-: Error in library(plyr) : there is no package called 'plyr'
-: Error in library(mlr) : there is no package called 'mlr'
+#+begin_example
+Loading required package: sp
+rgdal: version: 1.0-4, (SVN revision 548)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.10.0, released 2013/04/24
+ Path to GDAL shared files: /usr/share/gdal/1.10
+ Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
+ Path to PROJ.4 shared files: (autodetected)
+ Linking to sp version: 1.1-1
+rgeos version: 0.3-11, (SVN revision 479)
+ GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
+ Linking to sp version: 1.1-1
+ Polygon checking: TRUE
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from ‘package:rgeos’:
+
+    intersect, setdiff, union
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+Loading required package: foreach
+foreach: simple, scalable parallel programming from Revolution Analytics
+Use Revolution R for scalability, fault tolerance and more.
+http://www.revolutionanalytics.com
+Loading required package: iterators
+Loading required package: parallel
+Loading required package: BBmisc
+
+Attaching package: ‘BBmisc’
+
+The following object is masked from ‘package:dplyr’:
+
+    collapse
+
+The following object is masked from ‘package:rgeos’:
+
+    symdiff
+
+Loading required package: ggplot2
+Loading required package: ParamHelpers
+
+Attaching package: ‘ParamHelpers’
+
+The following object is masked from ‘package:raster’:
+
+    getValues
+
+
+Attaching package: ‘mlr’
+
+The following object is masked from ‘package:raster’:
+
+    resample
+#+end_example
 
 ** Load Functions
 #+BEGIN_SRC R
@@ -200,8 +268,8 @@ Crop_mask <- function(tile.path, tile.name, CDL_stack){
       ##################
 
       image.name <- "wausau"
-      image.rd.directory <- "../../RD_NAIP-imagery/"
-      image.dd.directory <- "../../DD_NAIP-imagery/"
+      image.rd.directory <- "../RD_NAIP-imagery/"
+      image.dd.directory <- "../DD_NAIP-imagery/"
 
   dir.create(image.dd.directory)
 
@@ -239,7 +307,7 @@ Crop_mask <- function(tile.path, tile.name, CDL_stack){
 
 #+RESULTS:
 : Warning message:
-: In dir.create(image.dd.directory) : '../../DD_NAIP-imagery' already exists
+: In dir.create(image.dd.directory) : '../DD_NAIP-imagery' already exists
 
 
 ** read in image
@@ -261,6 +329,7 @@ Crop_mask <- function(tile.path, tile.name, CDL_stack){
 [[file:figs/raw-*-432.png]]
 
 ** Reproject image to epsg:26916
+I should make this epsg:3160 to be uptodate?
 #+BEGIN_SRC R
 
   inFile <- str_c(image.rd.directory,image.name,".tif")
@@ -10952,6 +11021,12 @@ Note on Google Earth and the NAIP image:
     This is because the relative cover of the two images is very
     similar over the whole extent, however there is shift.
 
+Note on shadows:
+There are a lot of shadows in the Wausau image.  We are making the
+decision to try to classify these, but report the high uncertainty
+that will be associated with the areas.
+
+
 *** Load Segments and original image into qgis
 
 *** classify features
@@ -11024,24 +11099,888 @@ additional Classes in their attributes
 
 #+RESULTS:
 #+begin_example
-Warning message:
-In dir.create(path = segment.features.path) :
-  '../DD_NAIP-imagery/madison-SegmentFeatureDFs' already exists
- Error in stri_detect_regex(string, pattern, opts_regex = attr(pattern,  :
-  object 'seg.tile.names' not found
- Error in stri_detect_regex(string, pattern, opts_regex = attr(pattern,  :
-  object 'seg.tile.names' not found
-Error in lapply(X = X, FUN = FUN, ...) :
-  object 'seg.tile.names' not found
-Error in stri_extract_first_regex(string, pattern, opts_regex = attr(pattern,  :
-  object 'seg.tile.paths' not found
- Error in lapply(X = X, FUN = FUN, ...) : object 'tiles' not found
- Error in eval(expr, envir, enclos) : object 'ratio.tile.paths' not found
+[[1]]
+madison-0-2000.tif_N-60_C-30.tif
+  "madison-0-2000.tif_N-60_C-30"
+
+[[2]]
+madison-0-21000.tif_N-60_C-30.tif
+  "madison-0-21000.tif_N-60_C-30"
+
+[[3]]
+madison-0-22000.tif_N-60_C-30.tif
+  "madison-0-22000.tif_N-60_C-30"
+
+[[4]]
+madison-0-3000.tif_N-60_C-30.tif
+  "madison-0-3000.tif_N-60_C-30"
+
+[[5]]
+madison-0-4000.tif_N-60_C-30.tif
+  "madison-0-4000.tif_N-60_C-30"
+
+[[6]]
+madison-10000-10000.tif_N-60_C-30.tif
+  "madison-10000-10000.tif_N-60_C-30"
+
+[[7]]
+madison-10000-11000.tif_N-60_C-30.tif
+  "madison-10000-11000.tif_N-60_C-30"
+
+[[8]]
+madison-10000-12000.tif_N-60_C-30.tif
+  "madison-10000-12000.tif_N-60_C-30"
+
+[[9]]
+madison-10000-13000.tif_N-60_C-30.tif
+  "madison-10000-13000.tif_N-60_C-30"
+
+[[10]]
+madison-10000-14000.tif_N-60_C-30.tif
+  "madison-10000-14000.tif_N-60_C-30"
+
+[[11]]
+madison-10000-15000.tif_N-60_C-30.tif
+  "madison-10000-15000.tif_N-60_C-30"
+
+[[12]]
+madison-10000-16000.tif_N-60_C-30.tif
+  "madison-10000-16000.tif_N-60_C-30"
+
+[[13]]
+madison-10000-17000.tif_N-60_C-30.tif
+  "madison-10000-17000.tif_N-60_C-30"
+
+[[14]]
+madison-10000-18000.tif_N-60_C-30.tif
+  "madison-10000-18000.tif_N-60_C-30"
+
+[[15]]
+madison-10000-19000.tif_N-60_C-30.tif
+  "madison-10000-19000.tif_N-60_C-30"
+
+[[16]]
+madison-10000-20000.tif_N-60_C-30.tif
+  "madison-10000-20000.tif_N-60_C-30"
+
+[[17]]
+madison-10000-21000.tif_N-60_C-30.tif
+  "madison-10000-21000.tif_N-60_C-30"
+
+[[18]]
+madison-10000-22000.tif_N-60_C-30.tif
+  "madison-10000-22000.tif_N-60_C-30"
+
+[[19]]
+madison-10000-23000.tif_N-60_C-30.tif
+  "madison-10000-23000.tif_N-60_C-30"
+
+[[20]]
+madison-10000-24000.tif_N-60_C-30.tif
+  "madison-10000-24000.tif_N-60_C-30"
+
+[[21]]
+madison-10000-25000.tif_N-60_C-30.tif
+  "madison-10000-25000.tif_N-60_C-30"
+
+[[22]]
+madison-10000-26000.tif_N-60_C-30.tif
+  "madison-10000-26000.tif_N-60_C-30"
+
+[[23]]
+madison-10000-27000.tif_N-60_C-30.tif
+  "madison-10000-27000.tif_N-60_C-30"
+
+[[24]]
+madison-10000-8000.tif_N-60_C-30.tif
+  "madison-10000-8000.tif_N-60_C-30"
+
+[[25]]
+madison-10000-9000.tif_N-60_C-30.tif
+  "madison-10000-9000.tif_N-60_C-30"
+
+[[26]]
+madison-1000-1000.tif_N-60_C-30.tif
+  "madison-1000-1000.tif_N-60_C-30"
+
+[[27]]
+madison-1000-2000.tif_N-60_C-30.tif
+  "madison-1000-2000.tif_N-60_C-30"
+
+[[28]]
+madison-1000-21000.tif_N-60_C-30.tif
+  "madison-1000-21000.tif_N-60_C-30"
+
+[[29]]
+madison-1000-22000.tif_N-60_C-30.tif
+  "madison-1000-22000.tif_N-60_C-30"
+
+[[30]]
+madison-1000-3000.tif_N-60_C-30.tif
+  "madison-1000-3000.tif_N-60_C-30"
+
+[[31]]
+madison-1000-4000.tif_N-60_C-30.tif
+  "madison-1000-4000.tif_N-60_C-30"
+
+[[32]]
+madison-11000-10000.tif_N-60_C-30.tif
+  "madison-11000-10000.tif_N-60_C-30"
+
+[[33]]
+madison-11000-11000.tif_N-60_C-30.tif
+  "madison-11000-11000.tif_N-60_C-30"
+
+[[34]]
+madison-11000-12000.tif_N-60_C-30.tif
+  "madison-11000-12000.tif_N-60_C-30"
+
+[[35]]
+madison-11000-13000.tif_N-60_C-30.tif
+  "madison-11000-13000.tif_N-60_C-30"
+
+[[36]]
+madison-11000-14000.tif_N-60_C-30.tif
+  "madison-11000-14000.tif_N-60_C-30"
+
+[[37]]
+madison-11000-15000.tif_N-60_C-30.tif
+  "madison-11000-15000.tif_N-60_C-30"
+
+[[38]]
+madison-11000-16000.tif_N-60_C-30.tif
+  "madison-11000-16000.tif_N-60_C-30"
+
+[[39]]
+madison-11000-17000.tif_N-60_C-30.tif
+  "madison-11000-17000.tif_N-60_C-30"
+
+[[40]]
+madison-11000-18000.tif_N-60_C-30.tif
+  "madison-11000-18000.tif_N-60_C-30"
+
+[[41]]
+madison-11000-19000.tif_N-60_C-30.tif
+  "madison-11000-19000.tif_N-60_C-30"
+
+[[42]]
+madison-11000-20000.tif_N-60_C-30.tif
+  "madison-11000-20000.tif_N-60_C-30"
+
+[[43]]
+madison-11000-21000.tif_N-60_C-30.tif
+  "madison-11000-21000.tif_N-60_C-30"
+
+[[44]]
+madison-11000-22000.tif_N-60_C-30.tif
+  "madison-11000-22000.tif_N-60_C-30"
+
+[[45]]
+madison-11000-23000.tif_N-60_C-30.tif
+  "madison-11000-23000.tif_N-60_C-30"
+
+[[46]]
+madison-11000-24000.tif_N-60_C-30.tif
+  "madison-11000-24000.tif_N-60_C-30"
+
+[[47]]
+madison-11000-25000.tif_N-60_C-30.tif
+  "madison-11000-25000.tif_N-60_C-30"
+
+[[48]]
+madison-11000-26000.tif_N-60_C-30.tif
+  "madison-11000-26000.tif_N-60_C-30"
+
+[[49]]
+madison-11000-27000.tif_N-60_C-30.tif
+  "madison-11000-27000.tif_N-60_C-30"
+
+[[50]]
+madison-11000-8000.tif_N-60_C-30.tif
+  "madison-11000-8000.tif_N-60_C-30"
+
+[[51]]
+madison-11000-9000.tif_N-60_C-30.tif
+  "madison-11000-9000.tif_N-60_C-30"
+
+[[52]]
+madison-12000-10000.tif_N-60_C-30.tif
+  "madison-12000-10000.tif_N-60_C-30"
+
+[[53]]
+madison-12000-11000.tif_N-60_C-30.tif
+  "madison-12000-11000.tif_N-60_C-30"
+
+[[54]]
+madison-12000-12000.tif_N-60_C-30.tif
+  "madison-12000-12000.tif_N-60_C-30"
+
+[[55]]
+madison-12000-13000.tif_N-60_C-30.tif
+  "madison-12000-13000.tif_N-60_C-30"
+
+[[56]]
+madison-12000-14000.tif_N-60_C-30.tif
+  "madison-12000-14000.tif_N-60_C-30"
+
+[[57]]
+madison-12000-15000.tif_N-60_C-30.tif
+  "madison-12000-15000.tif_N-60_C-30"
+
+[[58]]
+madison-12000-16000.tif_N-60_C-30.tif
+  "madison-12000-16000.tif_N-60_C-30"
+
+[[59]]
+madison-12000-17000.tif_N-60_C-30.tif
+  "madison-12000-17000.tif_N-60_C-30"
+
+[[60]]
+madison-12000-18000.tif_N-60_C-30.tif
+  "madison-12000-18000.tif_N-60_C-30"
+
+[[61]]
+madison-12000-23000.tif_N-60_C-30.tif
+  "madison-12000-23000.tif_N-60_C-30"
+
+[[62]]
+madison-12000-24000.tif_N-60_C-30.tif
+  "madison-12000-24000.tif_N-60_C-30"
+
+[[63]]
+madison-12000-25000.tif_N-60_C-30.tif
+  "madison-12000-25000.tif_N-60_C-30"
+
+[[64]]
+madison-12000-8000.tif_N-60_C-30.tif
+  "madison-12000-8000.tif_N-60_C-30"
+
+[[65]]
+madison-12000-9000.tif_N-60_C-30.tif
+  "madison-12000-9000.tif_N-60_C-30"
+
+[[66]]
+madison-13000-15000.tif_N-60_C-30.tif
+  "madison-13000-15000.tif_N-60_C-30"
+
+[[67]]
+madison-13000-16000.tif_N-60_C-30.tif
+  "madison-13000-16000.tif_N-60_C-30"
+
+[[68]]
+madison-13000-17000.tif_N-60_C-30.tif
+  "madison-13000-17000.tif_N-60_C-30"
+
+[[69]]
+madison-14000-14000.tif_N-60_C-30.tif
+  "madison-14000-14000.tif_N-60_C-30"
+
+[[70]]
+madison-14000-15000.tif_N-60_C-30.tif
+  "madison-14000-15000.tif_N-60_C-30"
+
+[[71]]
+madison-14000-16000.tif_N-60_C-30.tif
+  "madison-14000-16000.tif_N-60_C-30"
+
+[[72]]
+madison-14000-17000.tif_N-60_C-30.tif
+  "madison-14000-17000.tif_N-60_C-30"
+
+[[73]]
+madison-14000-18000.tif_N-60_C-30.tif
+  "madison-14000-18000.tif_N-60_C-30"
+
+[[74]]
+madison-15000-14000.tif_N-60_C-30.tif
+  "madison-15000-14000.tif_N-60_C-30"
+
+[[75]]
+madison-15000-15000.tif_N-60_C-30.tif
+  "madison-15000-15000.tif_N-60_C-30"
+
+[[76]]
+madison-15000-16000.tif_N-60_C-30.tif
+  "madison-15000-16000.tif_N-60_C-30"
+
+[[77]]
+madison-15000-17000.tif_N-60_C-30.tif
+  "madison-15000-17000.tif_N-60_C-30"
+
+[[78]]
+madison-15000-18000.tif_N-60_C-30.tif
+  "madison-15000-18000.tif_N-60_C-30"
+
+[[79]]
+madison-16000-14000.tif_N-60_C-30.tif
+  "madison-16000-14000.tif_N-60_C-30"
+
+[[80]]
+madison-16000-15000.tif_N-60_C-30.tif
+  "madison-16000-15000.tif_N-60_C-30"
+
+[[81]]
+madison-16000-16000.tif_N-60_C-30.tif
+  "madison-16000-16000.tif_N-60_C-30"
+
+[[82]]
+madison-16000-17000.tif_N-60_C-30.tif
+  "madison-16000-17000.tif_N-60_C-30"
+
+[[83]]
+madison-16000-18000.tif_N-60_C-30.tif
+  "madison-16000-18000.tif_N-60_C-30"
+
+[[84]]
+madison-17000-14000.tif_N-60_C-30.tif
+  "madison-17000-14000.tif_N-60_C-30"
+
+[[85]]
+madison-17000-15000.tif_N-60_C-30.tif
+  "madison-17000-15000.tif_N-60_C-30"
+
+[[86]]
+madison-17000-16000.tif_N-60_C-30.tif
+  "madison-17000-16000.tif_N-60_C-30"
+
+[[87]]
+madison-18000-15000.tif_N-60_C-30.tif
+  "madison-18000-15000.tif_N-60_C-30"
+
+[[88]]
+madison-18000-16000.tif_N-60_C-30.tif
+  "madison-18000-16000.tif_N-60_C-30"
+
+[[89]]
+madison-19000-15000.tif_N-60_C-30.tif
+  "madison-19000-15000.tif_N-60_C-30"
+
+[[90]]
+madison-2000-2000.tif_N-60_C-30.tif
+  "madison-2000-2000.tif_N-60_C-30"
+
+[[91]]
+madison-2000-21000.tif_N-60_C-30.tif
+  "madison-2000-21000.tif_N-60_C-30"
+
+[[92]]
+madison-2000-22000.tif_N-60_C-30.tif
+  "madison-2000-22000.tif_N-60_C-30"
+
+[[93]]
+madison-2000-23000.tif_N-60_C-30.tif
+  "madison-2000-23000.tif_N-60_C-30"
+
+[[94]]
+madison-2000-3000.tif_N-60_C-30.tif
+  "madison-2000-3000.tif_N-60_C-30"
+
+[[95]]
+madison-2000-4000.tif_N-60_C-30.tif
+  "madison-2000-4000.tif_N-60_C-30"
+
+[[96]]
+madison-3000-20000.tif_N-60_C-30.tif
+  "madison-3000-20000.tif_N-60_C-30"
+
+[[97]]
+madison-3000-2000.tif_N-60_C-30.tif
+  "madison-3000-2000.tif_N-60_C-30"
+
+[[98]]
+madison-3000-21000.tif_N-60_C-30.tif
+  "madison-3000-21000.tif_N-60_C-30"
+
+[[99]]
+madison-3000-22000.tif_N-60_C-30.tif
+  "madison-3000-22000.tif_N-60_C-30"
+
+[[100]]
+madison-3000-23000.tif_N-60_C-30.tif
+  "madison-3000-23000.tif_N-60_C-30"
+
+[[101]]
+madison-3000-3000.tif_N-60_C-30.tif
+  "madison-3000-3000.tif_N-60_C-30"
+
+[[102]]
+madison-3000-4000.tif_N-60_C-30.tif
+  "madison-3000-4000.tif_N-60_C-30"
+
+[[103]]
+madison-4000-0.tif_N-60_C-30.tif
+  "madison-4000-0.tif_N-60_C-30"
+
+[[104]]
+madison-4000-1000.tif_N-60_C-30.tif
+  "madison-4000-1000.tif_N-60_C-30"
+
+[[105]]
+madison-4000-19000.tif_N-60_C-30.tif
+  "madison-4000-19000.tif_N-60_C-30"
+
+[[106]]
+madison-4000-20000.tif_N-60_C-30.tif
+  "madison-4000-20000.tif_N-60_C-30"
+
+[[107]]
+madison-4000-2000.tif_N-60_C-30.tif
+  "madison-4000-2000.tif_N-60_C-30"
+
+[[108]]
+madison-4000-21000.tif_N-60_C-30.tif
+  "madison-4000-21000.tif_N-60_C-30"
+
+[[109]]
+madison-4000-22000.tif_N-60_C-30.tif
+  "madison-4000-22000.tif_N-60_C-30"
+
+[[110]]
+madison-4000-23000.tif_N-60_C-30.tif
+  "madison-4000-23000.tif_N-60_C-30"
+
+[[111]]
+madison-4000-3000.tif_N-60_C-30.tif
+  "madison-4000-3000.tif_N-60_C-30"
+
+[[112]]
+madison-4000-4000.tif_N-60_C-30.tif
+  "madison-4000-4000.tif_N-60_C-30"
+
+[[113]]
+madison-4000-5000.tif_N-60_C-30.tif
+  "madison-4000-5000.tif_N-60_C-30"
+
+[[114]]
+madison-4000-6000.tif_N-60_C-30.tif
+  "madison-4000-6000.tif_N-60_C-30"
+
+[[115]]
+madison-5000-0.tif_N-60_C-30.tif
+  "madison-5000-0.tif_N-60_C-30"
+
+[[116]]
+madison-5000-10000.tif_N-60_C-30.tif
+  "madison-5000-10000.tif_N-60_C-30"
+
+[[117]]
+madison-5000-1000.tif_N-60_C-30.tif
+  "madison-5000-1000.tif_N-60_C-30"
+
+[[118]]
+madison-5000-14000.tif_N-60_C-30.tif
+  "madison-5000-14000.tif_N-60_C-30"
+
+[[119]]
+madison-5000-15000.tif_N-60_C-30.tif
+  "madison-5000-15000.tif_N-60_C-30"
+
+[[120]]
+madison-5000-16000.tif_N-60_C-30.tif
+  "madison-5000-16000.tif_N-60_C-30"
+
+[[121]]
+madison-5000-18000.tif_N-60_C-30.tif
+  "madison-5000-18000.tif_N-60_C-30"
+
+[[122]]
+madison-5000-19000.tif_N-60_C-30.tif
+  "madison-5000-19000.tif_N-60_C-30"
+
+[[123]]
+madison-5000-20000.tif_N-60_C-30.tif
+  "madison-5000-20000.tif_N-60_C-30"
+
+[[124]]
+madison-5000-2000.tif_N-60_C-30.tif
+  "madison-5000-2000.tif_N-60_C-30"
+
+[[125]]
+madison-5000-21000.tif_N-60_C-30.tif
+  "madison-5000-21000.tif_N-60_C-30"
+
+[[126]]
+madison-5000-22000.tif_N-60_C-30.tif
+  "madison-5000-22000.tif_N-60_C-30"
+
+[[127]]
+madison-5000-23000.tif_N-60_C-30.tif
+  "madison-5000-23000.tif_N-60_C-30"
+
+[[128]]
+madison-5000-24000.tif_N-60_C-30.tif
+  "madison-5000-24000.tif_N-60_C-30"
+
+[[129]]
+madison-5000-28000.tif_N-60_C-30.tif
+  "madison-5000-28000.tif_N-60_C-30"
+
+[[130]]
+madison-5000-29000.tif_N-60_C-30.tif
+  "madison-5000-29000.tif_N-60_C-30"
+
+[[131]]
+madison-5000-3000.tif_N-60_C-30.tif
+  "madison-5000-3000.tif_N-60_C-30"
+
+[[132]]
+madison-5000-4000.tif_N-60_C-30.tif
+  "madison-5000-4000.tif_N-60_C-30"
+
+[[133]]
+madison-5000-5000.tif_N-60_C-30.tif
+  "madison-5000-5000.tif_N-60_C-30"
+
+[[134]]
+madison-5000-6000.tif_N-60_C-30.tif
+  "madison-5000-6000.tif_N-60_C-30"
+
+[[135]]
+madison-5000-7000.tif_N-60_C-30.tif
+  "madison-5000-7000.tif_N-60_C-30"
+
+[[136]]
+madison-5000-8000.tif_N-60_C-30.tif
+  "madison-5000-8000.tif_N-60_C-30"
+
+[[137]]
+madison-5000-9000.tif_N-60_C-30.tif
+  "madison-5000-9000.tif_N-60_C-30"
+
+[[138]]
+madison-6000-10000.tif_N-60_C-30.tif
+  "madison-6000-10000.tif_N-60_C-30"
+
+[[139]]
+madison-6000-1000.tif_N-60_C-30.tif
+  "madison-6000-1000.tif_N-60_C-30"
+
+[[140]]
+madison-6000-11000.tif_N-60_C-30.tif
+  "madison-6000-11000.tif_N-60_C-30"
+
+[[141]]
+madison-6000-14000.tif_N-60_C-30.tif
+  "madison-6000-14000.tif_N-60_C-30"
+
+[[142]]
+madison-6000-15000.tif_N-60_C-30.tif
+  "madison-6000-15000.tif_N-60_C-30"
+
+[[143]]
+madison-6000-16000.tif_N-60_C-30.tif
+  "madison-6000-16000.tif_N-60_C-30"
+
+[[144]]
+madison-6000-17000.tif_N-60_C-30.tif
+  "madison-6000-17000.tif_N-60_C-30"
+
+[[145]]
+madison-6000-18000.tif_N-60_C-30.tif
+  "madison-6000-18000.tif_N-60_C-30"
+
+[[146]]
+madison-6000-19000.tif_N-60_C-30.tif
+  "madison-6000-19000.tif_N-60_C-30"
+
+[[147]]
+madison-6000-20000.tif_N-60_C-30.tif
+  "madison-6000-20000.tif_N-60_C-30"
+
+[[148]]
+madison-6000-2000.tif_N-60_C-30.tif
+  "madison-6000-2000.tif_N-60_C-30"
+
+[[149]]
+madison-6000-21000.tif_N-60_C-30.tif
+  "madison-6000-21000.tif_N-60_C-30"
+
+[[150]]
+madison-6000-22000.tif_N-60_C-30.tif
+  "madison-6000-22000.tif_N-60_C-30"
+
+[[151]]
+madison-6000-23000.tif_N-60_C-30.tif
+  "madison-6000-23000.tif_N-60_C-30"
+
+[[152]]
+madison-6000-24000.tif_N-60_C-30.tif
+  "madison-6000-24000.tif_N-60_C-30"
+
+[[153]]
+madison-6000-25000.tif_N-60_C-30.tif
+  "madison-6000-25000.tif_N-60_C-30"
+
+[[154]]
+madison-6000-26000.tif_N-60_C-30.tif
+  "madison-6000-26000.tif_N-60_C-30"
+
+[[155]]
+madison-6000-27000.tif_N-60_C-30.tif
+  "madison-6000-27000.tif_N-60_C-30"
+
+[[156]]
+madison-6000-28000.tif_N-60_C-30.tif
+  "madison-6000-28000.tif_N-60_C-30"
+
+[[157]]
+madison-6000-29000.tif_N-60_C-30.tif
+  "madison-6000-29000.tif_N-60_C-30"
+
+[[158]]
+madison-6000-3000.tif_N-60_C-30.tif
+  "madison-6000-3000.tif_N-60_C-30"
+
+[[159]]
+madison-6000-7000.tif_N-60_C-30.tif
+  "madison-6000-7000.tif_N-60_C-30"
+
+[[160]]
+madison-6000-8000.tif_N-60_C-30.tif
+  "madison-6000-8000.tif_N-60_C-30"
+
+[[161]]
+madison-6000-9000.tif_N-60_C-30.tif
+  "madison-6000-9000.tif_N-60_C-30"
+
+[[162]]
+madison-7000-10000.tif_N-60_C-30.tif
+  "madison-7000-10000.tif_N-60_C-30"
+
+[[163]]
+madison-7000-11000.tif_N-60_C-30.tif
+  "madison-7000-11000.tif_N-60_C-30"
+
+[[164]]
+madison-7000-12000.tif_N-60_C-30.tif
+  "madison-7000-12000.tif_N-60_C-30"
+
+[[165]]
+madison-7000-13000.tif_N-60_C-30.tif
+  "madison-7000-13000.tif_N-60_C-30"
+
+[[166]]
+madison-7000-14000.tif_N-60_C-30.tif
+  "madison-7000-14000.tif_N-60_C-30"
+
+[[167]]
+madison-7000-15000.tif_N-60_C-30.tif
+  "madison-7000-15000.tif_N-60_C-30"
+
+[[168]]
+madison-7000-16000.tif_N-60_C-30.tif
+  "madison-7000-16000.tif_N-60_C-30"
+
+[[169]]
+madison-7000-17000.tif_N-60_C-30.tif
+  "madison-7000-17000.tif_N-60_C-30"
+
+[[170]]
+madison-7000-18000.tif_N-60_C-30.tif
+  "madison-7000-18000.tif_N-60_C-30"
+
+[[171]]
+madison-7000-19000.tif_N-60_C-30.tif
+  "madison-7000-19000.tif_N-60_C-30"
+
+[[172]]
+madison-7000-20000.tif_N-60_C-30.tif
+  "madison-7000-20000.tif_N-60_C-30"
+
+[[173]]
+madison-7000-2000.tif_N-60_C-30.tif
+  "madison-7000-2000.tif_N-60_C-30"
+
+[[174]]
+madison-7000-21000.tif_N-60_C-30.tif
+  "madison-7000-21000.tif_N-60_C-30"
+
+[[175]]
+madison-7000-22000.tif_N-60_C-30.tif
+  "madison-7000-22000.tif_N-60_C-30"
+
+[[176]]
+madison-7000-23000.tif_N-60_C-30.tif
+  "madison-7000-23000.tif_N-60_C-30"
+
+[[177]]
+madison-7000-24000.tif_N-60_C-30.tif
+  "madison-7000-24000.tif_N-60_C-30"
+
+[[178]]
+madison-7000-25000.tif_N-60_C-30.tif
+  "madison-7000-25000.tif_N-60_C-30"
+
+[[179]]
+madison-7000-26000.tif_N-60_C-30.tif
+  "madison-7000-26000.tif_N-60_C-30"
+
+[[180]]
+madison-7000-3000.tif_N-60_C-30.tif
+  "madison-7000-3000.tif_N-60_C-30"
+
+[[181]]
+madison-8000-10000.tif_N-60_C-30.tif
+  "madison-8000-10000.tif_N-60_C-30"
+
+[[182]]
+madison-8000-11000.tif_N-60_C-30.tif
+  "madison-8000-11000.tif_N-60_C-30"
+
+[[183]]
+madison-8000-12000.tif_N-60_C-30.tif
+  "madison-8000-12000.tif_N-60_C-30"
+
+[[184]]
+madison-8000-13000.tif_N-60_C-30.tif
+  "madison-8000-13000.tif_N-60_C-30"
+
+[[185]]
+madison-8000-14000.tif_N-60_C-30.tif
+  "madison-8000-14000.tif_N-60_C-30"
+
+[[186]]
+madison-8000-15000.tif_N-60_C-30.tif
+  "madison-8000-15000.tif_N-60_C-30"
+
+[[187]]
+madison-8000-16000.tif_N-60_C-30.tif
+  "madison-8000-16000.tif_N-60_C-30"
+
+[[188]]
+madison-8000-17000.tif_N-60_C-30.tif
+  "madison-8000-17000.tif_N-60_C-30"
+
+[[189]]
+madison-8000-18000.tif_N-60_C-30.tif
+  "madison-8000-18000.tif_N-60_C-30"
+
+[[190]]
+madison-8000-19000.tif_N-60_C-30.tif
+  "madison-8000-19000.tif_N-60_C-30"
+
+[[191]]
+madison-8000-20000.tif_N-60_C-30.tif
+  "madison-8000-20000.tif_N-60_C-30"
+
+[[192]]
+madison-8000-21000.tif_N-60_C-30.tif
+  "madison-8000-21000.tif_N-60_C-30"
+
+[[193]]
+madison-8000-22000.tif_N-60_C-30.tif
+  "madison-8000-22000.tif_N-60_C-30"
+
+[[194]]
+madison-8000-23000.tif_N-60_C-30.tif
+  "madison-8000-23000.tif_N-60_C-30"
+
+[[195]]
+madison-8000-24000.tif_N-60_C-30.tif
+  "madison-8000-24000.tif_N-60_C-30"
+
+[[196]]
+madison-8000-25000.tif_N-60_C-30.tif
+  "madison-8000-25000.tif_N-60_C-30"
+
+[[197]]
+madison-8000-26000.tif_N-60_C-30.tif
+  "madison-8000-26000.tif_N-60_C-30"
+
+[[198]]
+madison-8000-8000.tif_N-60_C-30.tif
+  "madison-8000-8000.tif_N-60_C-30"
+
+[[199]]
+madison-8000-9000.tif_N-60_C-30.tif
+  "madison-8000-9000.tif_N-60_C-30"
+
+[[200]]
+madison-9000-10000.tif_N-60_C-30.tif
+  "madison-9000-10000.tif_N-60_C-30"
+
+[[201]]
+madison-9000-11000.tif_N-60_C-30.tif
+  "madison-9000-11000.tif_N-60_C-30"
+
+[[202]]
+madison-9000-12000.tif_N-60_C-30.tif
+  "madison-9000-12000.tif_N-60_C-30"
+
+[[203]]
+madison-9000-13000.tif_N-60_C-30.tif
+  "madison-9000-13000.tif_N-60_C-30"
+
+[[204]]
+madison-9000-14000.tif_N-60_C-30.tif
+  "madison-9000-14000.tif_N-60_C-30"
+
+[[205]]
+madison-9000-15000.tif_N-60_C-30.tif
+  "madison-9000-15000.tif_N-60_C-30"
+
+[[206]]
+madison-9000-16000.tif_N-60_C-30.tif
+  "madison-9000-16000.tif_N-60_C-30"
+
+[[207]]
+madison-9000-17000.tif_N-60_C-30.tif
+  "madison-9000-17000.tif_N-60_C-30"
+
+[[208]]
+madison-9000-18000.tif_N-60_C-30.tif
+  "madison-9000-18000.tif_N-60_C-30"
+
+[[209]]
+madison-9000-19000.tif_N-60_C-30.tif
+  "madison-9000-19000.tif_N-60_C-30"
+
+[[210]]
+madison-9000-20000.tif_N-60_C-30.tif
+  "madison-9000-20000.tif_N-60_C-30"
+
+[[211]]
+madison-9000-21000.tif_N-60_C-30.tif
+  "madison-9000-21000.tif_N-60_C-30"
+
+[[212]]
+madison-9000-22000.tif_N-60_C-30.tif
+  "madison-9000-22000.tif_N-60_C-30"
+
+[[213]]
+madison-9000-23000.tif_N-60_C-30.tif
+  "madison-9000-23000.tif_N-60_C-30"
+
+[[214]]
+madison-9000-24000.tif_N-60_C-30.tif
+  "madison-9000-24000.tif_N-60_C-30"
+
+[[215]]
+madison-9000-25000.tif_N-60_C-30.tif
+  "madison-9000-25000.tif_N-60_C-30"
+
+[[216]]
+madison-9000-26000.tif_N-60_C-30.tif
+  "madison-9000-26000.tif_N-60_C-30"
+
+[[217]]
+madison-9000-27000.tif_N-60_C-30.tif
+  "madison-9000-27000.tif_N-60_C-30"
+
+[[218]]
+madison-9000-8000.tif_N-60_C-30.tif
+  "madison-9000-8000.tif_N-60_C-30"
+
+[[219]]
+madison-9000-9000.tif_N-60_C-30.tif
+  "madison-9000-9000.tif_N-60_C-30"
 #+end_example
 
 *** Read in Training Polygons and Create DF to build models
 
 reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingModels"
+
+
 
 #+BEGIN_SRC R
                                           # Read in the training data from the shapefiles
@@ -11100,81 +12039,135 @@ reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingMod
   saveRDS(TrainingData, file = str_c(image.dd.directory, image.name, "-DataForBuildingModel/trainingData.rds"))
 #+END_SRC
 
-*** Build SVM and RF models
+#+RESULTS:
+#+begin_example
+ OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-0-22000.tif_N-60_C-30.tif"
+with 15597 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-10000-22000.tif_N-60_C-30.tif"
+with 15306 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-1000-22000.tif_N-60_C-30.tif"
+with 15434 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-11000-22000.tif_N-60_C-30.tif"
+with 15535 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-2000-22000.tif_N-60_C-30.tif"
+with 15472 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-3000-22000.tif_N-60_C-30.tif"
+with 15442 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-4000-22000.tif_N-60_C-30.tif"
+with 15375 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-5000-22000.tif_N-60_C-30.tif"
+with 15316 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-6000-22000.tif_N-60_C-30.tif"
+with 15330 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-7000-22000.tif_N-60_C-30.tif"
+with 15427 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-8000-22000.tif_N-60_C-30.tif"
+with 15354 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../DD_NAIP-imagery/wausau-TrainingPolygons", layer: "madison-9000-22000.tif_N-60_C-30.tif"
+with 15227 features
+It has 2 fields
+ Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+Joining by: "zone"
+#+end_example
+
+*** Build models
 #+BEGIN_SRC R
 
-  # Read in data
-  pathToTrainingDFs <-  str_c(image.dd.directory, image.name, "-DataForBuildingModel/trainingData.rds")
+    # Read in data
+    pathToTrainingDFs <-  str_c(image.dd.directory, image.name, "-DataForBuildingModel/trainingData.rds")
 
-  dat.list <- readRDS(pathToTrainingDFs)
+    dat.list <- readRDS(pathToTrainingDFs)
 
-  # Copy Data for Cover specfic models
-  dat.list_T <- lapply(dat.list, function(d) {
-                           mutate(d, Class = as.character(Class)) %>%
-                           mutate(Class = ifelse(Class == "T", Class, "O"))
-                       })
-
-
-
-  # Create Tasks
-
-  task.list <- lapply(seq_along(dat.list), function(i) {
-      makeClassifTask(id = paste0(image.name,"_",names(dat.list)[[i]],"_all"), data = dat.list[[i]], target = "Class") %>%
-          dropFeatures("zone")
-  })
-
-  tree.task.list <- lapply(seq_along(dat.list_T), function(i) {
-      makeClassifTask(id = paste0(image.name,"_",names(dat.list_T)[[i]],"_tree"), data = dat.list_T[[i]], target = "Class", positive = "T") %>%
-          dropFeatures("zone")
-  })
+    # Copy Data for Cover specfic models
+    dat.list_T <- lapply(dat.list, function(d) {
+                             mutate(d, Class = as.character(Class)) %>%
+                             mutate(Class = ifelse(Class == "T", Class, "O"))
+                         })
 
 
-  task.list <- list(all = task.list, tree = tree.task.list) %>%
-      unlist(recursive = F)
+
+    # Create Tasks
+
+    task.list <- lapply(seq_along(dat.list), function(i) {
+        makeClassifTask(id = paste0(image.name,"_",names(dat.list)[[i]],"_all"), data = dat.list[[i]], target = "Class") %>%
+            dropFeatures("zone")
+    })
+
+    tree.task.list <- lapply(seq_along(dat.list_T), function(i) {
+        makeClassifTask(id = paste0(image.name,"_",names(dat.list_T)[[i]],"_tree"), data = dat.list_T[[i]], target = "Class", positive = "T") %>%
+            dropFeatures("zone")
+    })
 
 
-                                            # Make Learners
-    # RF
-    RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
-#    RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
-
-#    SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
-
-#    learner_list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
-    learner_list <- list(RF_prob = RF_prob)
-
-                                            # Train Learners on Tasks, Make models
-
-  cl<-makeCluster(cores)
-  registerDoParallel(cl)
+    task.list <- list(all = task.list, tree = tree.task.list) %>%
+        unlist(recursive = F)
 
 
-    models <- foreach(task = task.list, .packages = "mlr") %:%
-        foreach(learner = learner_list) %dopar% {
-            train(learner, task)
-        }
+                                              # Make Learners
+      # RF
+      RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
+  #    RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
 
-  dir.create(str_c(image.dd.directory,image.name, "-Models"))
-  saveRDS(models, file = paste0(image.dd.directory,image.name,"-Models/models.rds"))
+      SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
+
+  #    learner_list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
+      learner_list <- list(RF_prob = RF_prob, SVM_response = SVM_response)
+
+                                              # Train Learners on Tasks, Make models
+
+    cl<-makeCluster(cores)
+    registerDoParallel(cl)
+
+
+      models <- foreach(task = task.list, .packages = "mlr") %:%
+          foreach(learner = learner_list) %dopar% {
+              train(learner, task)
+          }
+
+    dir.create(str_c(image.dd.directory,image.name, "-Models"))
+    saveRDS(models, file = paste0(image.dd.directory,image.name,"-Models/models.rds"))
 
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
- Error in eval(expr, envir, enclos) (from #2) :
-  could not find function "makeClassifTask"
- Error in eval(expr, envir, enclos) (from #2) :
-  could not find function "makeClassifTask"
- Error in eval(expr, envir, enclos) : object 'task.list' not found
-Error: could not find function "makeLearner"
-Error: object 'RF_prob' not found
- Error in eval(expr, envir, enclos) : object 'task.list' not found
-Warning message:
-In dir.create(str_c(image.dd.directory, image.name, "-Models")) :
-  '../../DD_NAIP-imagery/wausau-Models' already exists
-Error in saveRDS(models, file = paste0(image.dd.directory, image.name,  :
-  object 'models' not found
-#+end_example
+:  Warning in fixupData.Task(task, target, fixup.data) :
+:   Empty factor levels were dropped for columns: Class
+: Warning message:
+: In dir.create(str_c(image.dd.directory, image.name, "-Models")) :
+:   '../DD_NAIP-imagery/wausau-Models' already exists
 
 *** Apply models to create classifications
 #+BEGIN_SRC R
@@ -11218,6 +12211,11 @@ Error in saveRDS(models, file = paste0(image.dd.directory, image.name,  :
   }
 
 
+  ## i <- 100
+  ## seg.file.path <- seg.files[i]
+  ## feature.file.path <- features.files[i]
+  ## tile.name <- tile.names[i]
+  ## j <- 1
 
   # I have to apply the correct model to each segmentation
   PredictOnSegmentedRaster <- function(seg.file.path, feature.file.path, tile.name, models) {
@@ -11238,9 +12236,17 @@ Error in saveRDS(models, file = paste0(image.dd.directory, image.name,  :
           m <- cbind(zone = complete.features$zone, response)
           m <- left_join(as.data.frame(features["zone"]), as.data.frame(m))
           r <- reclassify(seg, m)
-          x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
-              filter(LandCover %in% levels(factor(response)))
-          levels(r) <- x
+  #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
+  #            filter(LandCover %in% levels(factor(response)))
+  #        levels(r) <- x
+          if (ncol(pred$data) > 2) {
+              prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
+              ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
+              m <- cbind(zone = complete.features$zone, ProbOfClass)
+              m <- left_join(as.data.frame(features["zone"]), as.data.frame(m))
+              p <- reclassify(seg, m)
+              r <- stack(r,p)
+          }
           path <- paste0(image.dd.directory,image.name,"-ClassifiedTiles/",mods[[j]]$task.desc$id,"/",mods[[j]]$learner$id,"/",tile.name,".tif")
           writeRaster(r, path, overwrite=TRUE)
       }
@@ -11248,7 +12254,11 @@ Error in saveRDS(models, file = paste0(image.dd.directory, image.name,  :
 
 
 
+
+
+
   cl<-makeCluster(cores)
+  cl <- makeCluster(15)
   registerDoParallel(cl)
 
   foreach(i = seq_along(seg.files), .packages = c("raster","dplyr","stringr","foreach","mlr")) %dopar% {
@@ -11257,23 +12267,37 @@ Error in saveRDS(models, file = paste0(image.dd.directory, image.name,  :
 
 
 
+
 #+END_SRC
 
+#+RESULTS:
+#+begin_example
+[[1]]
+[1] TRUE
+
+[[2]]
+[1] TRUE
+[[1]]
+[1] TRUE
+
+[[2]]
+[1] TRUE
+ Error in { :
+  task 26 failed - "task 1 failed - "Assertion on 'newdata' failed: Must have at least 1 rows, but has 0 rows""
+In addition: There were 16 warnings (use warnings() to see them)
+#+end_example
+
 *** merge classifications into single images
-Again, I'm having issues running this from org mode.  Just copy in
-command line.
+Run the below loop from the *-ClassifiedTiles directory.
+
+The parenthesis and the "&" at the end of the expression make it run
+in parallel.
 #+BEGIN_SRC sh
-
-  # make list of files to merge
-  #ls -1 ../DD_NAIP-imagery/madison-ScaledPCATiles/*.tif > tiff_list.txt
-
-  # Merge tiles
-  #gdal_merge.py -n 0 -v -o ../DD_NAIP-imagery/madison-ScaledPCA.tif --optfile tiff_list.txt
 
   for r in */*
    do
-   ls -1 $r/*.tif > tiff_list.txt
-   gdal_merge.py -n 0 -v -o $r/combinedClassification.tif --optfile tiff_list.txt
+   (ls -1 $r/*000.tif > $r/tiff_list.txt
+   gdal_merge.py -n 0 -v -o $r/combinedClassification.tif --optfile $r/tiff_list.txt) &
    done
 
 #+END_SRC
