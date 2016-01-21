@@ -301,7 +301,8 @@ Crop_mask <- function(tile.path, tile.name, CDL_stack){
       crop2013.name <- "CDL_2013_clip_20151229123327_86558742"
       crop2014.name <- "CDL_2014_clip_20151229123327_86558742"
 
-
+  #  Specify the number of tiles to polygonize
+  n_TilesToSample <- 50
 #+END_SRC
 
 #+RESULTS:
@@ -9812,16 +9813,45 @@ command line. from the directory that contains the tiffs you want to merge
 ls -1 *.tif > tiff_list.txt
 
 # Merge tiles
-gdal_merge.py -n 0 -v -o ../wausau-ScaledPCA.tif --optfile tiff_list.txt
+gdal_merge.py -a_nodata 0 -v -o ../wausau-ScaledPCA.tif --optfile tiff_list.txt
 
 #+END_SRC
 
 #+RESULTS:
 
+*** make values less than zero in combined PCA image NA
+
+I maybe shouldn't do this.  Perhaps qgis is just interpreting NA as
+very low
+
+#+BEGIN_SRC R
+
+  r <- stack(paste0(image.dd.directory,image.name,"-ScaledPCA.tif"))
+
+  ZeroToNA <- function(x) {
+      x[x <= 0] <- NA
+      return(x)
+  }
+
+  beginCluster(cores)
+
+  rn <- clusterR(r, calc, args = list(fun = ZeroToNA))
+
+  endCluster()
+
+  writeRaster(rn, paste0(image.dd.directory,image.name,"-ScaledPCA_0min.tif"), overwrite = T)
+
+  png(paste0("figs/",image.name,"-ScaledPCA_0min.png"))
+  plotRGB(rn,1,2,3)
+  dev.off()
+
+
+#+END_SRC
+[[file:figs/*-ScaledPCA.png]]
+[[file:figs/*-ScaledPCA*.png]]
 
 
 ** Segment image
-*** For Tiles
 #+BEGIN_SRC sh
 
 python fia_segment.py
@@ -9850,7 +9880,7 @@ In the terminal I run the scripts fia_segment.py.
   c <- unique(b)
                                           # randomly sample from those
   set.seed(3)
-  d <- sample(c, 10)
+  d <- sample(c, n_TilesToSample)
   # select the segmentations of the sample of segmentations
 
   index <- sapply(d, function(d) grepl(d, x = tile.paths))
@@ -9858,7 +9888,7 @@ In the terminal I run the scripts fia_segment.py.
   tile.pathsToSample <- tile.paths[as.logical(index)]
   tile.namesToSample <- tile.names[as.logical(index)]
 
-  cl <- makeCluster(detectCores())
+  cl <- makeCluster(cores)
   registerDoParallel(cl)
 
   foreach (i = seq_along(tile.pathsToSample), .packages = c("raster","sp","gdalUtils")) %dopar% {
@@ -9873,55 +9903,6 @@ In the terminal I run the scripts fia_segment.py.
   }
 
 #+END_SRC
-*** of a single small scene
-#+BEGIN_SRC R
-  segPath <- paste0("SegmentationImage/")
-  segNames <- list.files(path = segPath)
-
-  lapply(segNames, function(x) {
-      seg <- raster(paste0(segPath,x))
-      s <- gdal_polygonizeR(seg)
-      writeOGR(obj = s, dsn = paste0("Seg_Shapefiles"), layer = x,
-               driver = "ESRI Shapefile",
-               overwrite=TRUE)
-  })
-#+END_SRC
-
-#+RESULTS:
-#+begin_example
- Creating output /var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T//RtmpiEs2yf/filea9c33dcf239.shp of format ESRI Shapefile.
-0...10...20...30...40...50...60...70...80...90...100 - done.
-Creating output /var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T//RtmpiEs2yf/filea9c74595d36.shp of format ESRI Shapefile.
-0...10...20...30...40...50...60...70...80...90...100 - done.
-Creating output /var/folders/yj/vjkj1yyx1n510rf_rggqdb640000gr/T//RtmpiEs2yf/filea9c21b0e278.shp of format ESRI Shapefile.
-0...10...20...30...40...50...60...70...80...90...100 - done.
-[[1]]
-NULL
-
-[[2]]
-NULL
-
-[[3]]
-NULL
-#+end_example
-
-Segmentations that I will use:
-
-
-
-|   | Average Pixel number | Compactness |
-|---+----------------------+-------------|
-|   |                   15 |          10 |
-|   |                   30 |          15 |
-|   |                   45 |          31 |
-|   |                   60 |          30 |
-|   |                  105 |          32 |
-|   |                      |             |
-
-
-think I'll try the best compactness from pixel number 15, 30, 60,
-and 105.  Other sizes looked good too, but I think 105 is near the
-upper limit.  Smaller than 15 doesn't make much sense either.
 
 
 ** Manually classify segments for training data in qgis
