@@ -11081,7 +11081,7 @@ additional Classes in their attributes
       print(seg.tile.name)
   }
 
-    cl <- makeCluster(detectCores())
+    cl <- makeCluster(cores)
     registerDoParallel(cl)
 
   foreach (i = seq_along(ratio.tile.paths), .packages = c("raster")) %dopar% {
@@ -11188,15 +11188,6 @@ reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingMod
                            mutate(Class = ifelse(Class == "T", Class, "O"))
                        })
 
-  dat.list_G <- lapply(dat.list, function(d) {
-                           mutate(d, Class = as.character(Class)) %>%
-                           mutate(Class = ifelse(Class == "G", Class, "O"))
-                       })
-
-  dat.list_I <- lapply(dat.list, function(d) {
-                           mutate(d, Class = as.character(Class)) %>%
-                           mutate(Class = ifelse(Class == "I", Class, "O"))
-                       })
 
 
   # Create Tasks
@@ -11211,17 +11202,8 @@ reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingMod
           dropFeatures("zone")
   })
 
-  grass.task.list <- lapply(seq_along(dat.list_G), function(i) {
-      makeClassifTask(id = paste0(image.name,"_",names(dat.list_G)[[i]],"_grass"), data = dat.list_G[[i]], target = "Class", positive = "G") %>%
-          dropFeatures("zone")
-  })
 
-  impervious.task.list <- lapply(seq_along(dat.list_I), function(i) {
-      makeClassifTask(id = paste0(image.name,"_",names(dat.list_I)[[i]],"_impervious"), data = dat.list_I[[i]], target = "Class", positive = "I") %>%
-          dropFeatures("zone")
-  })
-
-  task.list <- list(all = task.list, tree = tree.task.list, grass = grass.task.list, impervious = impervious.task.list) %>%
+  task.list <- list(all = task.list, tree = tree.task.list) %>%
       unlist(recursive = F)
 
 
@@ -11229,16 +11211,16 @@ reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingMod
     # RF
     RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
     RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
-    SVM_prob <- makeLearner(id = "svm_prob", "classif.svm", predict.type = "prob", fix.factors.prediction = TRUE)
+
     SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
 
-    learner_list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_prob = SVM_prob, SVM_response = SVM_response)
+    learner_list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
 
 
                                             # Train Learners on Tasks, Make models
-  nCores <- detectCores()
-    cl<-makeCluster(nCores)
-    registerDoParallel(cl)
+
+  cl<-makeCluster(cores)
+  registerDoParallel(cl)
 
 
     models <- foreach(task = task.list, .packages = "mlr") %:%
@@ -11275,7 +11257,10 @@ reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingMod
 
 
 
-  # Create directories to save tiles into
+                                          # Create directories to save tiles into
+  classified.Path <- paste0(image.dd.directory, image.name, "-ClassifiedTiles")
+  dir.create(classified.Path)
+
   # Segmentation Parameters
   foreach(i = seq_along(models)) %do% {
           directory.path <- paste0(image.dd.directory,image.name,"-ClassifiedTiles/",models[[i]]$task.desc$id)
