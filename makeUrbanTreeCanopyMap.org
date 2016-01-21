@@ -11258,8 +11258,9 @@ reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingMod
 
 
                                           # Create directories to save tiles into
-  classified.Path <- paste0(image.dd.directory, image.name, "-ClassifiedTiles")
-  dir.create(classified.Path)
+
+
+  dir.create(paste0(image.dd.directory, image.name, "-ClassifiedTiles"))
 
   # Segmentation Parameters
   foreach(i = seq_along(models)) %do% {
@@ -11302,9 +11303,9 @@ reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingMod
       }
   }
 
-  dir.create(paste0(image.dd.directory, image.name, "-ClassifiedTiles"))
 
-  cl<-makeCluster(detectCores())
+
+  cl<-makeCluster(cores)
   registerDoParallel(cl)
 
   foreach(i = seq_along(seg.files), .packages = c("raster","dplyr","stringr","foreach","mlr")) %dopar% {
@@ -11312,10 +11313,7 @@ reads in "TrainingPolygons", "SegmentFeatureDFs".  Writes to "DataForBuildingMod
   }
 
 
-  foreach(i = 55:length(seg.files), .packages = c("raster","dplyr","stringr","foreach","mlr")) %dopar% {
-      PredictOnSegmentedRaster(seg.files[i], features.files[i], tile.names[i], models)
-      i
-  }
+
 #+END_SRC
 
 *** merge classifications into single images
