@@ -302,7 +302,7 @@ Crop_mask <- function(tile.path, tile.name, CDL_stack){
       crop2014.name <- "CDL_2014_clip_20151229123327_86558742"
 
   #  Specify the number of tiles to polygonize
-  n_TilesToSample <- 50
+  n_TilesToSample <- 219
 #+END_SRC
 
 #+RESULTS:
@@ -9862,7 +9862,6 @@ In the terminal I run the scripts fia_segment.py.
 
 
 ** Polygonize Segments
-*** of a subset of tiles for training
 #+BEGIN_SRC R
                                             # make directory for Polygonized Segments
   PolygonDir <- str_c(image.dd.directory,image.name,"-PolygonizedSegTiles")
@@ -9904,6 +9903,1109 @@ In the terminal I run the scripts fia_segment.py.
 
 #+END_SRC
 
+#+RESULTS:
+#+begin_example
+Warning message:
+In dir.create(path = PolygonDir) :
+  '../../../data2/erker-data2/DD_NAIP-imagery/wausau-PolygonizedSegTiles' already exists
+ Creating output /tmp/RtmppvemRg/file64cb70494cab.shp of format ESRI Shapefile.
+0.Creating output /tmp/Rtmp0cWn2M/file64b973f3fe04.shp of format ESRI Shapefile.
+0Creating output /tmp/RtmpgGEMiO/file64dd330121e8.shp of format ESRI Shapefile.
+0.Creating output /tmp/RtmpRLw1P5/file64b0330c361c.shp of format ESRI Shapefile.
+.0.....Creating output /tmp/RtmpxUODOB/file649e74c24446.shp of format ESRI Shapefile.
+0.10.....20.....3010......102040.........3010....20.50.20.......3040........3040..60....50.50.........6040.70.60......70.......705080......10...9080..80......20.Creating output /tmp/RtmpK7eZLY/file64d434cd000b.shp of format ESRI Shapefile.
+Creating output /tmp/Rtmpeb6YVB/file64c268d28d7c.shp of format ESRI Shapefile.
+..60100 - done.
+...3090...Creating output /tmp/RtmpAPVHdr/file64a72f75764d.shp of format ESRI Shapefile.
+......400.0..90.100 - done.
+..5070.....60...0..100 - done.
+70....8080......90.....100 - done.
+.90.....100 - done.
+....10.10..20.10....30......20..40.20..30.....50...40...60......305070......80...60....90....40.100 - done.
+70.....80...50.90.....100 - done.
+.60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e66db149d.shp of format ESRI Shapefile.
+0...10...20...30..Creating output /tmp/RtmpRLw1P5/file64b05697f5e5.shp of format ESRI Shapefile.
+.40..0.50...60....Creating output /tmp/Rtmpeb6YVB/file64c23c9bfd3a.shp of format ESRI Shapefile.
+70.0...80...90.....100 - done.
+.10...Creating output /tmp/RtmpgGEMiO/file64dd57b0f83a.shp of format ESRI Shapefile.
+20..0..30...40..10....50..20.....60..30....70..40...Creating output /tmp/Rtmp0cWn2M/file64b928986608.shp of format ESRI Shapefile.
+0..80..50.....9060..Creating output /tmp/RtmpAPVHdr/file64a71cb9d402.shp of format ESRI Shapefile.
+...100.....70100 - done.
+20.......3080......40...90..50......100 - done.
+.60...70...10..80....20..90....30.10...100 - done.
+...2040.....30...50..40.....6050.....60..70...70.....8080.....90..90...100 - done.
+..100 - done.
+Creating output /tmp/RtmppvemRg/file64cb528cff54.shp of format ESRI Shapefile.
+0...10...20...30.Creating output /tmp/RtmpK7eZLY/file64d47d804860.shp of format ESRI Shapefile.
+..400...50...60....70....80...90...100 - done.
+.10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd405c568.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a758b41a5d.shp of format ESRI Shapefile.
+0..Creating output /tmp/RtmpRLw1P5/file64b03580f0e1.shp of format ESRI Shapefile.
+0..10....20...30....40..Creating output /tmp/RtmpxUODOB/file649e72aaef35.shp of format ESRI Shapefile.
+0.5010......6020.......3070.......4080......5090.......60100 - done.
+...70..10...80..20...Creating output /tmp/RtmppvemRg/file64cb1d069b92.shp of format ESRI Shapefile.
+0..3090.Creating output /tmp/Rtmpeb6YVB/file64c26518952f.shp of format ESRI Shapefile.
+.0....40100 - done.
+.....50....60Creating output /tmp/Rtmp0cWn2M/file64b95e79c696.shp of format ESRI Shapefile.
+0..Creating output /tmp/RtmpK7eZLY/file64d41cb79d33.shp of format ESRI Shapefile.
+.0.70.....80.....90..10.....10.100 - done.
+...2020....30......4030......50...40..60.....5070...10....6080.10.......20..90.70....20......3080.100 - done.
+.....30..9040.........100 - done.
+4050......5060......70.60...80.....90.70..100 - done.
+...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd142a309b.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a72cc86c64.shp of format ESRI Shapefile.
+0...10...20...30...40...50...Creating output /tmp/Rtmpeb6YVB/file64c249724611.shp of format ESRI Shapefile.
+060...70...80...90....100 - done.
+.Creating output /tmp/RtmpRLw1P5/file64b0325a763c.shp of format ESRI Shapefile.
+0..Creating output /tmp/RtmppvemRg/file64cb4a11ef5a.shp of format ESRI Shapefile.
+010....20...30...40....50....60...70....80...90...100 - done.
+10.Creating output /tmp/Rtmp0cWn2M/file64b951068437.shp of format ESRI Shapefile.
+0..Creating output /tmp/RtmpxUODOB/file649e529264aa.shp of format ESRI Shapefile.
+0.20....30..10.....4020.......30..50...40......6050.....60.....70.70...80.....90.80...10100 - done.
+....10..9020.....20....100 - done.
+..30.30...40.....4050.....50.60.....60..70....70..80...80....90..90..Creating output /tmp/RtmpK7eZLY/file64d478cc7844.shp of format ESRI Shapefile.
+0...100 - done.
+100 - done.
+...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd63053df5.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a73c693042.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80.Creating output /tmp/RtmppvemRg/file64cbb2db20a.shp of format ESRI Shapefile.
+0..90....100 - done.
+..10...20..Creating output /tmp/Rtmp0cWn2M/file64b93841cc03.shp of format ESRI Shapefile.
+.030...40....50...60....70...80Creating output /tmp/Rtmpeb6YVB/file64c266e436a6.shp of format ESRI Shapefile.
+0....90.Creating output /tmp/RtmpRLw1P5/file64b04404d87c.shp of format ESRI Shapefile.
+0...100 - done.
+10....20....30....40....50....60.10....70..20.10.....80...3020......90..40.30.....Creating output /tmp/RtmpxUODOB/file649e7597980c.shp of format ESRI Shapefile.
+0.100 - done.
+..50.40....60..50.....70..60....80....70..90.....80100 - done.
+....90...100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpK7eZLY/file64d444fca162.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd310716a5.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a76124ef53.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80.Creating output /tmp/RtmppvemRg/file64cb4be30d33.shp of format ESRI Shapefile.
+.0.90...100 - done.
+...Creating output /tmp/Rtmp0cWn2M/file64b936a8ebf3.shp of format ESRI Shapefile.
+010...20....30...40...50....60...70....80...90..Creating output /tmp/Rtmpeb6YVB/file64c253b26f43.shp of format ESRI Shapefile.
+0.100 - done.
+10...20....30...40....50...60...70....80...90...100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b044beb037.shp of format ESRI Shapefile.
+010...20....30...40....50...60...Creating output /tmp/RtmpxUODOB/file649e2b9ddddd.shp of format ESRI Shapefile.
+0.70...8010......20....9030.....40..100 - done.
+...50...60....70...80...1090.....20..100 - done.
+..30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpK7eZLY/file64d45fbb90af.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd1970ef34.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a71d7cc90b.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmppvemRg/file64cb71b46a67.shp of format ESRI Shapefile.
+0...10...20...30...40Creating output /tmp/Rtmp0cWn2M/file64b9365101e1.shp of format ESRI Shapefile.
+0...50...60....70...80....90...100 - done.
+.10...20...30...Creating output /tmp/RtmpxUODOB/file649e38d4a909.shp of format ESRI Shapefile.
+040...50...60Creating output /tmp/RtmpRLw1P5/file64b028536afb.shp of format ESRI Shapefile.
+0....70...80....90....100 - done.
+...10...20...3010......4020......3050......4060......7050......8060.....90..70...100 - done.
+..80...90...100 - done.
+Creating output /tmp/RtmpK7eZLY/file64d422514fbb.shp of format ESRI Shapefile.
+0.Creating output /tmp/Rtmpeb6YVB/file64c21db270c7.shp of format ESRI Shapefile.
+0.....10...20...30...4010.....50..20...60....30..70.....4080......9050.....100 - done.
+.60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd1f2a4747.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a71d5670a1.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90..Creating output /tmp/RtmppvemRg/file64cb2b18f2b4.shp of format ESRI Shapefile.
+0.100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b948a74e35.shp of format ESRI Shapefile.
+.0.....10...20...10.30..20.....30....4040....50....60.Creating output /tmp/RtmpxUODOB/file649e1330dee7.shp of format ESRI Shapefile.
+0..50.70.....80....6090......100 - done.
+.70...80....90...100 - done.
+.10...20...30...40...50...60...Creating output /tmp/RtmpRLw1P5/file64b07f8f80d.shp of format ESRI Shapefile.
+700...80...90...100 - done.
+..Creating output /tmp/RtmpK7eZLY/file64d43053c3f4.shp of format ESRI Shapefile.
+0..10...20...30....40...50...60....70...80...90...100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c24eb43f79.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd44ede031.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a726124345.shp of format ESRI Shapefile.
+0.Creating output /tmp/RtmpxUODOB/file649e3ac6ffc.shp of format ESRI Shapefile.
+0....10....20...30..10...40.Creating output /tmp/Rtmp0cWn2M/file64b966e06746.shp of format ESRI Shapefile.
+0.20.....5030.......6040......7050......80....9060....100 - done.
+.Creating output /tmp/RtmppvemRg/file64cb1928a29a.shp of format ESRI Shapefile.
+0.70....80....90.10.....20...100 - done.
+.30...40...50....60...70...80Creating output /tmp/RtmpRLw1P5/file64b0454550ba.shp of format ESRI Shapefile.
+0..10...90..20.....30100 - done.
+...40....50...60...70....80...90...100 - done.
+.Creating output /tmp/RtmpK7eZLY/file64d42cf2ed5a.shp of format ESRI Shapefile.
+010....20...30....40...50....60...7010......8020......9030.....100 - done.
+.40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c261784880.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd6195aa50.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b953418f93.shp of format ESRI Shapefile.
+0...10...20...30...40...50Creating output /tmp/RtmppvemRg/file64cbd8e70a.shp of format ESRI Shapefile.
+0...60Creating output /tmp/RtmpAPVHdr/file64a7c97bba0.shp of format ESRI Shapefile.
+0...70...80...90....100 - done.
+.....10.10....20..20....30..30....40..40....50..50...60....60.Creating output /tmp/RtmpxUODOB/file649e4e284f01.shp of format ESRI Shapefile.
+070......7080.......8090.....90..100 - done.
+...Creating output /tmp/RtmpRLw1P5/file64b040b2d94b.shp of format ESRI Shapefile.
+0100 - done.
+..10...20...30....40...50....60...70...80..10....90.20....100 - done.
+.30...40Creating output /tmp/RtmpK7eZLY/file64d47b00b1cb.shp of format ESRI Shapefile.
+0...50...60....70...80....90....100 - done.
+10...20...30...40..Creating output /tmp/Rtmpeb6YVB/file64c29d75457.shp of format ESRI Shapefile.
+0.50...60...70...80....90...100 - done.
+..10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd1aa655ff.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b96cc85ed8.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmppvemRg/file64cb38517e84.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...Creating output /tmp/RtmpAPVHdr/file64a77e0d2320.shp of format ESRI Shapefile.
+070...80...90....100 - done.
+.Creating output /tmp/RtmpK7eZLY/file64d470a0a862.shp of format ESRI Shapefile.
+0.Creating output /tmp/RtmpRLw1P5/file64b035bcf7dc.shp of format ESRI Shapefile.
+0..10....20...30....40...50....60...70...80....90...100 - done.
+10...20...30.10.....20.40...30.....4050....50.....6060....70.....7080.....90...80..100 - done.
+..90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c265a1b846.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80.Creating output /tmp/RtmpxUODOB/file649e760683f3.shp of format ESRI Shapefile.
+0..90...100 - done.
+...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd55f90e75.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b91a3a9dd4.shp of format ESRI Shapefile.
+0.Creating output /tmp/RtmppvemRg/file64cb74f7e248.shp of format ESRI Shapefile.
+0....10...20....30...40...50..Creating output /tmp/RtmpRLw1P5/file64b0634fb800.shp of format ESRI Shapefile.
+0.60...70.10....80...20.90.......100 - done.
+30...40....50...60...70...80....90...100 - done.
+10...20...30...40.Creating output /tmp/RtmpAPVHdr/file64a7c0fde08.shp of format ESRI Shapefile.
+0..50....60...70....80...90....100 - done.
+10...20...Creating output /tmp/RtmpK7eZLY/file64d4550717a6.shp of format ESRI Shapefile.
+030...40...50...60....70...80....90....100 - done.
+10...20...30...40Creating output /tmp/Rtmpeb6YVB/file64c2200bfea6.shp of format ESRI Shapefile.
+0...50....60...70....80...90...100 - done.
+.10...20...30...40...50.Creating output /tmp/RtmpxUODOB/file649e47d79a9c.shp of format ESRI Shapefile.
+0..60...70...80....90....100 - done.
+.10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd1ef42df8.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b9751db866.shp of format ESRI Shapefile.
+0...10...20...30Creating output /tmp/RtmppvemRg/file64cb5b67776d.shp of format ESRI Shapefile.
+0...40....50...60....70...80...90....100 - done.
+10...20...30...40...50...60...70...80...Creating output /tmp/RtmpAPVHdr/file64a7798ba46d.shp of format ESRI Shapefile.
+090...100 - done.
+...10...20...30...40...50...60.Creating output /tmp/RtmpRLw1P5/file64b0630e05.shp of format ESRI Shapefile.
+0..70...80...90...Creating output /tmp/RtmpK7eZLY/file64d46013e68e.shp of format ESRI Shapefile.
+0.100 - done.
+....10....20...30.10.....20.40...30....40..50...50.....6060..Creating output /tmp/Rtmpeb6YVB/file64c25c89cf4f.shp of format ESRI Shapefile.
+.0..70...70.Creating output /tmp/RtmpxUODOB/file649e71feb86c.shp of format ESRI Shapefile.
+0.80....80...90...90......100 - done.
+100 - done.
+....10...20...30.10...40....20.50......6030......7040......8050......9060.....100 - done.
+.70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd2bcd993a.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b96eae5c5a.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90..Creating output /tmp/RtmppvemRg/file64cb63cf511e.shp of format ESRI Shapefile.
+0.100 - done.
+...10...20...30...40...50.Creating output /tmp/RtmpAPVHdr/file64a7597da2aa.shp of format ESRI Shapefile.
+0..60...70...80...90....100 - done.
+.Creating output /tmp/RtmpK7eZLY/file64d446f18ca1.shp of format ESRI Shapefile.
+.0.10...20....30...40....50...60...70...80...1090....100 - done.
+..Creating output /tmp/RtmpRLw1P5/file64b023b3776a.shp of format ESRI Shapefile.
+200...30....40....50...60...Creating output /tmp/Rtmpeb6YVB/file64c24af14bea.shp of format ESRI Shapefile.
+0.10...20...30...40....50...60...70....80.70..10.......20..8090.30........40.90..100 - done.
+...50...100 - done.
+.60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e2c0b7888.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd6f8493f3.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b97cf71883.shp of format ESRI Shapefile.
+0...Creating output /tmp/RtmppvemRg/file64cb39f91e9d.shp of format ESRI Shapefile.
+0Creating output /tmp/RtmpAPVHdr/file64a776160831.shp of format ESRI Shapefile.
+010....20....30...40.....50...60....70....80...90.10.10.....20...100 - done.
+.20..30....30..40....40.50......5060......6070......70.80....80..90...90.....100 - done.
+100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b06c2d6a6a.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpK7eZLY/file64d4734f5d06.shp of format ESRI Shapefile.
+0Creating output /tmp/Rtmpeb6YVB/file64c26cabc03.shp of format ESRI Shapefile.
+0......10...20...30..10.40.....50...20.60.....30...70..40.....5080....60.....9070..Creating output /tmp/RtmpxUODOB/file649e32d0c9a5.shp of format ESRI Shapefile.
+0...80....100 - done.
+90...100 - done.
+...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd193c9993.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a719206182.shp of format ESRI Shapefile.
+0...Creating output /tmp/Rtmp0cWn2M/file64b92bd1c9e5.shp of format ESRI Shapefile.
+010....20...30...40....50.Creating output /tmp/RtmppvemRg/file64cb3bdceb93.shp of format ESRI Shapefile.
+0..60....70....80...90..10.....100 - done.
+20...30...40...50....60...70...80...90.10....100 - done.
+.20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b073e58c1a.shp of format ESRI Shapefile.
+0...10...20...30..Creating output /tmp/Rtmpeb6YVB/file64c225fec1e8.shp of format ESRI Shapefile.
+0.40...50...60....70...80...90....100 - done.
+Creating output /tmp/RtmpK7eZLY/file64d45a523d69.shp of format ESRI Shapefile.
+0..10....20...30....40...50..10Creating output /tmp/RtmpxUODOB/file649e27ca734f.shp of format ESRI Shapefile.
+0..60....20...70..30.....80..40....90...50.100 - done.
+....60...70...80....90...100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dde203873.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b958281b57.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80.Creating output /tmp/RtmpAPVHdr/file64a757796d29.shp of format ESRI Shapefile.
+0..90...100 - done.
+...10...20...30...40...50Creating output /tmp/RtmppvemRg/file64cb3100972d.shp of format ESRI Shapefile.
+0...60...70...80....90...100 - done.
+..10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b01ecab4e7.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e9b834dc.shp of format ESRI Shapefile.
+0...10...Creating output /tmp/RtmpK7eZLY/file64d471b04ab6.shp of format ESRI Shapefile.
+020...30...40Creating output /tmp/Rtmpeb6YVB/file64c27f86df6c.shp of format ESRI Shapefile.
+0....50...60....70....80...90....100 - done.
+..10...20...30..10..40....20...50..30....60..40....70..50....80..60.....9070......80.100 - done.
+..90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd4cbd0585.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b9539cd064.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a717758299.shp of format ESRI Shapefile.
+0...Creating output /tmp/RtmppvemRg/file64cb4456272e.shp of format ESRI Shapefile.
+0.10...20...30....40...50...60...70....80...90...100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b0372bd032.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e5609a039.shp of format ESRI Shapefile.
+0.Creating output /tmp/Rtmpeb6YVB/file64c25a55c622.shp of format ESRI Shapefile.
+0....10....20...30..10...40..20.....5030......60.40...70.....5080......6090......100 - done.
+70...80...90Creating output /tmp/RtmpK7eZLY/file64d454bfc7fa.shp of format ESRI Shapefile.
+0...100 - done.
+..Creating output /tmp/RtmpgGEMiO/file64ddaad5135.shp of format ESRI Shapefile.
+0..10....20...30...40....50...60...70...80.10...90.....100 - done.
+20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a713ccaeb6.shp of format ESRI Shapefile.
+0Creating output /tmp/Rtmp0cWn2M/file64b95a799f2c.shp of format ESRI Shapefile.
+0......10...20.10...30.....2040......5030......6040.....50...Creating output /tmp/RtmppvemRg/file64cb5090a5aa.shp of format ESRI Shapefile.
+0.7060....70.....8080.......90..90.100 - done.
+...100 - done.
+..10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b021c944e9.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e2c492eb0.shp of format ESRI Shapefile.
+0...10Creating output /tmp/RtmpgGEMiO/file64dd786ec71.shp of format ESRI Shapefile.
+0...20.Creating output /tmp/Rtmpeb6YVB/file64c256079a12.shp of format ESRI Shapefile.
+0...30...40....50....60....70....80....90.10....20...100 - done.
+.30...1040.....50...20.60......Creating output /tmp/RtmpK7eZLY/file64d42ead62e8.shp of format ESRI Shapefile.
+700.30....80...40.90.......100 - done.
+50...60....70...80....90...100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b94cb3a214.shp of format ESRI Shapefile.
+0...Creating output /tmp/RtmpAPVHdr/file64a72ed09394.shp of format ESRI Shapefile.
+0.10...20...30...40....50...60...70....80...90...100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmppvemRg/file64cb1fcb56be.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd7438fb3c.shp of format ESRI Shapefile.
+0Creating output /tmp/RtmpRLw1P5/file64b05981b6c2.shp of format ESRI Shapefile.
+0......10...20...30.10....40.20......5030.....60..40....70...50..80...60.....9070......80100 - done.
+...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e280d9ae0.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...Creating output /tmp/RtmpK7eZLY/file64d427fd1136.shp of format ESRI Shapefile.
+070...80...90...100 - done.
+...10...20...30...40...50...60...70Creating output /tmp/Rtmpeb6YVB/file64c2730ef723.shp of format ESRI Shapefile.
+0...80...90....100 - done.
+..10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b91ee35be8.shp of format ESRI Shapefile.
+0..Creating output /tmp/RtmpAPVHdr/file64a74421f175.shp of format ESRI Shapefile.
+0..10...20....30...40...50...60....70...80...90...100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmppvemRg/file64cb28d07523.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd36c5e328.shp of format ESRI Shapefile.
+0...Creating output /tmp/RtmpRLw1P5/file64b0253336b6.shp of format ESRI Shapefile.
+010....20...30...40...50....60...70...80...90....100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e2a7cf290.shp of format ESRI Shapefile.
+0...10...Creating output /tmp/RtmpK7eZLY/file64d46dc94f4f.shp of format ESRI Shapefile.
+020...30...40....50...60...70...80....90...100 - done.
+.10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c25b48809f.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b96381b93b.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...Creating output /tmp/RtmpAPVHdr/file64a7171c8451.shp of format ESRI Shapefile.
+070...80....90...100 - done.
+..10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmppvemRg/file64cb3650eaa5.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd2f9be0e6.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b01450f443.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e5f8d6b5f.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90.Creating output /tmp/RtmpK7eZLY/file64d42d62da14.shp of format ESRI Shapefile.
+0..100 - done.
+...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c217b7d70f.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a76bca024e.shp of format ESRI Shapefile.
+0...10...20...30..Creating output /tmp/Rtmp0cWn2M/file64b95ea65044.shp of format ESRI Shapefile.
+0.40...50....60...70....80...90....100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmppvemRg/file64cb6d6405fe.shp of format ESRI Shapefile.
+0...Creating output /tmp/RtmpgGEMiO/file64dda0b210a.shp of format ESRI Shapefile.
+010....20...30...40...50....60...70...80...90....100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b073f6af1b.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e711eb88.shp of format ESRI Shapefile.
+0.Creating output /tmp/RtmpK7eZLY/file64d46923d750.shp of format ESRI Shapefile.
+0.....10...20...1030.....20..40...30....50..40.....6050......70.60....80..70....90..80.....100 - done.
+90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c26f53cfb5.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a731b0bf4d.shp of format ESRI Shapefile.
+0...Creating output /tmp/Rtmp0cWn2M/file64b93f34a52.shp of format ESRI Shapefile.
+0.10...20....30...40....50...60...70.10.....20.80...30.....40..90.50.....60..100 - done.
+..70...80...90...100 - done.
+Creating output /tmp/RtmppvemRg/file64cb4264063c.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd2e4d611d.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b016afb4e3.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpK7eZLY/file64d471b8d054.shp of format ESRI Shapefile.
+0.Creating output /tmp/RtmpxUODOB/file649e72aef55d.shp of format ESRI Shapefile.
+0.....10...20...3010......2040.....30..50....40...60..50....70..60...80....70..90....80..100 - done.
+..90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c22fac8b08.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b967ca76aa.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a76f952dfd.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmppvemRg/file64cb33b7135.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd261d0d5d.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpRLw1P5/file64b0198840fa.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpK7eZLY/file64d453078dc1.shp of format ESRI Shapefile.
+0...10...20..Creating output /tmp/RtmpxUODOB/file649e5d69a58e.shp of format ESRI Shapefile.
+.030...40...50....60...70...80....90...100 - done.
+.10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c2728c603.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b96d354fc1.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a72e6a34e0.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70.Creating output /tmp/RtmppvemRg/file64cb6c98e3c3.shp of format ESRI Shapefile.
+0..80...90....100 - done.
+..10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd26c2b567.shp of format ESRI Shapefile.
+0Creating output /tmp/RtmpRLw1P5/file64b0447c379f.shp of format ESRI Shapefile.
+0......10...20...30.10.....4020.....30..50.....4060......5070......8060......90.70....100 - done.
+.80...90...100 - done.
+Creating output /tmp/RtmpK7eZLY/file64d454533952.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e3b7e8f9a.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c279c222a2.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmp0cWn2M/file64b953ef8978.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a75487e1b.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmppvemRg/file64cb2e6adc49.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpgGEMiO/file64dd2534bbc6.shp of format ESRI Shapefile.
+0...10...20...30...40...50...Creating output /tmp/RtmpRLw1P5/file64b07a2cc95e.shp of format ESRI Shapefile.
+060...70....80....90...100 - done.
+.10...20...30...40.Creating output /tmp/RtmpK7eZLY/file64d479fd9986.shp of format ESRI Shapefile.
+0..50...60....70....80...90....100 - done.
+10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpxUODOB/file649e48f93b47.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/Rtmpeb6YVB/file64c265b6026e.shp of format ESRI Shapefile.
+0...10...20...30...40...50...60...70...80...90...100 - done.
+Creating output /tmp/RtmpAPVHdr/file64a71bd52c6d.shp of format ESRI Shapefile.
+0.Creating output /tmp/Rtmp0cWn2M/file64b93a67433e.shp of format ESRI Shapefile.
+0....10....20...3010......4020......5030......6040......7050......6080.....70....9080....90.....100 - done.
+100 - done.
+[[1]]
+NULL
+
+[[2]]
+NULL
+
+[[3]]
+NULL
+
+[[4]]
+NULL
+
+[[5]]
+NULL
+
+[[6]]
+NULL
+
+[[7]]
+NULL
+
+[[8]]
+NULL
+
+[[9]]
+NULL
+
+[[10]]
+NULL
+
+[[11]]
+NULL
+
+[[12]]
+NULL
+
+[[13]]
+NULL
+
+[[14]]
+NULL
+
+[[15]]
+NULL
+
+[[16]]
+NULL
+
+[[17]]
+NULL
+
+[[18]]
+NULL
+
+[[19]]
+NULL
+
+[[20]]
+NULL
+
+[[21]]
+NULL
+
+[[22]]
+NULL
+
+[[23]]
+NULL
+
+[[24]]
+NULL
+
+[[25]]
+NULL
+
+[[26]]
+NULL
+
+[[27]]
+NULL
+
+[[28]]
+NULL
+
+[[29]]
+NULL
+
+[[30]]
+NULL
+
+[[31]]
+NULL
+
+[[32]]
+NULL
+
+[[33]]
+NULL
+
+[[34]]
+NULL
+
+[[35]]
+NULL
+
+[[36]]
+NULL
+
+[[37]]
+NULL
+
+[[38]]
+NULL
+
+[[39]]
+NULL
+
+[[40]]
+NULL
+
+[[41]]
+NULL
+
+[[42]]
+NULL
+
+[[43]]
+NULL
+
+[[44]]
+NULL
+
+[[45]]
+NULL
+
+[[46]]
+NULL
+
+[[47]]
+NULL
+
+[[48]]
+NULL
+
+[[49]]
+NULL
+
+[[50]]
+NULL
+
+[[51]]
+NULL
+
+[[52]]
+NULL
+
+[[53]]
+NULL
+
+[[54]]
+NULL
+
+[[55]]
+NULL
+
+[[56]]
+NULL
+
+[[57]]
+NULL
+
+[[58]]
+NULL
+
+[[59]]
+NULL
+
+[[60]]
+NULL
+
+[[61]]
+NULL
+
+[[62]]
+NULL
+
+[[63]]
+NULL
+
+[[64]]
+NULL
+
+[[65]]
+NULL
+
+[[66]]
+NULL
+
+[[67]]
+NULL
+
+[[68]]
+NULL
+
+[[69]]
+NULL
+
+[[70]]
+NULL
+
+[[71]]
+NULL
+
+[[72]]
+NULL
+
+[[73]]
+NULL
+
+[[74]]
+NULL
+
+[[75]]
+NULL
+
+[[76]]
+NULL
+
+[[77]]
+NULL
+
+[[78]]
+NULL
+
+[[79]]
+NULL
+
+[[80]]
+NULL
+
+[[81]]
+NULL
+
+[[82]]
+NULL
+
+[[83]]
+NULL
+
+[[84]]
+NULL
+
+[[85]]
+NULL
+
+[[86]]
+NULL
+
+[[87]]
+NULL
+
+[[88]]
+NULL
+
+[[89]]
+NULL
+
+[[90]]
+NULL
+
+[[91]]
+NULL
+
+[[92]]
+NULL
+
+[[93]]
+NULL
+
+[[94]]
+NULL
+
+[[95]]
+NULL
+
+[[96]]
+NULL
+
+[[97]]
+NULL
+
+[[98]]
+NULL
+
+[[99]]
+NULL
+
+[[100]]
+NULL
+
+[[101]]
+NULL
+
+[[102]]
+NULL
+
+[[103]]
+NULL
+
+[[104]]
+NULL
+
+[[105]]
+NULL
+
+[[106]]
+NULL
+
+[[107]]
+NULL
+
+[[108]]
+NULL
+
+[[109]]
+NULL
+
+[[110]]
+NULL
+
+[[111]]
+NULL
+
+[[112]]
+NULL
+
+[[113]]
+NULL
+
+[[114]]
+NULL
+
+[[115]]
+NULL
+
+[[116]]
+NULL
+
+[[117]]
+NULL
+
+[[118]]
+NULL
+
+[[119]]
+NULL
+
+[[120]]
+NULL
+
+[[121]]
+NULL
+
+[[122]]
+NULL
+
+[[123]]
+NULL
+
+[[124]]
+NULL
+
+[[125]]
+NULL
+
+[[126]]
+NULL
+
+[[127]]
+NULL
+
+[[128]]
+NULL
+
+[[129]]
+NULL
+
+[[130]]
+NULL
+
+[[131]]
+NULL
+
+[[132]]
+NULL
+
+[[133]]
+NULL
+
+[[134]]
+NULL
+
+[[135]]
+NULL
+
+[[136]]
+NULL
+
+[[137]]
+NULL
+
+[[138]]
+NULL
+
+[[139]]
+NULL
+
+[[140]]
+NULL
+
+[[141]]
+NULL
+
+[[142]]
+NULL
+
+[[143]]
+NULL
+
+[[144]]
+NULL
+
+[[145]]
+NULL
+
+[[146]]
+NULL
+
+[[147]]
+NULL
+
+[[148]]
+NULL
+
+[[149]]
+NULL
+
+[[150]]
+NULL
+
+[[151]]
+NULL
+
+[[152]]
+NULL
+
+[[153]]
+NULL
+
+[[154]]
+NULL
+
+[[155]]
+NULL
+
+[[156]]
+NULL
+
+[[157]]
+NULL
+
+[[158]]
+NULL
+
+[[159]]
+NULL
+
+[[160]]
+NULL
+
+[[161]]
+NULL
+
+[[162]]
+NULL
+
+[[163]]
+NULL
+
+[[164]]
+NULL
+
+[[165]]
+NULL
+
+[[166]]
+NULL
+
+[[167]]
+NULL
+
+[[168]]
+NULL
+
+[[169]]
+NULL
+
+[[170]]
+NULL
+
+[[171]]
+NULL
+
+[[172]]
+NULL
+
+[[173]]
+NULL
+
+[[174]]
+NULL
+
+[[175]]
+NULL
+
+[[176]]
+NULL
+
+[[177]]
+NULL
+
+[[178]]
+NULL
+
+[[179]]
+NULL
+
+[[180]]
+NULL
+
+[[181]]
+NULL
+
+[[182]]
+NULL
+
+[[183]]
+NULL
+
+[[184]]
+NULL
+
+[[185]]
+NULL
+
+[[186]]
+NULL
+
+[[187]]
+NULL
+
+[[188]]
+NULL
+
+[[189]]
+NULL
+
+[[190]]
+NULL
+
+[[191]]
+NULL
+
+[[192]]
+NULL
+
+[[193]]
+NULL
+
+[[194]]
+NULL
+
+[[195]]
+NULL
+
+[[196]]
+NULL
+
+[[197]]
+NULL
+
+[[198]]
+NULL
+
+[[199]]
+NULL
+
+[[200]]
+NULL
+
+[[201]]
+NULL
+
+[[202]]
+NULL
+
+[[203]]
+NULL
+
+[[204]]
+NULL
+
+[[205]]
+NULL
+
+[[206]]
+NULL
+
+[[207]]
+NULL
+
+[[208]]
+NULL
+
+[[209]]
+NULL
+
+[[210]]
+NULL
+
+[[211]]
+NULL
+
+[[212]]
+NULL
+
+[[213]]
+NULL
+
+[[214]]
+NULL
+
+[[215]]
+NULL
+
+[[216]]
+NULL
+
+[[217]]
+NULL
+
+[[218]]
+NULL
+
+[[219]]
+NULL
+
+There were 24 warnings (use warnings() to see them)
+#+end_example
+
 
 ** Manually classify segments for training data in qgis
 Note on Google Earth and the NAIP image:
@@ -9925,9 +11027,12 @@ Note on Google Earth and the NAIP image:
 *** Save results in TrainingData folder
 #+BEGIN_SRC R
 
-  dir.create(path = str_c(image.dd.directory,image.name, "-TrainingPolygons")
+  dir.create(path = str_c(image.dd.directory,image.name, "-TrainingPolygons"))
 
 #+END_SRC
+
+#+RESULTS:
+
 names are the same as the segmentation polygons, but they have
 additional Classes in their attributes
 
