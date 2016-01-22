@@ -1,9 +1,60 @@
-#+TITLE: Make Urban Tree Canopy Map
+#+TITLE: Make Urban Tree Canopy Map for Wisconsin
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
 #+PROPERTY:  header-args:R :session *R* :cache no :results output :exports both :tangle yes
 
+This work depends on the classification model built in ufia.org
+
 * Workflow
+** Set image name and directory and other variables
+#+BEGIN_SRC R
+  cores <- detectCores()
+  cores <- 8
+      ##################
+      #################                Specify image name and directory
+      ##################
+
+      image.name <- "wausau"
+      image.rd.directory <- "../RD_NAIP-imagery/"
+      image.dd.directory <- "../DD_NAIP-imagery/"
+
+  dir.create(image.dd.directory)
+
+
+  ##################
+  #################                Specify WI Urban Area Shapefile name and directory (dsn)
+  ##################
+
+  US_UrbanAreas.name <- "cb_2013_us_ua10_500k"
+  US_UrbanAreas.dsn <- "../RD_US_UrbanAreasShapefile/"
+  urban.area.name <- "Wausau, WI"
+
+
+      ##################
+      #################                Specify water shapefile name and directory (dsn)
+      ##################
+
+      water.name <- "WD-Hydro-Waterbody-WBIC-AR-24K"
+      water.dsn <- "../RD_WI-waterbody-24k"
+
+
+      ##################
+      #################                Specify Cropland Datalayer name and directory
+      ##################
+
+      crop.directory <- "../RD_CroplandDataLayer/"
+      crop2011.name <- "CDL_2011_clip_20160106190244_1504737741"
+      crop2012.name <- "CDL_2012_clip_20151229124713_1037776543"
+      crop2013.name <- "CDL_2013_clip_20151229123327_86558742"
+      crop2014.name <- "CDL_2014_clip_20151229123327_86558742"
+
+  #  Specify the number of tiles to polygonize
+  n_TilesToSample <- 219
+#+END_SRC
+
+#+RESULTS:
+: Warning message:
+: In dir.create(image.dd.directory) : '../DD_NAIP-imagery' already exists
 ** Load Libraries
 #+BEGIN_SRC R
   library(gdalUtils)
@@ -259,57 +310,6 @@ Crop_mask <- function(tile.path, tile.name, CDL_stack){
 
 #+RESULTS:
 
-** Set image name and directory and other variables
-#+BEGIN_SRC R
-  cores <- detectCores()
-  cores <- 8
-      ##################
-      #################                Specify image name and directory
-      ##################
-
-      image.name <- "wausau"
-      image.rd.directory <- "../RD_NAIP-imagery/"
-      image.dd.directory <- "../DD_NAIP-imagery/"
-
-  dir.create(image.dd.directory)
-
-
-  ##################
-  #################                Specify WI Urban Area Shapefile name and directory (dsn)
-  ##################
-
-  US_UrbanAreas.name <- "cb_2013_us_ua10_500k"
-  US_UrbanAreas.dsn <- "../RD_US_UrbanAreasShapefile/"
-  urban.area.name <- "Wausau, WI"
-
-
-      ##################
-      #################                Specify water shapefile name and directory (dsn)
-      ##################
-
-      water.name <- "WD-Hydro-Waterbody-WBIC-AR-24K"
-      water.dsn <- "../RD_WI-waterbody-24k"
-
-
-      ##################
-      #################                Specify Cropland Datalayer name and directory
-      ##################
-
-      crop.directory <- "../RD_CroplandDataLayer/"
-      crop2011.name <- "CDL_2011_clip_20160106190244_1504737741"
-      crop2012.name <- "CDL_2012_clip_20151229124713_1037776543"
-      crop2013.name <- "CDL_2013_clip_20151229123327_86558742"
-      crop2014.name <- "CDL_2014_clip_20151229123327_86558742"
-
-  #  Specify the number of tiles to polygonize
-  n_TilesToSample <- 219
-#+END_SRC
-
-#+RESULTS:
-: Warning message:
-: In dir.create(image.dd.directory) : '../DD_NAIP-imagery' already exists
-
-
 ** read in image
 #+BEGIN_SRC R
   dir.create("figs")
@@ -342,7 +342,6 @@ I should make this epsg:3160 to be uptodate?
 
 #+RESULTS:
 : NULL
-
 
 ** Crop image
 Crop image to the extent of the urban area of interest, Madison
@@ -6998,7 +6997,6 @@ max values  :          244,          247,          241,          234
 
 
 
-
 ** Add Ratios of image
 - Read in Cropped_Image
 - Save results in Ratios folder
@@ -9716,7 +9714,6 @@ max values  :  244.0000000,  247.0000000,  241.0000000,  234.0000000,    0.40501
 : Error in .getGDALtransient(x, filename = filename, options = options,  :
 :   filename exists; use overwrite=TRUE
 
-
 ** Perform PCA
 *** For Tiled image
 I need to sample from the entire image to perform the pca, not each
@@ -9850,7 +9847,6 @@ very low
 [[file:figs/*-ScaledPCA.png]]
 [[file:figs/*-ScaledPCA*.png]]
 
-
 ** Segment image
 #+BEGIN_SRC sh
 
@@ -9859,7 +9855,6 @@ python fia_segment.py
 #+END_SRC
 
 In the terminal I run the scripts fia_segment.py.
-
 
 ** Polygonize Segments
 #+BEGIN_SRC R
@@ -11005,7 +11000,6 @@ NULL
 
 There were 24 warnings (use warnings() to see them)
 #+end_example
-
 
 ** Manually classify segments for training data in qgis
 Note on Google Earth and the NAIP image:
