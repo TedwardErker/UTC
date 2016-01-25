@@ -37,10 +37,10 @@ cpt = compactness parameter
 |             |              |        |                          |                   |              |
 | PAN_SPOT... |              |        |                          |                   |              |
 
-* Functions I'll need
+** Functions I'll need
 
 (use foreach and doParallel!)
-** Accuracy Assessment
+*** Accuracy Assessment
 1) Point based accuracy
 2) Grid based accuracy
 3) Field plot based accuracy
@@ -66,7 +66,7 @@ For each accuracy assessment I need to save the output, especially the
 overall accuracy so I can include it in the final accuracy table at
 the end.
 
-** Classifications
+*** Classifications
 *** SVM or RF classification
 input:
 - SVM or RF, indicate which one to use
@@ -80,7 +80,7 @@ output:
   classification, classification method and parameters
 
 
-** Segmentation
+*** Segmentation
 input:
 - pca image
 - the bands to use in the pca
@@ -107,83 +107,41 @@ output:
 
 
 
-** Folders:
-*** Image (NAIP)
-- contains madison NAIP image
-*** Cropped Image
-*** NAIP training data (for non segmented image)
-**** Non segmented
-- make sure that there is equal effort spent making this
-- Should be a single shapefile, with attribute "Class" for each
-  feature
-**** Segmented
-- contains the training data (manually classified segments) shapefiles
-  for each segmentation
-*** WI water
-- shapefile with water features to mask out
-*** Cropland DataLayer
-- raster file to use for masking out agriculture from the NAIP image
-*** Urban Areas of WI
-- shapefile of urban areas in WI
+** Directory Structure
+*** top
+**** Pjt_UFIA
+**** RD_NAIP
+**** RD_SPOT
+**** DD_NAIP
+***** Best Model
+***** i directories for each urban area
+****** naip image, cropped to this urban area's extent
+****** masked: Directory containing j tiles of urban extent naip image, masked by water, crops, urban borders
+******* j tiles (.tif files)
+****** add_features: Directory containing j tiles of masked image with additional features/ratio bands/layers added
+******* j tiles (.tif files)
+****** pca: Directory containing j tiles of PCA image derived from image with added features.
+******* j tiles (.tif files)
+****** segmentation: Directory containing j tiles of Segmented image
+******* j segmentation tiles (.tif), single layer
+****** polygonized_segmentation: Directory containing n_random_sample_tiles shapefiles of polygonized segmentation tiles
+******* n shapefiles
+- This is only for Madison and Wausau, the two cities for which I'm
+  creating training data
+****** training: Directory containing shapefiles that have had polygons classified by the user.
+- Also only for Madison and Wausau.
+******
+******
 
-*** PCA
-- contains the results of the pca on the cropped image
-*** Ratios
-*** Texture
-*** Segmentation
-*** Classifications
-*** AccuracyAssessment
+
+**** DD_SPOT
+**** RD_UrbanAreasShapefile
+**** RD_WaterShapefile
+**** RD_CroplandDataLayer
+
+
 
 * Workflow
-** Set image name and directory and other variables
-#+BEGIN_SRC R
-  cores <- detectCores()
-  cores <- 8
-      ##################
-      #################                Specify image name and directory
-      ##################
-
-      image.name <- "wausau"
-      image.rd.directory <- "../RD_NAIP-imagery/"
-      image.dd.directory <- "../DD_NAIP-imagery/"
-
-  dir.create(image.dd.directory)
-
-
-  ##################
-  #################                Specify WI Urban Area Shapefile name and directory (dsn)
-  ##################
-
-  US_UrbanAreas.name <- "cb_2013_us_ua10_500k"
-  US_UrbanAreas.dsn <- "../RD_US_UrbanAreasShapefile/"
-  urban.area.name <- "Wausau, WI"
-
-
-      ##################
-      #################                Specify water shapefile name and directory (dsn)
-      ##################
-
-      water.name <- "WD-Hydro-Waterbody-WBIC-AR-24K"
-      water.dsn <- "../RD_WI-waterbody-24k"
-
-
-      ##################
-      #################                Specify Cropland Datalayer name and directory
-      ##################
-
-      crop.directory <- "../RD_CroplandDataLayer/"
-      crop2011.name <- "CDL_2011_clip_20160106190244_1504737741"
-      crop2012.name <- "CDL_2012_clip_20151229124713_1037776543"
-      crop2013.name <- "CDL_2013_clip_20151229123327_86558742"
-      crop2014.name <- "CDL_2014_clip_20151229123327_86558742"
-
-  #  Specify the number of tiles to polygonize
-  n_TilesToSample <- 219
-#+END_SRC
-
-#+RESULTS:
-: Warning message:
-: In dir.create(image.dd.directory) : '../DD_NAIP-imagery' already exists
 ** Load Libraries
 #+BEGIN_SRC R
   library(gdalUtils)
@@ -270,6 +228,56 @@ The following object is masked from ‘package:raster’:
     resample
 #+end_example
 
+** Set image name and directory and other variables
+#+BEGIN_SRC R
+  cores <- detectCores()
+  cores <- 8
+      ##################
+      #################                Specify image name and directory
+      ##################
+
+      image.name <- "wausau"
+      image.rd.directory <- "../RD_NAIP-imagery/"
+      image.dd.directory <- "../DD_NAIP-imagery/"
+
+  dir.create(image.dd.directory)
+
+
+  ##################
+  #################                Specify WI Urban Area Shapefile name and directory (dsn)
+  ##################
+
+  US_UrbanAreas.name <- "cb_2013_us_ua10_500k"
+  US_UrbanAreas.dsn <- "../RD_US_UrbanAreasShapefile/"
+  urban.area.name <- "Wausau, WI"
+
+
+      ##################
+      #################                Specify water shapefile name and directory (dsn)
+      ##################
+
+      water.name <- "WD-Hydro-Waterbody-WBIC-AR-24K"
+      water.dsn <- "../RD_WI-waterbody-24k"
+
+
+      ##################
+      #################                Specify Cropland Datalayer name and directory
+      ##################
+
+      crop.directory <- "../RD_CroplandDataLayer/"
+      crop2011.name <- "CDL_2011_clip_20160106190244_1504737741"
+      crop2012.name <- "CDL_2012_clip_20151229124713_1037776543"
+      crop2013.name <- "CDL_2013_clip_20151229123327_86558742"
+      crop2014.name <- "CDL_2014_clip_20151229123327_86558742"
+
+  #  Specify the number of tiles to polygonize
+  n_TilesToSample <- 219
+#+END_SRC
+
+#+RESULTS:
+: Error: could not find function "detectCores"
+: Warning message:
+: In dir.create(image.dd.directory) : '../DD_NAIP-imagery' already exists
 ** Load Functions
 #+BEGIN_SRC R
       namedList <- function(...) {
@@ -439,6 +447,9 @@ Crop_mask <- function(tile.path, tile.name, CDL_stack){
 
 #+RESULTS:
 
+
+** For NAIP and for pansharpened SPOT?
+
 ** Reproject to image's projection
 
 #+BEGIN_SRC R
@@ -461,171 +472,28 @@ Crop_mask <- function(tile.path, tile.name, CDL_stack){
 #+END_SRC
 
 
-** Print Urban Areas to Table
-#+NAME: WI.urban.areas
-#+BEGIN_SRC R :results raw
-  WI_UrbanAreas$NAME10
-#+END_SRC
 
-#+RESULTS: WI.urban.areas
-  [1] Oshkosh, WI
-  [2] Mukwonago, WI
-  [3] Beloit, WI--IL
-  [4] Mayville, WI
-  [5] La Crosse, WI--MN
-  [6] Juneau, WI
-  [7] Prescott, WI
-  [8] Chilton, WI
-  [9] Stevens Point, WI
- [10] Iron Mountain--Kingsford, MI--WI
- [11] Waterloo, WI
- [12] Fond du Lac, WI
- [13] Eau Claire, WI
- [14] Stanley, WI
- [15] Wausau, WI
- [16] Madison, WI
- [17] Marshall, WI
- [18] Minneapolis--St. Paul, MN--WI
- [19] Appleton, WI
- [20] Omro, WI
- [21] Wisconsin Rapids, WI
- [22] Rhinelander, WI
- [23] Seymour (Outagamie County), WI
- [24] Green Bay, WI
- [25] West Bend, WI
- [26] Richland Center, WI
- [27] Kenosha, WI--IL
- [28] Round Lake Beach--McHenry--Grayslake, IL--WI
- [29] Janesville, WI
- [30] Duluth, MN--WI
- [31] Mount Horeb, WI
- [32] Whitewater, WI
- [33] Cambridge, WI
- [34] Union Grove, WI
- [35] Lancaster, WI
- [36] Burlington, WI
- [37] Sturgeon Bay, WI
- [38] New Richmond, WI
- [39] Prairie du Sac--Sauk City, WI
- [40] Kiel--New Holstein, WI
- [41] Ellsworth, WI
- [42] Shawano, WI
- [43] Fort Atkinson, WI
- [44] Wautoma, WI
- [45] Amery, WI
- [46] Viroqua, WI
- [47] Osceola, WI
- [48] Edgerton, WI
- [49] Arcadia, WI
- [50] Reedsburg, WI
- [51] Algoma, WI
- [52] Wrightstown, WI
- [53] Columbus, WI
- [54] Waupun, WI
- [55] Racine, WI
- [56] Lake Mills, WI
- [57] Watertown, WI
- [58] Evansville, WI
- [59] Ladysmith, WI
- [60] Sheboygan, WI
- [61] Medford, WI
- [62] Tomahawk, WI
- [63] Delavan, WI
- [64] East Troy, WI
- [65] Walworth, WI
- [66] Brodhead, WI
- [67] Ripon, WI
- [68] Ironwood, MI--WI
- [69] Menomonie, WI
- [70] Mazomanie, WI
- [71] Winneconne, WI
- [72] Kewaunee, WI
- [73] Hayward, WI
- [74] Bloomer, WI
- [75] Somerset, WI
- [76] Hudson, WI--MN
- [77] Manitowoc, WI
- [78] Lodi, WI
- [79] Abbotsford, WI
- [80] Tomah, WI
- [81] Spooner, WI
- [82] Horicon, WI
- [83] Pulaski, WI
- [84] Oregon, WI
- [85] Black River Falls, WI
- [86] Platteville, WI
- [87] Berlin, WI
- [88] New London, WI
- [89] Elkhorn, WI
- [90] Peshtigo, WI
- [91] Brillion, WI
- [92] Mauston, WI
- [93] Chetek, WI
- [94] Clintonville, WI
- [95] Dodgeville, WI
- [96] Beaver Dam, WI
- [97] Oconto Falls, WI
- [98] Monroe, WI
- [99] Marinette--Menominee, WI--MI
-[100] Johnson Creek, WI
-[101] Milwaukee, WI
-[102] Rice Lake, WI
-[103] Sparta, WI
-[104] Baraboo, WI
-[105] Merrill, WI
-[106] Prairie du Chien, WI--IA
-[107] Marshfield, WI
-[108] Plymouth, WI
-[109] Lake Geneva, WI
-[110] Lake Delton, WI
-[111] River Falls, WI
-[112] Antigo, WI
-[113] Waupaca, WI
-[114] Baldwin, WI
-[115] Oostburg, WI
-[116] Oconto, WI
-[117] Boscobel, WI
-[118] Ashland, WI
-[119] Portage, WI
-[120] Barron, WI
-3601 Levels: Abbeville, LA Abbeville, SC ... Zuni Pueblo, NM
-
-
+** For Wausau and Madison:
+*** START FOR LOOP
 For urban.area in WI.urban.areas
-
-Find a way to access this list generated from org mode
-
-#+BEGIN_SRC R :var urban.area = "Madison, WI"
-
-
-
+#+BEGIN_SRC R
+  WI_urban.area.names <- as.character(WI_UrbanAreas$NAME10)
+  for (urban.area in WI_urban.area.names) {
 #+END_SRC
 
-
-** Crop image
-Crop image to the extent of the urban area of interest, Madison
+*** Crop image
+Crop image to the extent of the urban area of interest
 #+BEGIN_SRC R
-
-
-
   UrbanArea <- US_UrbanAreas[str_detect(US_UrbanAreas$NAME10, urban.area.name), ]
 
   # Crop image
   e <- extent(UrbanArea)
 
-  inFile <- str_c(image.dd.directory,image.name,".tif")
+  inFile <- str_c(image.rd.directory,image.name,".tif")
   outFile <- str_c(image.dd.directory,image.name,"/urbanExtent.tif")
 
   gdal_translate(inFile, outFile,
                  projwin = c(xmin(e), ymax(e), xmax(e), ymin(e)))
-
-
-  image <- stack(outFile)
-
-  png(paste0("figs/",image.name,"/urbanExtent.png"))
-  plotRGB(image, 4, 3, 2)
-  dev.off()
-
 #+END_SRC
 
 #+RESULTS:
@@ -637,10 +505,7 @@ Crop image to the extent of the urban area of interest, Madison
 : null device
 :           1
 
-[[file:figs/*-urbanExtent.png]]
-[[file:figs/wausau-urbanExtent.png]]
-
-** tile image
+*** tile image
 #+BEGIN_SRC R
     ##############
     #######                     Split image for parallel masking
@@ -741,7 +606,7 @@ Warning: -srcwin 19000 -218 1000 1000 falls partially outside raster extent. Goi
   0.000   0.000  38.758
 #+end_example
 
-** Mask image
+*** Mask image
 - Use WI waterbodies, Urban area extent, and cropland datalayer to
   mask out areas that are not of interest.
 - Save masked NAIP in masked_Image folder
@@ -7250,8 +7115,7 @@ min values  :           34,            1,           60,           49
 max values  :          244,          247,          241,          234
 #+end_example
 
-
-** Add Ratios of image
+*** Add Ratios of image
 - Read in Cropped_Image
 - Save results in Ratios folder
 *** for tiled image
@@ -9968,7 +9832,7 @@ max values  :  244.0000000,  247.0000000,  241.0000000,  234.0000000,    0.40501
 : Error in .getGDALtransient(x, filename = filename, options = options,  :
 :   filename exists; use overwrite=TRUE
 
-** Perform PCA
+*** Perform PCA
 *** For Tiled image
 I need to sample from the entire image to perform the pca, not each
 tile separately.
@@ -10101,8 +9965,8 @@ very low
 [[file:figs/*-ScaledPCA.png]]
 [[file:figs/*-ScaledPCA*.png]]
 
-** Add Texture?
-** Segment image
+*** Add Texture?
+*** Segment image
 #+BEGIN_SRC sh
 
 python fia_segment.py
@@ -10111,6 +9975,10 @@ python fia_segment.py
 
 In the terminal I run the scripts fia_segment.py.
 
+*** END FOR LOOP
+
+
+** Select Training Data
 ** Polygonize Segments
 #+BEGIN_SRC R
                                             # make directory for Polygonized Segments
@@ -11274,6 +11142,17 @@ Note on shadows:
 There are a lot of shadows in the Wausau image.  We are making the
 decision to try to classify these, but report the high uncertainty
 that will be associated with the areas.
+
+Note on where to select training data:
+
+I need to specify a few areas that I completely classify by hand for
+each segmentation.  They don't have to be large, but they have to be
+the same.  I'll use these to find the best segmentation.  Then once I
+know the best one, I'll collect extra training data.
+
+So I need to define maybe 5 200m x 200m boxes that I completely
+classify for each of the segmentation combinations.  This will
+standardize my effort.
 
 
 *** Load Segments and original image into qgis
@@ -12559,6 +12438,32 @@ in parallel.
 #+END_SRC
 
 #+RESULTS:
+
+
+
+
+
+
+
+
+
+
+
+
+
+** For Every Other Urban Area in WI, add features, perform pca, segment image, classify image
+This is same as above but just uses models developed from Madison and Wausau
+*** Update any parameters
+
+*** START FOR LOOP
+For urban.area in WI.urban.areas
+#+BEGIN_SRC R
+  WI_urban.area.names <- as.character(WI_UrbanAreas$NAME10)
+# remove Madison and Wausau, because they are already done.
+
+  for (urban.area in WI_urban.area.names) {
+#+END_SRC
+
 
 
 
