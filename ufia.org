@@ -158,76 +158,6 @@ output:
 #+END_SRC
 
 #+RESULTS:
-#+begin_example
-Loading required package: sp
-rgdal: version: 1.0-4, (SVN revision 548)
- Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 1.10.0, released 2013/04/24
- Path to GDAL shared files: /usr/share/gdal/1.10
- Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
- Path to PROJ.4 shared files: (autodetected)
- Linking to sp version: 1.1-1
-rgeos version: 0.3-11, (SVN revision 479)
- GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
- Linking to sp version: 1.1-1
- Polygon checking: TRUE
-
-Attaching package: ‘dplyr’
-
-The following objects are masked from ‘package:plyr’:
-
-    arrange, count, desc, failwith, id, mutate, rename, summarise,
-    summarize
-
-The following objects are masked from ‘package:rgeos’:
-
-    intersect, setdiff, union
-
-The following objects are masked from ‘package:raster’:
-
-    intersect, select, union
-
-The following objects are masked from ‘package:stats’:
-
-    filter, lag
-
-The following objects are masked from ‘package:base’:
-
-    intersect, setdiff, setequal, union
-Loading required package: foreach
-foreach: simple, scalable parallel programming from Revolution Analytics
-Use Revolution R for scalability, fault tolerance and more.
-http://www.revolutionanalytics.com
-Loading required package: iterators
-Loading required package: parallel
-Loading required package: BBmisc
-
-Attaching package: ‘BBmisc’
-
-The following object is masked from ‘package:dplyr’:
-
-    collapse
-
-The following object is masked from ‘package:rgeos’:
-
-    symdiff
-
-Loading required package: ggplot2
-Loading required package: ParamHelpers
-
-Attaching package: ‘ParamHelpers’
-
-The following object is masked from ‘package:raster’:
-
-    getValues
-
-
-Attaching package: ‘mlr’
-
-The following object is masked from ‘package:raster’:
-
-    resample
-#+end_example
 
 ** Set image name and directory and other variables
 #+BEGIN_SRC R
@@ -242,7 +172,7 @@ The following object is masked from ‘package:raster’:
       image.dd.directory <- "../DD_NAIP-imagery/"
 
   dir.create(image.dd.directory)
-  image.dir.path <- paste0(urban.area.dir.path)
+  image.dir.path <- paste0(image.dd.directory, image.name)
   dir.create(image.dir.path)
 
   ##################
@@ -283,165 +213,165 @@ The following object is masked from ‘package:raster’:
 :   '../DD_NAIP-imagery/madison_wausau_mounthoreb_NAIP' already exists
 ** Load Functions
 #+BEGIN_SRC R
-      namedList <- function(...) {
-        L <- list(...)
-        snm <- sapply(substitute(list(...)),deparse)[-1]
-        if (is.null(nm <- names(L))) nm <- snm
-        if (any(nonames <- nm=="")) nm[nonames] <- snm[nonames]
-        setNames(L,nm)
+        namedList <- function(...) {
+          L <- list(...)
+          snm <- sapply(substitute(list(...)),deparse)[-1]
+          if (is.null(nm <- names(L))) nm <- snm
+          if (any(nonames <- nm=="")) nm[nonames] <- snm[nonames]
+          setNames(L,nm)
+        }
+
+
+      ndvi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,...) {
+        red_band <- image_w4bands[[red_bandnumber]]
+        nir_band <- image_w4bands[[nir_bandnumber]]
+        ndvi <- (nir_band - red_band)/(nir_band + red_band)
+        return(ndvi)
       }
 
+        savi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,L,...) {
+          red_band <- image_w4bands[,,red_bandnumber,drop=FALSE]
+          nir_band <- image_w4bands[,,nir_bandnumber,drop=FALSE]
+          savi <- (nir_band - red_band)/(nir_band + red_band + L) * (1+L)
+          return(savi)
+        }
 
-    ndvi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,...) {
-      red_band <- image_w4bands[[red_bandnumber]]
-      nir_band <- image_w4bands[[nir_bandnumber]]
-      ndvi <- (nir_band - red_band)/(nir_band + red_band)
-      return(ndvi)
-    }
+        ratio <- function(image_w4bands, numerator_bandNumber) {
+          r <- image_w4bands[,,numerator_bandNumber,drop = F] / sum(image_w4bands)
+          return(r)
+        }
 
-      savi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,L,...) {
-        red_band <- image_w4bands[,,red_bandnumber,drop=FALSE]
-        nir_band <- image_w4bands[,,nir_bandnumber,drop=FALSE]
-        savi <- (nir_band - red_band)/(nir_band + red_band + L) * (1+L)
-        return(savi)
-      }
+        create_GLCM_layers_parallel <- function(list_rasterlayers, vec_window_sizes, dir, cpus) {
+          cl <- makeCluster(spec = cpus, methods = FALSE)
+          # Register the cluster with foreach:
+          registerDoParallel(cl)
+          GLCM_rasters <- foreach(i = 1:length(list_rasterlayers), .packages = c('glcm','raster')) %:%
+            foreach (j = 1:length(window_sizes), .packages = c('glcm','raster')) %dopar% {
+              raster <- list_rasterlayers[[i]]
+              dir <- dir
+              window_size <- vec_window_sizes[j]
+              w_s <- c(window_size,window_size)
+              a <- glcm(raster,shift = dir, window = w_s,na_opt = "center", na_val = 0, asinteger = T)
+              names(a)<- paste0(names(list_rasterlayers[[i]]),"_",vec_window_sizes[j],"x",vec_window_sizes[j],"_",names(a))
+              a
+            }
+          stopCluster(cl) # Stops the cluster
+          registerDoSEQ()
+          return(unlist(GLCM_rasters))
+        }
 
-      ratio <- function(image_w4bands, numerator_bandNumber) {
-        r <- image_w4bands[,,numerator_bandNumber,drop = F] / sum(image_w4bands)
-        return(r)
-      }
-
-      create_GLCM_layers_parallel <- function(list_rasterlayers, vec_window_sizes, dir, cpus) {
-        cl <- makeCluster(spec = cpus, methods = FALSE)
-        # Register the cluster with foreach:
-        registerDoParallel(cl)
-        GLCM_rasters <- foreach(i = 1:length(list_rasterlayers), .packages = c('glcm','raster')) %:%
-          foreach (j = 1:length(window_sizes), .packages = c('glcm','raster')) %dopar% {
-            raster <- list_rasterlayers[[i]]
-            dir <- dir
-            window_size <- vec_window_sizes[j]
-            w_s <- c(window_size,window_size)
-            a <- glcm(raster,shift = dir, window = w_s,na_opt = "center", na_val = 0, asinteger = T)
-            names(a)<- paste0(names(list_rasterlayers[[i]]),"_",vec_window_sizes[j],"x",vec_window_sizes[j],"_",names(a))
-            a
+        # Function takes raster stack, samples data, performs pca and returns stack of first n_pcomp bands
+          predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
+              sr <- sampleRandom(stack,sampleNumber)
+              pca <- prcomp(sr, scale=T)
+              beginCluster()
+              r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
+              endCluster()
+              return(r)
           }
-        stopCluster(cl) # Stops the cluster
-        registerDoSEQ()
-        return(unlist(GLCM_rasters))
-      }
+    predict_pca <- function(raster.path, pca, n.comps, out.path) {
+        s <- stack(raster.path)
+        names(s) <- c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
+        predict(s, pca, index = 1:n.comps, filename = out.path, overwrite=TRUE)
+    }
 
-      # Function takes raster stack, samples data, performs pca and returns stack of first n_pcomp bands
-        predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
-            sr <- sampleRandom(stack,sampleNumber)
-            pca <- prcomp(sr, scale=T)
-            beginCluster()
-            r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
-            endCluster()
-            return(r)
+
+
+
+      gdal_polygonizeR <- function(x, outshape=NULL, gdalformat = 'ESRI Shapefile',
+                                   pypath=NULL, readpoly=TRUE, quiet=TRUE) {
+        if (isTRUE(readpoly)) require(rgdal)
+        if (is.null(pypath)) {
+          pypath <- Sys.which('gdal_polygonize.py')
         }
-  predict_pca <- function(raster.path, pca, n.comps, out.path) {
-      s <- stack(raster.path)
-      names(s) <- c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
-      predict(s, pca, index = 1:n.comps, filename = out.path, overwrite=TRUE)
-  }
-
-
-
-
-    gdal_polygonizeR <- function(x, outshape=NULL, gdalformat = 'ESRI Shapefile',
-                                 pypath=NULL, readpoly=TRUE, quiet=TRUE) {
-      if (isTRUE(readpoly)) require(rgdal)
-      if (is.null(pypath)) {
-        pypath <- Sys.which('gdal_polygonize.py')
-      }
-      if (!file.exists(pypath)) stop("Can't find gdal_polygonize.py on your system.")
-      owd <- getwd()
-      on.exit(setwd(owd))
-      setwd(dirname(pypath))
-      if (!is.null(outshape)) {
-        outshape <- sub('\\.shp$', '', outshape)
-        f.exists <- file.exists(paste(outshape, c('shp', 'shx', 'dbf'), sep='.'))
-        if (any(f.exists))
-          stop(sprintf('File already exists: %s',
-                       toString(paste(outshape, c('shp', 'shx', 'dbf'),
-                                      sep='.')[f.exists])), call.=FALSE)
-      } else outshape <- tempfile()
-      if (is(x, 'Raster')) {
-        require(raster)
-        writeRaster(x, {f <- tempfile(fileext='.asc')})
-        rastpath <- normalizePath(f)
-      } else if (is.character(x)) {
-        rastpath <- normalizePath(x)
-      } else stop('x must be a file path (character string), or a Raster object.')
-      system2('python', args=(sprintf('"%1$s" "%2$s" -f "%3$s" "%4$s.shp"',
-                                      pypath, rastpath, gdalformat, outshape)))
-      if (isTRUE(readpoly)) {
-        shp <- readOGR(dirname(outshape), layer = basename(outshape), verbose=!quiet)
-        return(shp)
-      }
-      return(NULL)
-    }
-
-
-    # Create a function to split the raster using gdalUtils::gdal_translate
-    split_rast <- function(infile, outfile, llx, lly, win_width, win_height) {
-      library(gdalUtils)
-      gdal_translate(infile, outfile,
-                     srcwin=c(llx, lly - win_height, win_width, win_height))
-    }
-
-
-    Water_Urban_mask <- function(tile.path, tile.name, urban, water) {
-                                            # load image tile
-        tile <- stack(tile.path)
-                                            # get extent image and make sp object
-        et <- as(extent(tile), "SpatialPolygons")
-        proj4string(et) <- "+init=epsg:26916"
-                                            # Mask out non-urban areas
-        if(gContainsProperly(urban,et) & !gIntersects(water,et)){
-            writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
-        } else if (gContainsProperly(urban,et) & gIntersects(water,et)) {
-            tile <- mask(tile, water, inverse = T)
-            writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
-        } else if (gIntersects(urban, et) & !gIntersects(water,et)) {
-            tile <- mask(tile, urban)
-            writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
-        } else if (gIntersects(urban, et) & gIntersects(water,et)) {
-            tile <- mask(tile, urban)
-            tile <- mask(tile, water, inverse = T)
-            writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+        if (!file.exists(pypath)) stop("Can't find gdal_polygonize.py on your system.")
+        owd <- getwd()
+        on.exit(setwd(owd))
+        setwd(dirname(pypath))
+        if (!is.null(outshape)) {
+          outshape <- sub('\\.shp$', '', outshape)
+          f.exists <- file.exists(paste(outshape, c('shp', 'shx', 'dbf'), sep='.'))
+          if (any(f.exists))
+            stop(sprintf('File already exists: %s',
+                         toString(paste(outshape, c('shp', 'shx', 'dbf'),
+                                        sep='.')[f.exists])), call.=FALSE)
+        } else outshape <- tempfile()
+        if (is(x, 'Raster')) {
+          require(raster)
+          writeRaster(x, {f <- tempfile(fileext='.asc')})
+          rastpath <- normalizePath(f)
+        } else if (is.character(x)) {
+          rastpath <- normalizePath(x)
+        } else stop('x must be a file path (character string), or a Raster object.')
+        system2('python', args=(sprintf('"%1$s" "%2$s" -f "%3$s" "%4$s.shp"',
+                                        pypath, rastpath, gdalformat, outshape)))
+        if (isTRUE(readpoly)) {
+          shp <- readOGR(dirname(outshape), layer = basename(outshape), verbose=!quiet)
+          return(shp)
         }
-    }
+        return(NULL)
+      }
 
-Crop_mask <- function(tile.path, tile.name, CDL_stack){
 
-  tile <- stack(tile.path)
-  crops <- crop(CDL_stack, tile)
+      # Create a function to split the raster using gdalUtils::gdal_translate
+      split_rast <- function(infile, outfile, llx, lly, win_width, win_height) {
+        library(gdalUtils)
+        gdal_translate(infile, outfile,
+                       srcwin=c(llx, lly - win_height, win_width, win_height))
+      }
 
-        # These are the values in the CDL that correspond to non crop cover types and not water
-        NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
-        # open water is 111
 
-        NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
-        # open water is 111. I don't include it in the above list so that it gets masked
+      Water_Urban_mask <- function(tile.path, tile.name, urban, water) {
+                                              # load image tile
+          tile <- stack(tile.path)
+                                              # get extent image and make sp object
+          et <- as(extent(tile), "SpatialPolygons")
+          proj4string(et) <- "+init=epsg:26916"
+                                              # Mask out non-urban areas
+          if(gContainsProperly(urban,et) & !gIntersects(water,et)){
+              writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+          } else if (gContainsProperly(urban,et) & gIntersects(water,et)) {
+              tile <- mask(tile, water, inverse = T)
+              writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+          } else if (gIntersects(urban, et) & !gIntersects(water,et)) {
+              tile <- mask(tile, urban)
+              writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+          } else if (gIntersects(urban, et) & gIntersects(water,et)) {
+              tile <- mask(tile, urban)
+              tile <- mask(tile, water, inverse = T)
+              writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+          }
+      }
 
-        # I'm going to add 37, Other Hay/Non-alfalfa, to the non crop cover types
-        NonCroppedValues <- c(NonCroppedValues, 37)
-        # I'm going to add 36, Alfalfa, to the non crop cover types
-        NonCroppedValues <- c(NonCroppedValues, 36)
+  Crop_mask <- function(tile.path, tile.name, CDL_stack){
 
-        # find cells that have been assigned crop all three years
-        crops[crops %in% NonCroppedValues] <- 0
-        crops[!(crops %in% NonCroppedValues)] <- 1
-        cropsum <- overlay(crops, fun = sum)
+    tile <- stack(tile.path)
+    crops <- crop(CDL_stack, tile)
 
-        dis.cropsum <- disaggregate(cropsum, fact = 20)
-        dis.cropsum <- resample(dis.cropsum, tile, "ngb")
-        masked_tile <- mask(tile, dis.cropsum, maskvalue = 4)
+          # These are the values in the CDL that correspond to non crop cover types and not water
+          NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
+          # open water is 111
 
-        #               Save Image
-        writeRaster(masked_tile, paste0(crop.masked.tiles.directory, "/", tile.name), overwrite = T)
-    }
+          NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
+          # open water is 111. I don't include it in the above list so that it gets masked
+
+          # I'm going to add 37, Other Hay/Non-alfalfa, to the non crop cover types
+          NonCroppedValues <- c(NonCroppedValues, 37)
+          # I'm going to add 36, Alfalfa, to the non crop cover types
+          NonCroppedValues <- c(NonCroppedValues, 36)
+
+          # find cells that have been assigned crop all three years
+          crops[crops %in% NonCroppedValues] <- 0
+          crops[!(crops %in% NonCroppedValues)] <- 1
+          cropsum <- overlay(crops, fun = sum)
+
+          dis.cropsum <- disaggregate(cropsum, fact = 20)
+          dis.cropsum <- resample(dis.cropsum, tile, "ngb")
+          masked_tile <- mask(tile, dis.cropsum, maskvalue = 4)
+
+          #               Save Image
+          writeRaster(masked_tile, paste0(crop.masked.tiles.directory, "/", tile.name), overwrite = T)
+      }
 
 
 
@@ -457,7 +387,7 @@ Crop_mask <- function(tile.path, tile.name, CDL_stack){
 
 #+BEGIN_SRC R
 
-  image <- stack(paste0(image.rd.directory, image.name))
+  image <- stack(paste0(image.rd.directory, image.name,".tif"))
 
   # get image projection, CRS
   ImageCRS <- image@crs
@@ -7112,79 +7042,83 @@ max values  :          244,          247,          241,          234
 I need to sample from the entire image to perform the pca, not each
 tile separately.
 #+BEGIN_SRC R
-                                          # make directory for PCA tiles
-  dir.create(path = str_c(urban.area.dir.path,"/PCATiles"))
+                                            # make directory for PCA tiles
+    dir.create(path = str_c(urban.area.dir.path,"/PCATiles"))
 
-                                          # Sample from every raster
-  tile.paths <- list.files(str_c(urban.area.dir.path,"/RatioTiles"), pattern = "*.tif$", full.names = T)
-  tile.names <- list.files(str_c(urban.area.dir.path,"/RatioTiles"), pattern = "*.tif$", full.names = F)
-
-
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-  sr <- foreach (i = seq_along(tile.names), .packages = c("raster"), .combine ="rbind") %dopar% {
-      tile <- stack(tile.paths[i])
-      s <- sampleRandom(tile, 100)
-  }
-
-  colnames(sr) <- c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
-
-                                          # Perform PCA on sample
-  pca <- prcomp(sr, scale = T)
-
-                                          # Apply PC rotation to each tile
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-  foreach (i = seq_along(tile.paths), .packages = c("raster")) %dopar% {
-      predict_pca(tile.paths[i],
-                  pca,
-                  n.comps = 3,
-                  out.path = paste0(urban.area.dir.path,"/PCATiles/",tile.names[i])
-                  )
-  }
-
-                                          # scale pca tiles between 0 and 255
-  dir.create(str_c(urban.area.dir.path,"/ScaledPCATiles"))
-                                          # find min and max
-  tile.paths <- list.files(str_c(urban.area.dir.path,"/PCATiles"), pattern = "*.tif$", full.names = T)
-  tile.names <- list.files(str_c(urban.area.dir.path,"/PCATiles"), pattern = "*.tif$", full.names = F)
-
-                                          #get min and max
-
-  getRasterMinMax <- function(t.path) {
-      tile <- stack(t.path)
-      mn <- cellStats(tile, stat = "min")
-      mx <- cellStats(tile, stat = "max")
-      mnmx <- c(mn,mx)
-      return (mnmx)
-  }
-
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-  minmax <- foreach(i = seq_along(tile.paths), .packages = "raster", .combine = "rbind") %dopar% {
-      getRasterMinMax(tile.paths[i])
-  }
-
-  mn <- apply(minmax, 2, min, na.rm = T)[1:3]
-  mx <- apply(minmax, 2, max, na.rm = T)[4:6]
+                                            # Sample from every raster
+    tile.paths <- list.files(str_c(urban.area.dir.path,"/RatioTiles"), pattern = "*.tif$", full.names = T)
+    tile.names <- list.files(str_c(urban.area.dir.path,"/RatioTiles"), pattern = "*.tif$", full.names = F)
 
 
+    cl <- makeCluster(cores)
+    registerDoParallel(cl)
 
-  range0255 <- function(tile.path, tile.name){
-      r <- stack(tile.path)
-      r <- (r - mn)/(mx-mn) * 255
-      writeRaster(r, paste0(image.dd.directory, image.name,"/ScaledPCATiles/",tile.name), overwrite=TRUE)
+    sr <- foreach (i = seq_along(tile.names), .packages = c("raster"), .combine ="rbind") %dopar% {
+        tile <- stack(tile.paths[i])
+        s <- sampleRandom(tile, 100)
+    }
+
+    colnames(sr) <- c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
+
+                                            # Perform PCA on sample
+    pca <- prcomp(sr, scale = T)
+
+                                            # Apply PC rotation to each tile
+    cl <- makeCluster(cores)
+    registerDoParallel(cl)
+
+    foreach (i = seq_along(tile.paths), .packages = c("raster")) %dopar% {
+        predict_pca(tile.paths[i],
+                    pca,
+                    n.comps = 3,
+                    out.path = paste0(urban.area.dir.path,"/PCATiles/",tile.names[i])
+                    )
+    }
+
+                                            # scale pca tiles between 0 and 255
+    dir.create(str_c(urban.area.dir.path,"/ScaledPCATiles"))
+                                            # find min and max
+    tile.paths <- list.files(str_c(urban.area.dir.path,"/PCATiles"), pattern = "*.tif$", full.names = T)
+    tile.names <- list.files(str_c(urban.area.dir.path,"/PCATiles"), pattern = "*.tif$", full.names = F)
+
+                                            #get min and max
+
+    getRasterMinMax <- function(t.path) {
+        tile <- stack(t.path)
+        mn <- cellStats(tile, stat = "min")
+        mx <- cellStats(tile, stat = "max")
+        mnmx <- c(mn,mx)
+        return (mnmx)
+    }
+
+    cl <- makeCluster(cores)
+    registerDoParallel(cl)
+
+    minmax <- foreach(i = seq_along(tile.paths), .packages = "raster", .combine = "rbind") %dopar% {
+        getRasterMinMax(tile.paths[i])
+    }
+
+    mn <- apply(minmax, 2, min, na.rm = T)[1:3]
+    mx <- apply(minmax, 2, max, na.rm = T)[4:6]
+
+
+
+    range0255 <- function(tile.path, tile.name){
+        r <- stack(tile.path)
+        r <- (r - mn)/(mx-mn) * 255
+        writeRaster(r, paste0(urban.area.dir.path,"/ScaledPCATiles/",tile.name), overwrite=TRUE)
+      }
+
+
+    registerDoParallel(cl)
+
+    foreach (i = seq_along(tile.paths), .packages = "raster") %dopar% {
+        range0255(tile.paths[i], tile.names[i])
     }
 
 
-  registerDoParallel(cl)
-
-  foreach (i = seq_along(tile.paths), .packages = "raster") %dopar% {
-      range0255(tile.paths[i], tile.names[i])
-  }
+  # Remove the unscaled PCA tiles to make some disk space
+  do.call(file.remove,list(tile.paths))
 
 #+END_SRC
 
@@ -7370,24 +7304,34 @@ max values  :    1.9058497,    5.3880100,    0.9396015
 #+END_SRC
 
 *** Segment image
-I need to make this run properly from this document.  Also need to
-change code to take arguments
-#+BEGIN_SRC sh
+
+This moves into the directory of the image, then into the directory of
+Madison, then runs the segmentation code with arguments that specify
+number of pixels per segment and the compactness.
 
 
-python fia_segment1.py &
-python fia_segment2.py &
-python fia_segment3.py &
-python fia_segment4.py &
+#+BEGIN_SRC sh :results raw
+  cd /home/erker/mydata2/DD_NAIP-imagery/madison_wausau_mounthoreb_NAIP
+
+#    for urban_area_dir in *     by uncommenting this line, it will run segmentation on all urban areas
+    for urban_area_dir in Madison
+    do
+     cd $urban_area_dir
+     mkdir SegmentationTiles
+     python /home/erker/mydata2/Pjt_UFIA/fia_segment_cmdArgs.py 60 30 &
+     python /home/erker/mydata2/Pjt_UFIA/fia_segment_cmdArgs.py 30 15 &
+     python /home/erker/mydata2/Pjt_UFIA/fia_segment_cmdArgs.py 105 32 &
+    done
 
 #+END_SRC
 
-In the terminal I run the scripts fia_segmentX.py.
+#+RESULTS:
 
-There are four scripts, one for each average pixel size and
-compactness combination that I want to investigate.  This saves time,
-by running four scripts at once.  Don't forget to run them in
-background with "&"
+
+
+
+
+
 
 
 
@@ -9907,6 +9851,11 @@ in parallel.
 
 ** For Every Other Urban Area in WI, add features, perform pca, segment image, classify image
 This is same as above but just uses models developed from Madison and Wausau
+
+Before I loop through all the WI urban areas I need to make sure I'll
+have enough disk space for all the intermediate images.  If I won't I
+should delete intermediate steps as I go.
+
 *** Update any parameters
 
 - e.g. segmentation parameters
