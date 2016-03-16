@@ -507,7 +507,7 @@ str_sub(.,1,-2)
     give_polygons_attributes_of_first_point_within <- function(points,
                                                           polygons){
         if (length(points@data$row) >1) {
-            points <- points[points@data$row ==1 & points@data$column ==1 ,]
+            points <- points[points@data$row ==1 & points@data$col ==1 ,]
         }
         po <- gIntersects(points, polygons, byid=TRUE)
         out <- foreach(polygon.number = seq_along(polygons), .combine = "rbind") %do% {
@@ -1294,8 +1294,11 @@ str_sub(.,1,-2)
       pix.mods <- readRDS(str_c(model.dir,"/",model.rds))
       pix.umods <- unlist(pix.mods, recursive = F)
 
-      pix.feature.df <- readRDS(str_c(tile.dir,"/",tile.name,pixelFeatureDF.appendage,".rds")) %>%
-          dplyr::select(-x, -y)
+      pix.feature.df <- readRDS(str_c(tile.dir,"/",tile.name,pixelFeatureDF.appendage,".rds"))
+
+      if(!is.null(pix.feature.df$y)) {
+          pix.feature.df <- dplyr::select(pix.feature.df, -x, -y)
+      }
 
       # I set NA's to 0 here.  Not the best choice.  Not sure why they exist.
       # imputing to mean would probably be better
@@ -1496,6 +1499,91 @@ plot(a)
 #+END_SRC
 
 #+RESULTS:
+
+*** Point-wise error functions
+#+BEGIN_SRC R
+  calcErrorAllMultinomial <-  function(pts, tile, Pixel = F) {
+      classification <- raster::extract(classified.tile, pts)
+      if(Pixel == T) {
+          lvls <- levels(classified.tile)[[1]]
+          classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
+      } else {
+          classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
+      }
+      google = pts@data$cvr_typ
+      overall.error <- 1 - mean(classification == google)
+      pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
+      pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
+      pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
+      error <- c(overall.error = overall.error,
+                 pct.grass.classified.as.other = pct.grass.classified.as.other,
+                 pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                 pct.tree.classified.as.other = pct.tree.classified.as.other)
+      return(error)
+  }
+
+  calcErrorBinomial <-  function(pts, tile, target, Pixel = F) {
+      classification <- raster::extract(classified.tile, pts)
+      if(Pixel == T) {
+          lvls <- levels(classified.tile)[[1]]
+          classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
+      } else {
+          classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
+      }
+      classification <- ifelse(classification == target, classification, "o")
+      google <- pts@data$cvr_typ
+      google <- ifelse(google == target, google, "o")
+      overall.error <- 1 - mean(classification == google)
+      pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
+      pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
+      pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
+      error <- c(overall.error = overall.error,
+                 pct.grass.classified.as.other = pct.grass.classified.as.other,
+                 pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                 pct.tree.classified.as.other = pct.tree.classified.as.other)
+      return(error)
+  }
+
+
+
+
+  calcConfusionMat <- function(pts, tile) {
+      classification <- raster::extract(classified.tile, pts)
+      classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
+      table(classification, google = pts@data$cvr_typ)
+  }
+
+
+#+END_SRC
+#+RESULTS:
+
+*** Plot points on classifed tile
+#+BEGIN_SRC R
+      pts.on.classified.tile.plot <- function(pts, classified.tile, target = NULL) {
+          if(target == "a") {
+              pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
+              pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, fill = cvr_typ), shape = 21, color = "black", size =2, stroke = .2)
+          } else {
+              pts@data <- pts@data %>%
+                  mutate(cvr_typ = ifelse(cvr_typ == target, cvr_typ, "o"))
+                  pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
+          }
+          r.df <- as.data.frame(classified.tile, xy = T)
+          names(r.df) <- c("x","y","cvr_typ")
+          r.df <- r.df %>%
+              mutate(cvr_typ = mapvalues(cvr_typ, from = c(1,2,3,4), to = c("g","i","t","o")))
+          pxls.plot <- ggplot() + geom_raster(data = r.df, aes(x = x, y = y, fill = cvr_typ))
+          title <- ggtitle(label = names(classified.tile))
+          UTC_pal <- c(g = "#ffff99", i = "#f0027f", t = "#7fc97f", o = "#666666")
+          pxls.plot + pts.plot + title + scale_fill_manual(values = UTC_pal)+ scale_color_manual(values = UTC_pal) +
+  coord_equal()
+      }
+
+
+
+#+END_SRC
+#+RESULTS:
+
 
 ** Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth
 *** Training
@@ -2029,113 +2117,551 @@ message(dd.accuracy.dir)
   stopCluster(cl)
 #+END_SRC
 
+
+
+
+
+
+
+**** Visualize classified rasters
+#+BEGIN_SRC R
+error.df %>%
+ungroup() %>%
+arrange(desc(overall.error)) %>%
+head()
+#+END_SRC
+
 #+RESULTS:
+#+begin_example
+
+ overall.error pct.grass.classified.as.other
+1             1                             1
+2             1                             1
+3             1                             1
+4             1                             1
+5             1                             1
+6             1                             1
+  pct.impervious.classified.as.other pct.tree.classified.as.other       grid
+1                                NaN                            1 mad-100m-1
+2                                NaN                            1 mad-100m-1
+3                                NaN                            1 mad-100m-1
+4                                NaN                            1 mad-100m-1
+5                                NaN                            1 mad-100m-1
+6                                NaN                            1 mad-100m-1
+        image target.cover    model seg.params
+1 madisonNAIP   impervious  rf_prob N-105_C-32
+2 madisonNAIP   impervious  rf_resp N-105_C-32
+3 madisonNAIP   impervious svm_resp N-105_C-32
+4 madisonNAIP   impervious  rf_prob  N-30_C-15
+5 madisonNAIP   impervious  rf_resp  N-30_C-15
+6 madisonNAIP   impervious svm_resp  N-30_C-15
+#+end_example
 
 
+#+BEGIN_SRC R :exports results :results graphics :file ./figs/classifiedRasters.png
+
+  grid.100m.1.paths <- list.files(str_c(dd.accuracy.dir, "/",ClassifiedTilesDirName), full.names = T) %>%
+      str_extract(., ".*mad-100m-1.*.tif$") %>%
+      na.omit()
+
+  grid.100m.1.stacks <- lapply(grid.100m.1.paths, stack)
 
 
+  r <- grid.100m.1.stacks[[2]]
+  plot(r, main = names(r))
 
+  (grid.100m.1.stacks[[2]])
 
-
+#+END_SRC
 
 **** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data
 #+BEGIN_SRC R
-        grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
-
-         classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-              str_extract(., pattern = ".*.tif$") %>%
-              str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
-                na.omit()
-
-         grid.names <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-              str_extract(., pattern = ".*.tif$") %>%
-             str_extract(., pattern = grid.pattern) %>%
-             str_sub(.,1,-2) %>%
-             unique() %>%
-                na.omit()
-
-
-  grid.name = grid.names[1]
-
-
-  mad.grid.id.pattern = "mad-[0-9]+m-[0-9]+"
-  grid.pattern = "[a-zA-Z]{3}-[0-9]+m-[0-9]+_"
-  image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
-  target.pattern = "all|grass|impervious|tree"
-  model.pattern = "rf_prob|rf_resp|svm_resp"
-  seg.prms = "N-[0-9]+_C-[0-9]+|Pixel"
-
-
-   cl <- makeCluster(cores)
-   registerDoParallel(cl)
-
-
-  error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
-
-      pts <- grd[grd@data$unq__ID== grid.name,]
-      classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,".*")) %>% na.omit()
-      classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
-
-      foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
-              .combine = "rbind",
-              .packages = c("plyr","raster","dplyr", "stringr")) %dopar% {
-
-          classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
-          classified.tile <- raster(classified.tile.path.at.grid)
-
-          error <- calcError(pts, classified.tile)
-          error <- error %>%
-              t() %>%
-              data.frame() %>%
-              mutate(grid = grid.name,
-                     image =  str_extract(classified.tile.name.at.grid, image.pattern),
-                     target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
-                     model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                     seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
-          error
+      pts.on.classified.tile.plot <- function(pts, classified.tile, target = NULL) {
+          if(target == "a") {
+              pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
+              pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, fill = cvr_typ), shape = 21, color = "black", size =2, stroke = .2)
+          } else {
+              pts@data <- pts@data %>%
+                  mutate(cvr_typ = ifelse(cvr_typ == target, cvr_typ, "o"))
+                  pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
+          }
+          r.df <- as.data.frame(classified.tile, xy = T)
+          names(r.df) <- c("x","y","cvr_typ")
+          r.df <- r.df %>%
+              mutate(cvr_typ = mapvalues(cvr_typ, from = c(1,2,3,4), to = c("g","i","t","o")))
+          pxls.plot <- ggplot() + geom_raster(data = r.df, aes(x = x, y = y, fill = cvr_typ))
+          title <- ggtitle(label = names(classified.tile))
+          UTC_pal <- c(g = "#ffff99", i = "#f0027f", t = "#7fc97f", o = "#666666")
+          pxls.plot + pts.plot + title + scale_fill_manual(values = UTC_pal)+ scale_color_manual(values = UTC_pal) +
+  coord_equal()
       }
-  }
 
 
-  error.df %>%
-      arrange(overall.error) %>%
-      head()
+      calcErrorAllMultinomial <-  function(pts, tile, Pixel = F) {
+          classification <- raster::extract(classified.tile, pts)
+          if(Pixel == T) {
+              lvls <- levels(classified.tile)[[1]]
+              classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
+          } else {
+              classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
+          }
+          google = pts@data$cvr_typ
+          overall.error <- 1 - mean(classification == google)
+          pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
+          pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
+          pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
+          error <- c(overall.error = overall.error,
+                     pct.grass.classified.as.other = pct.grass.classified.as.other,
+                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                     pct.tree.classified.as.other = pct.tree.classified.as.other)
+          return(error)
+      }
+
+      calcErrorBinomial <-  function(pts, tile, target, Pixel = F) {
+          classification <- raster::extract(classified.tile, pts)
+          if(Pixel == T) {
+              lvls <- levels(classified.tile)[[1]]
+              classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
+          } else {
+              classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
+          }
+          classification <- ifelse(classification == target, classification, "o")
+          google <- pts@data$cvr_typ
+          google <- ifelse(google == target, google, "o")
+          overall.error <- 1 - mean(classification == google)
+          pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
+          pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
+          pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
+          error <- c(overall.error = overall.error,
+                     pct.grass.classified.as.other = pct.grass.classified.as.other,
+                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                     pct.tree.classified.as.other = pct.tree.classified.as.other)
+          return(error)
+      }
 
 
 
-  calcError <-  function(pts, tile) {
-      classification <- raster::extract(classified.tile, pts)
-      classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
-      google = pts@data$cvr_typ
-      overall.error <- 1 - mean(classification == google)
-      pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
-      pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
-      pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
-      error <- c(overall.error = overall.error,
-                 pct.grass.classified.as.other = pct.grass.classified.as.other,
-                 pct.impervious.classified.as.other = pct.impervious.classified.as.other,
-                 pct.tree.classified.as.other = pct.tree.classified.as.other)
-      return(error)
-  }
 
-  calcConfusionMat <- function(pts, tile) {
-      classification <- raster::extract(classified.tile, pts)
-      classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
-      table(classification, google = pts@data$cvr_typ)
-  }
+      calcConfusionMat <- function(pts, tile) {
+          classification <- raster::extract(classified.tile, pts)
+          classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
+          table(classification, google = pts@data$cvr_typ)
+      }
+
+
+      grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
+
+      grd <- spTransform(grd, utm16)
+
+      xy <- coordinates(grd)
+      grd@data$x <- xy[,1]
+      grd@data$y <- xy[,2]
+
+
+
+
+      classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+          str_extract(., pattern = ".*.tif$") %>%
+          str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
+          na.omit()
+
+      grid.names <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+          str_extract(., pattern = ".*.tif$") %>%
+          str_extract(., pattern = grid.pattern) %>%
+          str_sub(.,1,-2) %>%
+          unique() %>%
+          na.omit()
+
+
+      grid.name = grid.names[3]
+  grid.name = str_extract(grid.names, ".*200m-3.*") %>% na.omit()
+
+      mad.grid.id.pattern = "mad-[0-9]+m-[0-9]+"
+      grid.pattern = "[a-zA-Z]{3}-[0-9]+m-[0-9]+_"
+      image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
+      target.pattern = "all|grass|impervious|tree"
+      model.pattern = "rf_prob|rf_resp|svm_resp"
+      seg.prms = "N-[0-9]+_C-[0-9]+|Pixel"
+
+
+      cl <- makeCluster(cores)
+      registerDoParallel(cl)
+
+
+      error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
+
+          pts <- grd[grd@data$unq__ID== grid.name,]
+          classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
+              na.omit()
+
+          ## classified.tile.paths.at.grid = classified.tile.paths.at.grid %>%
+          ##      str_extract(., ".*madisonNAIP.*Pixel.*svm_.*") %>%
+          ##      na.omit()
+
+          ## classified.tile.path.at.grid = classified.tile.paths.at.grid[4]
+
+          classified.tile.path.at.grid <- str_extract(classified.tile.paths, ".*panshpSPOT_mad.50m.5_Pixel_panshpSPOT_all_svm_resp.*") %>%
+              na.omit()
+
+
+          foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
+                  .combine = "rbind",
+                  .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+
+                      classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
+                      classified.tile <- raster(classified.tile.path.at.grid)
+
+                      tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
+                      tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+
+                     ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
+                     ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
+                     ## dev.off()
+
+                      PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
+
+                      if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
+                          error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
+                          error <- error %>%
+                              t() %>%
+                              data.frame() %>%
+                              mutate(grid = grid.name,
+                                     image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                     target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                     model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                     seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
+                          error
+                      } else {
+                          target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
+                          target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                          error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
+                          error <- error %>%
+                              t() %>%
+                              data.frame() %>%
+                              mutate(grid = grid.name,
+                                     image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                     target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                     model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                     seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
+
+                          error
+                      }
+                  }
+      }
+
+
+
+      saveRDS(error.df, str_c(derived.dir, "point2pixel.error.df.rds"))
+      readRDS(error.df, str_c(derived.dir, "point2pixel.error.df.rds"))
+
+
+      error.df %>%
+          arrange(overall.error) %>%
+          head()
+
+      error.df %>%
+          arrange(desc(overall.error)) %>%
+          head()
+
+      error.df %>%
+          filter(seg.params != "Pixel") %>%
+          arrange(desc(overall.error)) %>%
+          head()
+
+    error.df <- error.df %>%
+          mutate(segment.size = ifelse(!is.na(str_extract(seg.params, ".*105.*")), 105,
+                                ifelse(!is.na(str_extract(seg.params, ".*60.*")), 60,
+                                ifelse(!is.na(str_extract(seg.params, ".*30.*")), 30,
+                                ifelse(!is.na(str_extract(seg.params, ".*70.*")), 105,
+                                ifelse(!is.na(str_extract(seg.params, ".*40.*")), 60,
+                                ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
+
 
 #+END_SRC
 
 
-#+BEGIN_SRC R :results graphics :file figs/grid.errors.png :height 800 :width 600
+#+BEGIN_SRC R :results graphics :file figs/grid.errors2.newtraining.png :height 800 :width 600
   ggplot(error.df, aes(y = overall.error, x = grid, color = target.cover)) + geom_point() +
       facet_grid(image~seg.params)
 #+END_SRC
 
 #+RESULTS:
-[[file:figs/grid.errors.png]]
+[[file:figs/grid.errors2.newtraining.png]]
+#+BEGIN_SRC R :results graphics :file figs/grid.errors4.newtraining.png :height 800 :width 600
+  ggplot(error.df, aes(y = overall.error, x = grid, color = target.cover)) + geom_point() +
+      facet_grid(image~segment.size)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors4.newtraining.png]]
 
 
+#+BEGIN_SRC R :results graphics :file figs/grid.errors5.newtraining.png :height 800 :width 600
+  ggplot(error.df, aes(y = overall.error, x = segment.size)) +
+      geom_point(data = error.df, aes(color = target.cover), position = position_dodge(width = 20)) +
+      facet_grid(model~image)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors5.newtraining.png]]
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors6.newtraining.png :height 800 :width 800
+  error.df.ssfac <- mutate(error.df, segment.size = factor(segment.size))
+
+      ggplot(error.df.ssfac, aes(y = overall.error, x = segment.size)) +
+          geom_boxplot(data = error.df.ssfac, aes(color = target.cover, group = interaction(target.cover,segment.size))) +
+          facet_grid(model~image)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors6.newtraining.png]]
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors10.newtraining.png :height 800 :width 800
+  error.df.ssfac <- mutate(error.df, segment.size = factor(segment.size)) %>%
+filter(target.cover == "all")
+
+      ggplot(error.df.ssfac, aes(y = overall.error, x = segment.size)) +
+          geom_line(data = error.df.ssfac, aes(color = target.cover, group = interaction(grid,target.cover))) +
+          facet_grid(model~image)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors10.newtraining.png]]
+#+BEGIN_SRC R :results graphics :file figs/grid.errors11.newtraining.png :height 800 :width 800
+  error.df.ssfac <- mutate(error.df, segment.size = factor(segment.size)) %>%
+filter(target.cover == "all")
+#, overall.error > .4)
+
+      ggplot(error.df.ssfac, aes(y = overall.error, x = segment.size)) +
+          geom_line(data = error.df.ssfac, aes(color = grid, group = grid)) +
+          facet_grid(model~image)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors11.newtraining.png]]
+
+
+
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors.tree.newtraining.png :height 800 :width 800
+  error.df.ssfac.tree <- filter(error.df.ssfac, target.cover == "all" | target.cover == "tree")
+
+      ggplot(error.df.ssfac.tree, aes(y = pct.tree.classified.as.other, x = segment.size)) +
+          geom_boxplot(data = error.df.ssfac.tree, aes(color = target.cover, group = interaction(target.cover,segment.size))) +
+          facet_grid(model~image)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors.tree.newtraining.png]]
+
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors.grass.png :height 800 :width 800
+  error.df.ssfac.grass <- filter(error.df.ssfac, target.cover == "all" | target.cover == "grass")
+
+      ggplot(error.df.ssfac.grass, aes(y = pct.grass.classified.as.other, x = segment.size)) +
+          geom_boxplot(data = error.df.ssfac.grass, aes(color = target.cover, group = interaction(target.cover,segment.size))) +
+          facet_grid(model~image)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors.grass.png]]
+
+#+BEGIN_SRC R :results raw
+  error.mod <- lm(overall.error ~ image * (target.cover + model + segment.size), data = error.df)
+  tidy(error.mod) %>% ascii()
+#+END_SRC
+
+#+RESULTS:
+|    | term                                   | estimate | std.error | statistic | p.value |
+|----+----------------------------------------+----------+-----------+-----------+---------|
+|  1 | (Intercept)                            |     0.26 |      0.01 |     27.44 |    0.00 |
+|  2 | imagepanshpSPOT                        |     0.17 |      0.02 |     11.35 |    0.00 |
+|  3 | target.covergrass                      |    -0.08 |      0.01 |     -8.45 |    0.00 |
+|  4 | target.coverimpervious                 |    -0.14 |      0.01 |    -14.17 |    0.00 |
+|  5 | target.covertree                       |    -0.06 |      0.01 |     -6.31 |    0.00 |
+|  6 | modelrf_resp                           |     0.00 |      0.01 |      0.02 |    0.99 |
+|  7 | modelsvm_resp                          |    -0.01 |      0.01 |     -1.46 |    0.14 |
+|  8 | segment.size                           |    -0.00 |      0.00 |     -1.62 |    0.11 |
+|  9 | imagepanshpSPOT:target.covergrass      |    -0.10 |      0.02 |     -5.90 |    0.00 |
+| 10 | imagepanshpSPOT:target.coverimpervious |     0.10 |      0.02 |      6.29 |    0.00 |
+| 11 | imagepanshpSPOT:target.covertree       |    -0.13 |      0.02 |     -8.34 |    0.00 |
+| 12 | imagepanshpSPOT:modelrf_resp           |     0.00 |      0.01 |      0.03 |    0.97 |
+| 13 | imagepanshpSPOT:modelsvm_resp          |     0.13 |      0.01 |      9.42 |    0.00 |
+| 14 | imagepanshpSPOT:segment.size           |    -0.00 |      0.00 |     -5.62 |    0.00 |
+
+                                    term      estimate    std.error
+1                             (Intercept)  0.2594736239 9.457737e-03
+2                         imagepanshpSPOT  0.1727955729 1.522839e-02
+3                       target.covergrass -0.0818909914 9.689578e-03
+4                  target.coverimpervious -0.1373055644 9.689578e-03
+5                        target.covertree -0.0611569996 9.689578e-03
+6                            modelrf_resp  0.0001428180 8.391421e-03
+7                           modelsvm_resp -0.0122835115 8.391421e-03
+8                            segment.size -0.0001441090 8.903396e-05
+9       imagepanshpSPOT:target.covergrass -0.0950710892 1.612641e-02
+10 imagepanshpSPOT:target.coverimpervious  0.1013795711 1.612641e-02
+11       imagepanshpSPOT:target.covertree -0.1345326137 1.612641e-02
+12           imagepanshpSPOT:modelrf_resp  0.0004778158 1.396589e-02
+13          imagepanshpSPOT:modelsvm_resp  0.1315548935 1.396589e-02
+14           imagepanshpSPOT:segment.size -0.0008378628 1.489573e-04
+      statistic       p.value
+1   27.43506508 3.802666e-151
+2   11.34693391  2.306554e-29
+3   -8.45145037  4.066308e-17
+4  -14.17043735  1.931840e-44
+5   -6.31162645  3.083836e-10
+6    0.01701953  9.864219e-01
+7   -1.46381779  1.433277e-01
+8   -1.61858472  1.056209e-01
+9   -5.89536419  4.069309e-09
+10   6.28655355  3.619056e-10
+11  -8.34237580  1.011573e-16
+12   0.03421307  9.727091e-01
+13   9.41973196  7.679367e-21
+14  -5.62485092  1.992621e-08
+
+#+BEGIN_SRC R :results raw
+options(asciiType = "org")
+options(warn = -1)
+  error.df %>%
+      group_by(image, target.cover, model, seg.params) %>%
+      summarize(overall.error = mean(overall.error)) %>%
+      ungroup() %>%
+      arrange(overall.error) %>%
+      head(n=40) %>%
+      ascii()
+#+END_SRC
+
+#+RESULTS:
+ |    | image       | target.cover | model    | seg.params | overall.error |
+ |----+-------------+--------------+----------+------------+---------------|
+ |  1 | madisonNAIP | impervious   | rf_prob  | Pixel      |          0.10 |
+ |  2 | madisonNAIP | impervious   | rf_resp  | Pixel      |          0.10 |
+ |  3 | madisonNAIP | impervious   | svm_resp | Pixel      |          0.11 |
+ |  4 | madisonNAIP | impervious   | rf_resp  | N-30_C-15  |          0.11 |
+ |  5 | madisonNAIP | impervious   | rf_prob  | N-30_C-15  |          0.11 |
+ |  6 | madisonNAIP | impervious   | rf_resp  | N-60_C-30  |          0.11 |
+ |  7 | madisonNAIP | impervious   | rf_prob  | N-60_C-30  |          0.11 |
+ |  8 | madisonNAIP | impervious   | rf_prob  | N-105_C-32 |          0.11 |
+ |  9 | madisonNAIP | impervious   | rf_resp  | N-105_C-32 |          0.11 |
+ | 10 | madisonNAIP | impervious   | svm_resp | N-60_C-30  |          0.12 |
+ | 11 | madisonNAIP | impervious   | svm_resp | N-30_C-15  |          0.12 |
+ | 12 | madisonNAIP | impervious   | svm_resp | N-105_C-32 |          0.13 |
+ | 13 | madisonNAIP | grass        | svm_resp | N-60_C-30  |          0.14 |
+ | 14 | madisonNAIP | grass        | svm_resp | N-30_C-15  |          0.14 |
+ | 15 | madisonNAIP | grass        | svm_resp | N-105_C-32 |          0.14 |
+ | 16 | madisonNAIP | tree         | svm_resp | N-60_C-30  |          0.16 |
+ | 17 | madisonNAIP | grass        | rf_resp  | N-60_C-30  |          0.16 |
+ | 18 | madisonNAIP | grass        | rf_prob  | N-105_C-32 |          0.16 |
+ | 19 | madisonNAIP | grass        | rf_resp  | N-105_C-32 |          0.16 |
+ | 20 | madisonNAIP | grass        | rf_prob  | N-60_C-30  |          0.16 |
+ | 21 | madisonNAIP | grass        | rf_resp  | N-30_C-15  |          0.17 |
+ | 22 | madisonNAIP | tree         | svm_resp | N-30_C-15  |          0.17 |
+ | 23 | madisonNAIP | grass        | rf_prob  | N-30_C-15  |          0.17 |
+ | 24 | madisonNAIP | tree         | svm_resp | N-105_C-32 |          0.17 |
+ | 25 | madisonNAIP | grass        | svm_resp | Pixel      |          0.18 |
+ | 26 | madisonNAIP | tree         | svm_resp | Pixel      |          0.18 |
+ | 27 | madisonNAIP | tree         | rf_prob  | N-105_C-32 |          0.19 |
+ | 28 | madisonNAIP | tree         | rf_resp  | N-105_C-32 |          0.19 |
+ | 29 | madisonNAIP | tree         | rf_prob  | N-30_C-15  |          0.19 |
+ | 30 | madisonNAIP | tree         | rf_resp  | N-60_C-30  |          0.19 |
+ | 31 | madisonNAIP | tree         | rf_resp  | N-30_C-15  |          0.19 |
+ | 32 | madisonNAIP | tree         | rf_prob  | N-60_C-30  |          0.19 |
+ | 33 | madisonNAIP | grass        | rf_prob  | Pixel      |          0.21 |
+ | 34 | madisonNAIP | grass        | rf_resp  | Pixel      |          0.21 |
+ | 35 | madisonNAIP | tree         | rf_prob  | Pixel      |          0.22 |
+ | 36 | madisonNAIP | tree         | rf_resp  | Pixel      |          0.22 |
+ | 37 | panshpSPOT  | tree         | rf_resp  | Pixel      |          0.22 |
+ | 38 | panshpSPOT  | tree         | rf_prob  | Pixel      |          0.23 |
+ | 39 | madisonNAIP | all          | svm_resp | N-60_C-30  |          0.23 |
+ | 40 | madisonNAIP | all          | rf_resp  | N-60_C-30  |          0.24 |
+
+
+
+#+BEGIN_SRC R :results raw
+  options(asciiType = "org")
+  options(warn = -1)
+    error.df %>%
+        filter(target.cover == "all") %>%
+        group_by(image, target.cover, model, seg.params) %>%
+        summarize(overall.error = mean(overall.error)) %>%
+        ungroup() %>%
+        arrange(overall.error) %>%
+        head(n=40) %>%
+        ascii()
+#+END_SRC
+
+#+RESULTS:
+ |    | image       | target.cover | model    | seg.params | overall.error |
+ |----+-------------+--------------+----------+------------+---------------|
+ |  1 | madisonNAIP | all          | svm_resp | N-60_C-30  |          0.23 |
+ |  2 | madisonNAIP | all          | rf_resp  | N-60_C-30  |          0.24 |
+ |  3 | madisonNAIP | all          | rf_prob  | N-60_C-30  |          0.24 |
+ |  4 | madisonNAIP | all          | rf_resp  | N-105_C-32 |          0.24 |
+ |  5 | madisonNAIP | all          | rf_prob  | N-105_C-32 |          0.24 |
+ |  6 | madisonNAIP | all          | svm_resp | N-30_C-15  |          0.24 |
+ |  7 | madisonNAIP | all          | rf_prob  | N-30_C-15  |          0.24 |
+ |  8 | madisonNAIP | all          | rf_resp  | N-30_C-15  |          0.25 |
+ |  9 | madisonNAIP | all          | svm_resp | Pixel      |          0.25 |
+ | 10 | madisonNAIP | all          | svm_resp | N-105_C-32 |          0.25 |
+ | 11 | madisonNAIP | all          | rf_resp  | Pixel      |          0.28 |
+ | 12 | madisonNAIP | all          | rf_prob  | Pixel      |          0.28 |
+ | 13 | panshpSPOT  | all          | rf_resp  | Pixel      |          0.42 |
+ | 14 | panshpSPOT  | all          | rf_prob  | Pixel      |          0.43 |
+ | 15 | panshpSPOT  | all          | svm_resp | Pixel      |          0.57 |
+ | 16 | panshpSPOT  | all          | rf_prob  | N-20_C-10  |               |
+ | 17 | panshpSPOT  | all          | rf_prob  | N-40_C-20  |               |
+ | 18 | panshpSPOT  | all          | rf_prob  | N-70_C-21  |               |
+ | 19 | panshpSPOT  | all          | rf_resp  | N-20_C-10  |               |
+ | 20 | panshpSPOT  | all          | rf_resp  | N-40_C-20  |               |
+ | 21 | panshpSPOT  | all          | rf_resp  | N-70_C-21  |               |
+ | 22 | panshpSPOT  | all          | svm_resp | N-20_C-10  |               |
+ | 23 | panshpSPOT  | all          | svm_resp | N-40_C-20  |               |
+ | 24 | panshpSPOT  | all          | svm_resp | N-70_C-21  |               |
+
+
+
+#+BEGIN_SRC R :results raw
+  options(asciiType = "org")
+  options(warn = -1)
+    error.df %>%
+        filter(target.cover == "all") %>%
+        group_by(image, target.cover, model, seg.params) %>%
+        summarize(pct.tree.classified.as.other = mean(pct.tree.classified.as.other)) %>%
+        ungroup() %>%
+        arrange(pct.tree.classified.as.other) %>%
+        head(n=40) %>%
+        ascii()
+
+#+END_SRC
+
+#+RESULTS:
+ |    | image       | target.cover | model    | seg.params | pct.tree.classified.as.other |
+ |----+-------------+--------------+----------+------------+------------------------------|
+ |  1 | panshpSPOT  | all          | rf_prob  | N-20_C-10  |                              |
+ |  2 | panshpSPOT  | all          | rf_prob  | N-40_C-20  |                              |
+ |  3 | panshpSPOT  | all          | rf_prob  | N-70_C-21  |                              |
+ |  4 | panshpSPOT  | all          | rf_resp  | N-20_C-10  |                              |
+ |  5 | panshpSPOT  | all          | rf_resp  | N-40_C-20  |                              |
+ |  6 | panshpSPOT  | all          | rf_resp  | N-70_C-21  |                              |
+ |  7 | panshpSPOT  | all          | svm_resp | N-20_C-10  |                              |
+ |  8 | panshpSPOT  | all          | svm_resp | N-40_C-20  |                              |
+ |  9 | panshpSPOT  | all          | svm_resp | N-70_C-21  |                              |
+ | 10 | madisonNAIP | all          | rf_prob  | N-105_C-32 |                              |
+ | 11 | madisonNAIP | all          | rf_prob  | N-30_C-15  |                              |
+ | 12 | madisonNAIP | all          | rf_prob  | N-60_C-30  |                              |
+ | 13 | madisonNAIP | all          | rf_prob  | Pixel      |                              |
+ | 14 | madisonNAIP | all          | rf_resp  | N-105_C-32 |                              |
+ | 15 | madisonNAIP | all          | rf_resp  | N-30_C-15  |                              |
+ | 16 | madisonNAIP | all          | rf_resp  | N-60_C-30  |                              |
+ | 17 | madisonNAIP | all          | rf_resp  | Pixel      |                              |
+ | 18 | madisonNAIP | all          | svm_resp | N-105_C-32 |                              |
+ | 19 | madisonNAIP | all          | svm_resp | N-30_C-15  |                              |
+ | 20 | madisonNAIP | all          | svm_resp | N-60_C-30  |                              |
+ | 21 | madisonNAIP | all          | svm_resp | Pixel      |                              |
+ | 22 | panshpSPOT  | all          | rf_prob  | Pixel      |                              |
+ | 23 | panshpSPOT  | all          | rf_resp  | Pixel      |                              |
+ | 24 | panshpSPOT  | all          | svm_resp | Pixel      |                              |
 
 
 **** Calc RMSEs Grid.
@@ -2332,6 +2858,24 @@ ggtitle("SPOT, n.pts: 225")
 #+RESULTS:
 [[file:figs/better.SPOT.RMSE_plot.png]]
 
+#+BEGIN_SRC R :results graphics :file figs/NAIP.200m.RMSE_plot.png :height 800 :width 600
+
+    sub.for.rmse.plot <- grid.master.df %>%
+        filter(target.type == "multinomial",
+               image == "madisonNAIP",
+               n.points == 841)
+
+
+    ggplot(sub.for.rmse.plot, aes( x = pct.t.googleEarth, y = pct_t_pred, color = seg.params)) +
+  geom_point() + geom_smooth() + theme_classic() +
+  geom_line(data = data.frame(pct.t.googleEarth = c(0,1), pct_t_pred = c(0,1), seg.params = "1:1"),
+  color = "black", size = 1) +
+  ggtitle("NAIP, n.pts: 841")
+
+#+END_SRC
+
+#+RESULTS:
+x[[file:figs/NAIP.200m.RMSE_plot.png]]
 
 
 
@@ -2512,6 +3056,26 @@ facet(segmentation~cover_type)
 #+RESULTS:
 [[file:figs/RMSE_tree_compare_n.ptsXRMSE.png]]
 
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_AreaXRMSE_NAIP_seg60.png
+  RMSE_tree.sub <- RMSE_tree%>%
+      filter(segment.size == 60, image == "madisonNAIP", target.type == "binomial", model == "svm_resp") %>%
+      mutate(area_meters_squared = ((sqrt(n.points) - 1) * 7)^2)
+
+
+  ggplot(RMSE_tree.sub, aes(x = area_meters_squared, y = RMSE_t), color = "blue") + geom_point() +
+      labs(y = "Root Mean Squared Prediction Error \n for Percent Tree Cover") +
+      theme_classic() +
+      theme(axis.title = element_text(size = 24),
+            axis.text =  element_text(size = 22)) +
+      xlim(0,45000)
+
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/RMSE_tree_compare_AreaXRMSE_NAIP_seg60.png]]
+
+
 #+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_seg.sizeXRMSE.png :height 800 :width 600
 
   ggplot(RMSE_tree, aes(x = segment.size, y = RMSE_t, color = n.points, group = interaction(n.points,target.type))) + geom_line() +
@@ -2580,6 +3144,1009 @@ ascii()
 *** Summarize Accuracy Assessment Results
 
 ** Test How Madison Model performs for Wausau
+*** Classify Wausau Accuracy Regions
+**** Make tiles at accuracy regions
+#+BEGIN_SRC R :results none
+
+
+  image.names <- "wausauNAIP"
+  image.paths <- str_c("../RD_NAIP/",image.names,".tif")
+
+      foreach(i = 1:2) %do% {
+
+        foreach(img.pth = image.paths) %do% {
+
+            Reproject_Shapefile_to_Image_CRS(accuracy.region.dsn[i],
+                                             accuracy.region.layer[i],
+                                             img.pth,
+                                             accuracy.region.imageCRS.dsn)
+
+            Crop_image_to_regions_around_points_nameBygrid(shapefile.dsn = accuracy.region.imageCRS.dsn,
+                                                           shapefile.layer = accuracy.region.layer[i],
+                                                           image.path = img.pth,
+                                                           cores = cores,
+                                                           output.dir = dd.accuracy.dir,
+                                                           column.name = "unq__ID")
+
+        }
+    }
+
+
+#+END_SRC
+**** Make PixelFeatureDFs and SegmentationFeatureDFs for Accuracy Regions
+  1) Input
+     - Testing Region Shapefiles
+     - image
+  2) Operation
+     - Reproject Shapefiles to that of image
+     - Crop image to each polygon in the shapefile
+     - Derive PixelfeatureDFs and SegmentationFeatureDF from each tile of the image in region of each polygon
+  3) Output
+     - SegmentationFeatureDFs for every training polygon
+     - PixelFeatureDFs for every pixel
+
+****** Start R Loop, for every smaller image, do in parallel, :
+#+BEGIN_SRC R
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+  pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
+
+      tile.names <- list.files(dd.accuracy.dir) %>%
+           str_extract(., pattern = str_c(img.nm,".*-[0-9]+.tif$")) %>%
+           str_extract(., pattern = str_c(img.nm,".*-[0-9]+")) %>%
+           na.omit()
+
+       foreach (i = tile.names,
+                .packages = c("raster","stringr")) %dopar% {
+   #+END_SRC
+
+****** Add Ratios
+#+BEGIN_SRC R
+  add.ratios.ndvi(tile.dir = dd.accuracy.dir,
+                  tile.name = i)
+
+
+ #+END_SRC
+
+ #+RESULTS:
+****** Save Pixel Feature Dataframe
+ #+BEGIN_SRC R
+
+   pixel.feature.df <- Create.Pixel.Feature.df(tile.dir = dd.accuracy.dir,
+                                               tile.name = i)
+
+
+
+
+#+END_SRC
+
+#+RESULTS:
+
+****** Perform PCA
+#+BEGIN_SRC R :results none
+
+# note, I copied madisonNAIP_pca to wausauNAIP_pca because we want to test if the madison pca will work for wausau
+
+                image.pca(image.name = img.nm,
+                          tile.dir = dd.accuracy.dir,
+                          tile.name = i,
+                          pca.dir = dd.pca.dir)
+        }
+  }
+   #+END_SRC
+****** Segmentation
+
+#+NAME: accuracy.dir
+#+BEGIN_SRC R
+message(dd.accuracy.dir)
+#+END_SRC
+
+#+RESULTS: accuracy.dir
+: ../DD/Accuracy
+
+
+#+BEGIN_SRC sh :var dir=accuracy.dir
+   cd $dir
+   # pixel size
+   # desired area for superpixel/segments
+   # compactness value
+   # imagename
+   python ../../code/fia_segment_cmdArgs.py 1 60 30 wausauNAIP
+
+
+#+END_SRC
+
+#+END_SRC
+
+#+RESULTS:
+| average                           | number                           | of                               | pixels                           | per                              | segment                          | is                               |                             60.0 |                                  |                                   |
+| compactness                       | parameter                        | is                               | 30                               |                                  |                                  |                                  |                                  |                                  |                                   |
+| ['wausauNAIP_wau-100m-4_pca.tif', | 'wausauNAIP_wau-100m-6_pca.tif', | 'wausauNAIP_wau-100m-8_pca.tif', | 'wausauNAIP_wau-100m-9_pca.tif', | 'wausauNAIP_wau-100m-1_pca.tif', | 'wausauNAIP_wau-100m-2_pca.tif', | 'wausauNAIP_wau-100m-3_pca.tif', | 'wausauNAIP_wau-100m-7_pca.tif', | 'wausauNAIP_wau-100m-5_pca.tif', | 'wausauNAIP_wau-100m-10_pca.tif'] |
+
+****** Create Segment Feature Dataframe
+ #+BEGIN_SRC R :results none
+   cl <- makeCluster(cores)
+   registerDoParallel(cl)
+
+   seg.feature.dfs <- foreach(img.nm = image.names) %do% {
+
+       tile.names <- list.files(dd.accuracy.dir) %>%
+           str_extract(., pattern = str_c(img.nm,".*-[0-9]+",segmentation.layer.pattern,".tif$")) %>%
+               na.omit()
+
+       seg.params <- unique(str_extract(tile.names, segmentation.layer.pattern))
+
+       foreach(seg.param.set = seg.params) %do% {
+
+           tile.names.sub <- tile.names[which(complete.cases(str_extract(tile.names,seg.param.set)))]
+           tile.names.sub <- str_replace(tile.names.sub, ".tif","")
+
+           out <- foreach (i = tile.names.sub,
+                           .packages = c("raster","stringr","dplyr","broom","tidyr")) %dopar% {
+                               seg.df <- Create.Segment.Feature.df(tile.dir = dd.accuracy.dir,
+                                                         tile.name = i)
+                               saveRDS(seg.df, file = paste0(dd.accuracy.dir,"/", i, segmentFeatureDF.appendage))
+                           }
+           out
+       }
+   }
+
+    #+END_SRC
+
+**** Classify Tiles at accuracy regions
+
+#+BEGIN_SRC R
+   cl <- makeCluster(cores)
+   registerDoParallel(cl)
+
+
+# I copied the madisonNAIP model .rds file to a wausauNAIP model.rds since we want to see the performance of
+# Madison models in Wausau
+
+
+   classified.grid.tiles <-
+       foreach(img.nm = image.names) %do% {
+
+           models <- list.files(Models.dir) %>%
+               str_extract(., str_c(".*",img.nm,".*")) %>%
+               na.omit()
+
+           tile.names <- list.files(dd.accuracy.dir) %>%
+               str_extract(., pattern = str_c(img.nm,".*[0-9]+.tif$")) %>%
+               str_replace(., segmentation.layer.pattern, "") %>%
+               str_replace(., ".tif", "") %>%
+                       na.omit() %>%
+                           unique()
+
+           foreach(tile.nm = tile.names,
+                   .packages = c("dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
+
+               foreach(model = models) %do% {
+
+                   segmentation.params <- str_extract(model, "N-[0-9]+_C-[0-9]+|Pixel")
+
+                   if(grepl("N-[0-9]+_C-[0-9]+",segmentation.params)) {
+                          segment.tile.name.append <- paste0("_",segmentation.params,".tif")
+                          segment.feature.df.name.append <- paste0("_",segmentation.params,segmentFeatureDF.appendage)
+
+                          classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
+                                          model.dir = Models.dir,
+                                          segment.dir = dd.accuracy.dir,
+                                          classify.out.dir = dd.accuracy.dir,
+                                          tile.name = tile.nm,
+                                          segmentation.appendage = segment.tile.name.append,
+                                          model.name.rds = model,
+                                          segment.feature.appendage = segment.feature.df.name.append,
+                                          segmentation.prms = segmentation.params)
+
+                   } else {
+                       classify.pixel.raster(tile.dir = dd.accuracy.dir,
+                                             tile.name = tile.nm,
+                                             pixelFeatureDF.appendage = pixel.feature.df.appendage,
+                                             model.dir = Models.dir,
+                                             model.rds = model,
+                                             seg.prms = segmentation.params)
+                   }
+               }
+           }
+       }
+
+
+  stopCluster(cl)
+#+END_SRC
+
+#+RESULTS:
+
+
+
+
+
+
+
+*** Assess Accuracy of Wausau classified tiles
+**** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data
+#+BEGIN_SRC R
+        wau.grid.id.pattern = "wau-[0-9]+m-[0-9]+_"
+        grid.pattern = "[a-zA-Z]{3}-[0-9]+m-[0-9]+_"
+        image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
+        target.pattern = "all|grass|impervious|tree"
+        model.pattern = "rf_prob|rf_resp|svm_resp"
+        seg.prms = "N-[0-9]+_C-[0-9]+|Pixel"
+
+
+    grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
+
+        grd <- spTransform(grd, utm16)
+
+        xy <- coordinates(grd)
+        grd@data$x <- xy[,1]
+        grd@data$y <- xy[,2]
+
+
+        classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+            str_extract(., pattern = ".*.tif$") %>%
+            str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
+            na.omit()
+
+        grid.names <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+            str_extract(., pattern = ".*.tif$") %>%
+            str_extract(., pattern = wau.grid.id.pattern) %>%
+            str_sub(.,1,-2) %>%
+            unique() %>%
+            na.omit()
+
+    grid.name = grid.names[7]
+
+    cl <- makeCluster(cores)
+        registerDoParallel(cl)
+
+
+        error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
+
+            pts <- grd[grd@data$unq__ID== grid.name,]
+
+            classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
+                na.omit()
+
+             classified.tile.paths.at.grid = classified.tile.paths.at.grid %>%
+                  str_extract(., ".*wausauNAIP.*") %>%
+                  na.omit()
+
+             classified.tile.path.at.grid = classified.tile.paths.at.grid[11]
+
+
+            foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
+                    .combine = "rbind",
+                    .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+
+                        classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
+                        classified.tile <- raster(classified.tile.path.at.grid)
+
+                        tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
+                        tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+
+                        ## png(str_c(dd.accuracy.dir,"/ClassifiedTiles/ClassifiedVersusGrid","/",names(classified.tile),".png"))
+                        ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
+                        ##dev.off()
+
+                        PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
+
+                        if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
+                            error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
+                            error <- error %>%
+                                t() %>%
+                                data.frame() %>%
+                                mutate(grid = grid.name,
+                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                       seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
+                            error
+                        } else {
+                            target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
+                            target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                            error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
+                            error <- error %>%
+                                t() %>%
+                                data.frame() %>%
+                                mutate(grid = grid.name,
+                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                       seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
+
+                            error
+                        }
+                    }
+        }
+
+
+
+        saveRDS(error.df, str_c(derived.dir, /"point2pixel.error.df.Wausau.rds"))
+  error.df <-readRDS(str_c(derived.dir, "/point2pixel.error.df.Wausau.rds"))
+
+  error.df %>%
+            arrange(overall.error) %>%
+            head()
+
+        error.df %>%
+            arrange(desc(overall.error)) %>%
+            head()
+
+  error.df %>%
+      filter(model == "rf_prob", target.cover == "tree") %>%
+            arrange(desc(overall.error)) %>%
+            head()
+
+
+
+      error.df <- error.df %>%
+            mutate(segment.size = ifelse(!is.na(str_extract(seg.params, ".*105.*")), 105,
+                                  ifelse(!is.na(str_extract(seg.params, ".*60.*")), 60,
+                                  ifelse(!is.na(str_extract(seg.params, ".*30.*")), 30,
+                                  ifelse(!is.na(str_extract(seg.params, ".*70.*")), 105,
+                                  ifelse(!is.na(str_extract(seg.params, ".*40.*")), 60,
+                                  ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
+
+
+#+END_SRC
+
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors2.wausau.png :height 800 :width 600
+  ggplot(error.df, aes(y = overall.error, x = grid, color = target.cover)) + geom_point() +
+      facet_grid(image~seg.params)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors2.wausau.png]]
+#+BEGIN_SRC R :results graphics :file figs/grid.errors4.wausau.png :height 800 :width 600
+  ggplot(error.df, aes(y = overall.error, x = grid, color = target.cover)) + geom_point() +
+      facet_grid(image~segment.size)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors4.wausau.png]]
+
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors5.wausau.png :height 800 :width 600
+  ggplot(error.df, aes(y = overall.error, x = segment.size)) +
+      geom_point(data = error.df, aes(color = target.cover), position = position_dodge(width = 20)) +
+      facet_grid(model~image)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors5.wausau.png]]
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors6.wausau.png :height 800 :width 800
+  error.df.ssfac <- mutate(error.df, segment.size = factor(segment.size)) %>%
+  filter(target.cover == "all")
+
+      ggplot(error.df.ssfac, aes(y = overall.error, x = model)) +
+          geom_boxplot(data = error.df.ssfac, aes(group = model)) +
+          facet_grid(target.cover~image) +
+	  geom_line(data = error.df.ssfac, aes(color = grid, group = grid), size = 1) +
+	  theme_bw()
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors6.wausau.png]]
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors6.wausau.tree.png :height 800 :width 800
+  error.df.ssfac <- mutate(error.df, segment.size = factor(segment.size)) %>%
+  filter(target.cover == "tree")
+
+      ggplot(error.df.ssfac, aes(y = overall.error, x = model)) +
+          geom_boxplot(data = error.df.ssfac, aes(group = model)) +
+          facet_grid(target.cover~image) +
+	  geom_line(data = error.df.ssfac, aes(color = grid, group = grid), size = 1) +
+	  theme_bw()
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors6.wausau.tree.png]]
+
+
+
+
+
+
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors.tree.newtraining.png :height 800 :width 800
+  error.df.ssfac.tree <- filter(error.df.ssfac, target.cover == "all" | target.cover == "tree")
+
+      ggplot(error.df.ssfac.tree, aes(y = pct.tree.classified.as.other)) +
+          geom_boxplot(data = error.df.ssfac.tree, aes(color = target.cover, group = interaction(target.cover,segment.size))) +
+          facet_grid(image~model)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors.tree.newtraining.png]]
+
+
+#+BEGIN_SRC R :results graphics :file figs/grid.errors.grass.png :height 800 :width 800
+  error.df.ssfac.grass <- filter(error.df.ssfac, target.cover == "all" | target.cover == "grass")
+
+      ggplot(error.df.ssfac.grass, aes(y = pct.grass.classified.as.other, x = segment.size)) +
+          geom_boxplot(data = error.df.ssfac.grass, aes(color = target.cover, group = interaction(target.cover,segment.size))) +
+          facet_grid(model~image)
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid.errors.grass.png]]
+
+#+BEGIN_SRC R :results raw
+  error.mod <- lm(overall.error ~ image * (target.cover + model + segment.size), data = error.df)
+  tidy(error.mod) %>% ascii()
+#+END_SRC
+
+#+RESULTS:
+|    | term                                   | estimate | std.error | statistic | p.value |
+|----+----------------------------------------+----------+-----------+-----------+---------|
+|  1 | (Intercept)                            |     0.26 |      0.01 |     27.44 |    0.00 |
+|  2 | imagepanshpSPOT                        |     0.17 |      0.02 |     11.35 |    0.00 |
+|  3 | target.covergrass                      |    -0.08 |      0.01 |     -8.45 |    0.00 |
+|  4 | target.coverimpervious                 |    -0.14 |      0.01 |    -14.17 |    0.00 |
+|  5 | target.covertree                       |    -0.06 |      0.01 |     -6.31 |    0.00 |
+|  6 | modelrf_resp                           |     0.00 |      0.01 |      0.02 |    0.99 |
+|  7 | modelsvm_resp                          |    -0.01 |      0.01 |     -1.46 |    0.14 |
+|  8 | segment.size                           |    -0.00 |      0.00 |     -1.62 |    0.11 |
+|  9 | imagepanshpSPOT:target.covergrass      |    -0.10 |      0.02 |     -5.90 |    0.00 |
+| 10 | imagepanshpSPOT:target.coverimpervious |     0.10 |      0.02 |      6.29 |    0.00 |
+| 11 | imagepanshpSPOT:target.covertree       |    -0.13 |      0.02 |     -8.34 |    0.00 |
+| 12 | imagepanshpSPOT:modelrf_resp           |     0.00 |      0.01 |      0.03 |    0.97 |
+| 13 | imagepanshpSPOT:modelsvm_resp          |     0.13 |      0.01 |      9.42 |    0.00 |
+| 14 | imagepanshpSPOT:segment.size           |    -0.00 |      0.00 |     -5.62 |    0.00 |
+
+                                    term      estimate    std.error
+1                             (Intercept)  0.2594736239 9.457737e-03
+2                         imagepanshpSPOT  0.1727955729 1.522839e-02
+3                       target.covergrass -0.0818909914 9.689578e-03
+4                  target.coverimpervious -0.1373055644 9.689578e-03
+5                        target.covertree -0.0611569996 9.689578e-03
+6                            modelrf_resp  0.0001428180 8.391421e-03
+7                           modelsvm_resp -0.0122835115 8.391421e-03
+8                            segment.size -0.0001441090 8.903396e-05
+9       imagepanshpSPOT:target.covergrass -0.0950710892 1.612641e-02
+10 imagepanshpSPOT:target.coverimpervious  0.1013795711 1.612641e-02
+11       imagepanshpSPOT:target.covertree -0.1345326137 1.612641e-02
+12           imagepanshpSPOT:modelrf_resp  0.0004778158 1.396589e-02
+13          imagepanshpSPOT:modelsvm_resp  0.1315548935 1.396589e-02
+14           imagepanshpSPOT:segment.size -0.0008378628 1.489573e-04
+      statistic       p.value
+1   27.43506508 3.802666e-151
+2   11.34693391  2.306554e-29
+3   -8.45145037  4.066308e-17
+4  -14.17043735  1.931840e-44
+5   -6.31162645  3.083836e-10
+6    0.01701953  9.864219e-01
+7   -1.46381779  1.433277e-01
+8   -1.61858472  1.056209e-01
+9   -5.89536419  4.069309e-09
+10   6.28655355  3.619056e-10
+11  -8.34237580  1.011573e-16
+12   0.03421307  9.727091e-01
+13   9.41973196  7.679367e-21
+14  -5.62485092  1.992621e-08
+
+#+BEGIN_SRC R :results raw
+options(asciiType = "org")
+options(warn = -1)
+  error.df %>%
+      group_by(image, target.cover, model, seg.params) %>%
+      summarize(overall.error = mean(overall.error)) %>%
+      ungroup() %>%
+      arrange(overall.error) %>%
+      head(n=40) %>%
+      ascii()
+#+END_SRC
+
+#+RESULTS:
+ |    | image       | target.cover | model    | seg.params | overall.error |
+ |----+-------------+--------------+----------+------------+---------------|
+ |  1 | madisonNAIP | impervious   | rf_prob  | Pixel      |          0.10 |
+ |  2 | madisonNAIP | impervious   | rf_resp  | Pixel      |          0.10 |
+ |  3 | madisonNAIP | impervious   | svm_resp | Pixel      |          0.11 |
+ |  4 | madisonNAIP | impervious   | rf_resp  | N-30_C-15  |          0.11 |
+ |  5 | madisonNAIP | impervious   | rf_prob  | N-30_C-15  |          0.11 |
+ |  6 | madisonNAIP | impervious   | rf_resp  | N-60_C-30  |          0.11 |
+ |  7 | madisonNAIP | impervious   | rf_prob  | N-60_C-30  |          0.11 |
+ |  8 | madisonNAIP | impervious   | rf_prob  | N-105_C-32 |          0.11 |
+ |  9 | madisonNAIP | impervious   | rf_resp  | N-105_C-32 |          0.11 |
+ | 10 | madisonNAIP | impervious   | svm_resp | N-60_C-30  |          0.12 |
+ | 11 | madisonNAIP | impervious   | svm_resp | N-30_C-15  |          0.12 |
+ | 12 | madisonNAIP | impervious   | svm_resp | N-105_C-32 |          0.13 |
+ | 13 | madisonNAIP | grass        | svm_resp | N-60_C-30  |          0.14 |
+ | 14 | madisonNAIP | grass        | svm_resp | N-30_C-15  |          0.14 |
+ | 15 | madisonNAIP | grass        | svm_resp | N-105_C-32 |          0.14 |
+ | 16 | madisonNAIP | tree         | svm_resp | N-60_C-30  |          0.16 |
+ | 17 | madisonNAIP | grass        | rf_resp  | N-60_C-30  |          0.16 |
+ | 18 | madisonNAIP | grass        | rf_prob  | N-105_C-32 |          0.16 |
+ | 19 | madisonNAIP | grass        | rf_resp  | N-105_C-32 |          0.16 |
+ | 20 | madisonNAIP | grass        | rf_prob  | N-60_C-30  |          0.16 |
+ | 21 | madisonNAIP | grass        | rf_resp  | N-30_C-15  |          0.17 |
+ | 22 | madisonNAIP | tree         | svm_resp | N-30_C-15  |          0.17 |
+ | 23 | madisonNAIP | grass        | rf_prob  | N-30_C-15  |          0.17 |
+ | 24 | madisonNAIP | tree         | svm_resp | N-105_C-32 |          0.17 |
+ | 25 | madisonNAIP | grass        | svm_resp | Pixel      |          0.18 |
+ | 26 | madisonNAIP | tree         | svm_resp | Pixel      |          0.18 |
+ | 27 | madisonNAIP | tree         | rf_prob  | N-105_C-32 |          0.19 |
+ | 28 | madisonNAIP | tree         | rf_resp  | N-105_C-32 |          0.19 |
+ | 29 | madisonNAIP | tree         | rf_prob  | N-30_C-15  |          0.19 |
+ | 30 | madisonNAIP | tree         | rf_resp  | N-60_C-30  |          0.19 |
+ | 31 | madisonNAIP | tree         | rf_resp  | N-30_C-15  |          0.19 |
+ | 32 | madisonNAIP | tree         | rf_prob  | N-60_C-30  |          0.19 |
+ | 33 | madisonNAIP | grass        | rf_prob  | Pixel      |          0.21 |
+ | 34 | madisonNAIP | grass        | rf_resp  | Pixel      |          0.21 |
+ | 35 | madisonNAIP | tree         | rf_prob  | Pixel      |          0.22 |
+ | 36 | madisonNAIP | tree         | rf_resp  | Pixel      |          0.22 |
+ | 37 | panshpSPOT  | tree         | rf_resp  | Pixel      |          0.22 |
+ | 38 | panshpSPOT  | tree         | rf_prob  | Pixel      |          0.23 |
+ | 39 | madisonNAIP | all          | svm_resp | N-60_C-30  |          0.23 |
+ | 40 | madisonNAIP | all          | rf_resp  | N-60_C-30  |          0.24 |
+
+
+
+#+BEGIN_SRC R :results raw
+  options(asciiType = "org")
+  options(warn = -1)
+    error.df %>%
+        filter(target.cover == "all") %>%
+        group_by(image, target.cover, model, seg.params) %>%
+        summarize(overall.error = mean(overall.error)) %>%
+        ungroup() %>%
+        arrange(overall.error) %>%
+        head(n=40) %>%
+        ascii()
+#+END_SRC
+
+#+RESULTS:
+ |    | image       | target.cover | model    | seg.params | overall.error |
+ |----+-------------+--------------+----------+------------+---------------|
+ |  1 | madisonNAIP | all          | svm_resp | N-60_C-30  |          0.23 |
+ |  2 | madisonNAIP | all          | rf_resp  | N-60_C-30  |          0.24 |
+ |  3 | madisonNAIP | all          | rf_prob  | N-60_C-30  |          0.24 |
+ |  4 | madisonNAIP | all          | rf_resp  | N-105_C-32 |          0.24 |
+ |  5 | madisonNAIP | all          | rf_prob  | N-105_C-32 |          0.24 |
+ |  6 | madisonNAIP | all          | svm_resp | N-30_C-15  |          0.24 |
+ |  7 | madisonNAIP | all          | rf_prob  | N-30_C-15  |          0.24 |
+ |  8 | madisonNAIP | all          | rf_resp  | N-30_C-15  |          0.25 |
+ |  9 | madisonNAIP | all          | svm_resp | Pixel      |          0.25 |
+ | 10 | madisonNAIP | all          | svm_resp | N-105_C-32 |          0.25 |
+ | 11 | madisonNAIP | all          | rf_resp  | Pixel      |          0.28 |
+ | 12 | madisonNAIP | all          | rf_prob  | Pixel      |          0.28 |
+ | 13 | panshpSPOT  | all          | rf_resp  | Pixel      |          0.42 |
+ | 14 | panshpSPOT  | all          | rf_prob  | Pixel      |          0.43 |
+ | 15 | panshpSPOT  | all          | svm_resp | Pixel      |          0.57 |
+ | 16 | panshpSPOT  | all          | rf_prob  | N-20_C-10  |               |
+ | 17 | panshpSPOT  | all          | rf_prob  | N-40_C-20  |               |
+ | 18 | panshpSPOT  | all          | rf_prob  | N-70_C-21  |               |
+ | 19 | panshpSPOT  | all          | rf_resp  | N-20_C-10  |               |
+ | 20 | panshpSPOT  | all          | rf_resp  | N-40_C-20  |               |
+ | 21 | panshpSPOT  | all          | rf_resp  | N-70_C-21  |               |
+ | 22 | panshpSPOT  | all          | svm_resp | N-20_C-10  |               |
+ | 23 | panshpSPOT  | all          | svm_resp | N-40_C-20  |               |
+ | 24 | panshpSPOT  | all          | svm_resp | N-70_C-21  |               |
+
+
+
+#+BEGIN_SRC R :results raw
+  options(asciiType = "org")
+  options(warn = -1)
+    error.df %>%
+        filter(target.cover == "all") %>%
+        group_by(image, target.cover, model, seg.params) %>%
+        summarize(pct.tree.classified.as.other = mean(pct.tree.classified.as.other)) %>%
+        ungroup() %>%
+        arrange(pct.tree.classified.as.other) %>%
+        head(n=40) %>%
+        ascii()
+
+#+END_SRC
+
+#+RESULTS:
+ |    | image       | target.cover | model    | seg.params | pct.tree.classified.as.other |
+ |----+-------------+--------------+----------+------------+------------------------------|
+ |  1 | panshpSPOT  | all          | rf_prob  | N-20_C-10  |                              |
+ |  2 | panshpSPOT  | all          | rf_prob  | N-40_C-20  |                              |
+ |  3 | panshpSPOT  | all          | rf_prob  | N-70_C-21  |                              |
+ |  4 | panshpSPOT  | all          | rf_resp  | N-20_C-10  |                              |
+ |  5 | panshpSPOT  | all          | rf_resp  | N-40_C-20  |                              |
+ |  6 | panshpSPOT  | all          | rf_resp  | N-70_C-21  |                              |
+ |  7 | panshpSPOT  | all          | svm_resp | N-20_C-10  |                              |
+ |  8 | panshpSPOT  | all          | svm_resp | N-40_C-20  |                              |
+ |  9 | panshpSPOT  | all          | svm_resp | N-70_C-21  |                              |
+ | 10 | madisonNAIP | all          | rf_prob  | N-105_C-32 |                              |
+ | 11 | madisonNAIP | all          | rf_prob  | N-30_C-15  |                              |
+ | 12 | madisonNAIP | all          | rf_prob  | N-60_C-30  |                              |
+ | 13 | madisonNAIP | all          | rf_prob  | Pixel      |                              |
+ | 14 | madisonNAIP | all          | rf_resp  | N-105_C-32 |                              |
+ | 15 | madisonNAIP | all          | rf_resp  | N-30_C-15  |                              |
+ | 16 | madisonNAIP | all          | rf_resp  | N-60_C-30  |                              |
+ | 17 | madisonNAIP | all          | rf_resp  | Pixel      |                              |
+ | 18 | madisonNAIP | all          | svm_resp | N-105_C-32 |                              |
+ | 19 | madisonNAIP | all          | svm_resp | N-30_C-15  |                              |
+ | 20 | madisonNAIP | all          | svm_resp | N-60_C-30  |                              |
+ | 21 | madisonNAIP | all          | svm_resp | Pixel      |                              |
+ | 22 | panshpSPOT  | all          | rf_prob  | Pixel      |                              |
+ | 23 | panshpSPOT  | all          | rf_resp  | Pixel      |                              |
+ | 24 | panshpSPOT  | all          | svm_resp | Pixel      |                              |
+
+
+**** RMSE at grid level
+***** Combine google earth grid estimates of cover with classified tile estimates of cover
+
+ Create dataframe with structure:
+
+ | %t.img | %g.img | %i.img | %o.img | image      | segmentation | target.cover        | target.type         | model                   | tile                   | cropped.to.n.pts | %t.goog | %g.goog | %i.goog | %o.goog |   |   |   |   |   |   |   |   |
+ |--------+--------+--------+--------+------------+--------------+---------------------+---------------------+-------------------------+------------------------+------------------+---------+---------+---------+---------+---+---+---+---+---+---+---+---|
+ |    0-1 |    0-1 |    0-1 |    0-1 | NAIP       | Pixel        | grass               | binomial (two)      | random forest prob      | mad-size-id (up to 50) |                4 |     0-1 |     0-1 |     0-1 |     0-1 |   |   |   |   |   |   |   |   |
+ |        |        |        |        | panshpSPOT | 30 m2        | tree                | multinomial (three) | random forest resp      |                        |                9 |         |         |         |         |   |   |   |   |   |   |   |   |
+ |        |        |        |        |            | 60 m2        | impervious          |                     | support vector machines |                        |               16 |         |         |         |         |   |   |   |   |   |   |   |   |
+ |        |        |        |        |            |              | NA (if multinomial) |                     |                         |                        |               25 |         |         |         |         |   |   |   |   |   |   |   |   |
+ |        |        |        |        |            | 105 m2       |                     |                     |                         |                        |              ... |         |         |         |         |   |   |   |   |   |   |   |   |
+
+
+
+****** Create DF of % cover from grids cropped to different extents
+ #+BEGIN_SRC R
+        grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
+        grd.df <- grd@data
+
+   n.rows.and.columns.for.subset = c(15)
+
+        out <- foreach(n.rows.and.columns.for.sub = n.rows.and.columns.for.subset) %do% {
+            calc.pct.cvr.for.grid.subset(grd.df, n.rows.and.columns.for.sub)
+        }
+
+        Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- bind_rows(out)
+
+   Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets %>%
+       rename(grid = unq__ID)
+
+     saveRDS(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets, str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
+ #+END_SRC
+
+ #+RESULTS:
+ : OGR data source with driver: ESRI Shapefile
+ : Source: "../RD_Accuracy/Grids", layer: "All_Grids_Accuracy_Assessment_pts"
+ : with 18365 features
+ : It has 10 fields
+ :  Joining by: "unq__ID"
+ : Joining by: "unq__ID"
+
+****** Create DF of % cover from classified rasters cropped to different extents
+
+#+BEGIN_SRC R
+
+    grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
+
+
+    # get path of grid tiles (not interested in fieldplot classified tiles)
+        classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+            str_extract(., pattern = ".*.tif$") %>%
+            str_extract(., pattern = str_c(".*",wau.grid.id.pattern, ".*")) %>%
+              na.omit()
+
+
+  n.rows.and.columns.for.subset = c(15)
+
+
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+
+      out <- foreach(n.rows.and.columns.for.sub = n.rows.and.columns.for.subset) %do% {
+             pct.class.cover <- foreach(tile.path = classified.tile.paths, .packages = c("raster","dplyr","stringr")) %dopar% {
+               calculate.percent.cover.in.classified.tile(pts = grd,
+                                                           tile.pth = tile.path,
+                                                           n.rows.and.columns.subset = n.rows.and.columns.for.sub)
+
+            }
+                saveRDS(pct.class.cover, str_c(derived.dir,"/","Wausau.Percent.Cover.Classified.Tiles.nPoints",n.rows.and.columns.for.sub, ".rds"))
+      }
+
+
+  class.cover.files <- list.files(derived.dir, pattern = "Wausau.Percent.Cover.Classified.Tiles.nPoints*", full.names = T)
+
+  class.cover.dfs <- lapply(class.cover.files, readRDS)
+
+  out <- unlist(class.cover.dfs,recursive = F)
+
+       Percent.Cover.Classified.Tiles.dataframe <- bind_rows(out)
+
+
+
+
+
+  # delete this line if I run it again.
+  ## Percent.Cover.Classified.Tiles.dataframe <-rename(Percent.Cover.Classified.Tiles.dataframe,
+  ##                                                   image = tile,
+  ##                                                   pct_g_pred = pct_g,
+  ##                                                   pct_i_pred = pct_i,
+  ##                                                   pct_t_pred = pct_t,
+  ##                                                   pct_o_pred = pct_o)
+
+    ## saveRDS(Percent.Cover.Classified.Tiles.dataframe, str_c(derived.dir,"/","Percent.Cover.Classified.Tiles.dataframe",".rds"))
+
+#+END_SRC
+
+#+RESULTS:
+: OGR data source with driver: ESRI Shapefile
+: Source: "../RD_Accuracy/Grids", layer: "All_Grids_Accuracy_Assessment_pts"
+: with 18365 features
+: It has 10 fields
+
+
+
+
+****** Join Cover from Grids with predicted Cover from images
+#+BEGIN_SRC R
+    Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- readRDS(str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
+
+    str(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets)
+    str(Percent.Cover.Classified.Tiles.dataframe)
+
+  Percent.Cover.Classified.Tiles.dataframe %>%
+      filter(seg.params == "Pixel") %>%
+      data.frame() %>%
+      head()
+
+    Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets %>%
+        filter(n.points == 400)
+
+
+  #Percent.Cover.Classified.Tiles.dataframe <- Percent.Cover.Classified.Tiles.dataframe %>%
+  #    rename(pct_g_pred = pct_g, pct_t_pred = pct_t, pct_i_pred = pct_i, pct_o_pred = pct_o)
+
+
+    grid.master.df <- left_join(Percent.Cover.Classified.Tiles.dataframe, Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets)
+
+    # Should join by Joining by: c("grid", "target.cover", "n.points", "target.type")
+
+    str(grid.master.df)
+
+    grid.master.df %>%
+  #      filter(n.points == 400) %>%
+        data.frame() %>%
+        head(n=40)
+
+
+
+
+#+END_SRC
+
+
+***** Make RMSE plots
+
+#+BEGIN_SRC R :results graphics :file figs/wausauNAIP.100m.RMSE_plot.png :height 800 :width 600
+
+    sub.for.rmse.plot <- grid.master.df %>%
+        filter(target.type == "multinomial",
+               image == "wausauNAIP",
+               n.points == 225)
+
+
+    ggplot(sub.for.rmse.plot, aes( x = pct.t.googleEarth, y = pct_t_pred, color = model)) +
+  geom_point() + geom_smooth() + theme_classic() +
+  geom_line(data = data.frame(pct.t.googleEarth = c(0,1), pct_t_pred = c(0,1), seg.params = "1:1"),
+  color = "black", size = 1) +
+  ggtitle("NAIP, n.pts: 225")
+
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/wausauNAIP.100m.RMSE_plot.png]]
+
+
+
+***** Calc RMSE table
+
+ Create dataframe with structure:
+
+ | RMSE | image | segmentation | target | model | cropped.to.n.pts | cover_type |   |   |   |   |   |   |   |
+ |------+-------+--------------+--------+-------+------------------+------------+---+---+---+---+---+---+---|
+ |      |       |              |        |       |                  |            |   |   |   |   |   |   |   |
+
+
+****** Calc Error Column
+
+#+BEGIN_SRC R
+  error_tree <- grid.master.df %>%
+      filter(target.cover == "tree" | target.cover == "all") %>%
+      select(-target.cover) %>%
+      group_by(image, model, n.points, seg.params, target.type) %>%
+      mutate(t_error = (pct_t_pred - pct.t.googleEarth))
+
+  error_tree %>%
+      select(image, model, n.points, seg.params, target.type, grid, t_error) %>%
+      filter(n.points == 225) %>%
+      ungroup() %>%
+      arrange(desc(abs(t_error))) %>%
+      data.frame() %>%
+      head(n=50)
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+
+       image    model n.points seg.params target.type        grid     t_error
+1  wausauNAIP svm_resp      225  N-60_C-30    binomial  wau-100m-9 -0.23684326
+2  wausauNAIP  rf_prob      225  N-60_C-30    binomial  wau-100m-9 -0.16171938
+3  wausauNAIP  rf_resp      225  N-60_C-30    binomial  wau-100m-9 -0.15985461
+4  wausauNAIP  rf_prob      225  N-60_C-30 multinomial  wau-100m-9 -0.15170287
+5  wausauNAIP svm_resp      225  N-60_C-30    binomial  wau-100m-3 -0.13554282
+6  wausauNAIP  rf_resp      225  N-60_C-30 multinomial  wau-100m-9 -0.13444036
+7  wausauNAIP svm_resp      225  N-60_C-30 multinomial  wau-100m-9 -0.12255907
+8  wausauNAIP svm_resp      225  N-60_C-30    binomial  wau-100m-2 -0.11762135
+9  wausauNAIP svm_resp      225  N-60_C-30 multinomial  wau-100m-3 -0.10061635
+10 wausauNAIP svm_resp      225  N-60_C-30    binomial  wau-100m-8 -0.09735509
+11 wausauNAIP svm_resp      225  N-60_C-30    binomial  wau-100m-1 -0.07842719
+12 wausauNAIP  rf_resp      225  N-60_C-30    binomial  wau-100m-8 -0.06687931
+13 wausauNAIP  rf_prob      225  N-60_C-30 multinomial  wau-100m-8 -0.06576044
+14 wausauNAIP  rf_prob      225  N-60_C-30    binomial  wau-100m-8 -0.06410878
+15 wausauNAIP  rf_prob      225  N-60_C-30    binomial  wau-100m-4 -0.06165438
+16 wausauNAIP  rf_resp      225  N-60_C-30    binomial  wau-100m-4 -0.06165438
+17 wausauNAIP  rf_resp      225  N-60_C-30 multinomial  wau-100m-8 -0.06155138
+18 wausauNAIP  rf_prob      225  N-60_C-30 multinomial  wau-100m-2 -0.05987913
+19 wausauNAIP svm_resp      225  N-60_C-30    binomial  wau-100m-5 -0.05903233
+20 wausauNAIP  rf_resp      225  N-60_C-30 multinomial  wau-100m-2 -0.05733804
+21 wausauNAIP  rf_prob      225  N-60_C-30    binomial  wau-100m-5 -0.05104043
+22 wausauNAIP  rf_prob      225  N-60_C-30 multinomial  wau-100m-4 -0.04940013
+23 wausauNAIP  rf_resp      225  N-60_C-30 multinomial  wau-100m-4 -0.04940013
+24 wausauNAIP  rf_resp      225  N-60_C-30    binomial  wau-100m-5 -0.04677808
+25 wausauNAIP svm_resp      225  N-60_C-30    binomial  wau-100m-4 -0.04428532
+26 wausauNAIP svm_resp      225  N-60_C-30 multinomial  wau-100m-6  0.04281694
+27 wausauNAIP  rf_prob      225  N-60_C-30    binomial  wau-100m-2 -0.04046953
+28 wausauNAIP  rf_resp      225  N-60_C-30    binomial  wau-100m-2 -0.04046953
+29 wausauNAIP  rf_resp      225  N-60_C-30 multinomial  wau-100m-6  0.03791524
+30 wausauNAIP  rf_prob      225  N-60_C-30 multinomial  wau-100m-6  0.03541111
+31 wausauNAIP svm_resp      225  N-60_C-30 multinomial  wau-100m-2 -0.03495483
+32 wausauNAIP  rf_prob      225  N-60_C-30 multinomial  wau-100m-5 -0.02850326
+33 wausauNAIP  rf_prob      225  N-60_C-30 multinomial  wau-100m-7 -0.02720576
+34 wausauNAIP  rf_prob      225  N-60_C-30    binomial  wau-100m-7 -0.02720576
+35 wausauNAIP  rf_resp      225  N-60_C-30    binomial  wau-100m-7 -0.02720576
+36 wausauNAIP svm_resp      225  N-60_C-30    binomial  wau-100m-7 -0.02720576
+37 wausauNAIP  rf_prob      225  N-60_C-30 multinomial wau-100m-10  0.02521039
+38 wausauNAIP  rf_resp      225  N-60_C-30 multinomial wau-100m-10  0.02521039
+39 wausauNAIP  rf_resp      225  N-60_C-30 multinomial  wau-100m-7 -0.02473689
+40 wausauNAIP svm_resp      225  N-60_C-30 multinomial wau-100m-10  0.02435165
+41 wausauNAIP  rf_resp      225  N-60_C-30 multinomial  wau-100m-5 -0.02392124
+42 wausauNAIP svm_resp      225  N-60_C-30 multinomial  wau-100m-7 -0.02114093
+43 wausauNAIP  rf_resp      225  N-60_C-30 multinomial  wau-100m-3 -0.02113971
+44 wausauNAIP svm_resp      225  N-60_C-30 multinomial  wau-100m-4 -0.01983010
+45 wausauNAIP svm_resp      225  N-60_C-30 multinomial  wau-100m-1 -0.01870105
+46 wausauNAIP  rf_prob      225  N-60_C-30 multinomial  wau-100m-3 -0.01611159
+47 wausauNAIP svm_resp      225  N-60_C-30 multinomial  wau-100m-8 -0.01391964
+48 wausauNAIP  rf_prob      225  N-60_C-30    binomial  wau-100m-3 -0.01340830
+49 wausauNAIP  rf_resp      225  N-60_C-30    binomial  wau-100m-3 -0.01340830
+50 wausauNAIP svm_resp      225  N-60_C-30    binomial wau-100m-10  0.01340275
+#+end_example
+
+
+
+#+BEGIN_SRC R
+
+    RMSE_tree <- grid.master.df %>%
+        filter(target.cover == "tree" | target.cover == "all") %>%
+        select(-target.cover) %>%
+        group_by(image, model, n.points, seg.params, target.type) %>%
+        summarize(RMSE_t = sqrt( mean( (pct_t_pred - pct.t.googleEarth)^2, na.rm =T ) ) )
+
+  RMSE_tree <- RMSE_tree %>%
+      mutate(segment.size = ifelse(!is.na(str_extract(seg.params, ".*105.*")), 105,
+                            ifelse(!is.na(str_extract(seg.params, ".*60.*")), 60,
+                            ifelse(!is.na(str_extract(seg.params, ".*30.*")), 30,
+                            ifelse(!is.na(str_extract(seg.params, ".*70.*")), 105,
+                            ifelse(!is.na(str_extract(seg.params, ".*40.*")), 60,
+                            ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
+#+END_SRC
+
+#+RESULTS:
+
+***** RMSE analysis
+
+Which combination of image, segmentation, target, model and n.pts
+(spatial scale) minimize error for each cover_type?
+
+#+BEGIN_SRC R :results raw
+options(asciiType = "org")
+options(warn = -1)
+  RMSE_tree %>%
+      ungroup() %>%
+      arrange(RMSE_t) %>%
+      head(n = 30) %>%
+      ascii()
+#+END_SRC
+
+#+RESULTS:
+ |   | image      | model    | n.points | seg.params | target.type | RMSE_t | segment.size |
+ |---+------------+----------+----------+------------+-------------+--------+--------------|
+ | 1 | wausauNAIP | svm_resp |   225.00 | N-60_C-30  | multinomial |   0.05 |        60.00 |
+ | 2 | wausauNAIP | rf_resp  |   225.00 | N-60_C-30  | multinomial |   0.06 |        60.00 |
+ | 3 | wausauNAIP | rf_prob  |   225.00 | N-60_C-30  | multinomial |   0.06 |        60.00 |
+ | 4 | wausauNAIP | rf_resp  |   225.00 | N-60_C-30  | binomial    |   0.06 |        60.00 |
+ | 5 | wausauNAIP | rf_prob  |   225.00 | N-60_C-30  | binomial    |   0.06 |        60.00 |
+ | 6 | wausauNAIP | svm_resp |   225.00 | N-60_C-30  | binomial    |   0.11 |        60.00 |
+
+
+
+Plot:
+x = cropped.to.n.pts
+y = RMSE
+color = model
+facet(segmentation~cover_type)
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_n.ptsXRMSE.png :height 800 :width 600
+
+  ggplot(RMSE_tree, aes(x = n.points, y = RMSE_t, color = model)) + geom_point() +
+      facet_grid(segment.size~image)
+
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/RMSE_tree_compare_n.ptsXRMSE.png]]
+
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_AreaXRMSE_NAIP_seg60.png
+  RMSE_tree.sub <- RMSE_tree%>%
+      filter(segment.size == 60, image == "madisonNAIP", target.type == "binomial", model == "svm_resp") %>%
+      mutate(area_meters_squared = ((sqrt(n.points) - 1) * 7)^2)
+
+
+  ggplot(RMSE_tree.sub, aes(x = area_meters_squared, y = RMSE_t), color = "blue") + geom_point() +
+      labs(y = "Root Mean Squared Prediction Error \n for Percent Tree Cover") +
+      theme_classic() +
+      theme(axis.title = element_text(size = 24),
+            axis.text =  element_text(size = 22)) +
+      xlim(0,45000)
+
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/RMSE_tree_compare_AreaXRMSE_NAIP_seg60.png]]
+
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_seg.sizeXRMSE.png :height 800 :width 600
+
+  ggplot(RMSE_tree, aes(x = segment.size, y = RMSE_t, color = n.points, group = interaction(n.points,target.type))) + geom_line() +
+      facet_grid(model~image)
+
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/RMSE_tree_compare_seg.sizeXRMSE.png]]
+
+
+#+BEGIN_SRC R :results raw
+
+  m1 <-lm(RMSE_t*100 ~ image * (model +  target.type + n.points * segment.size), data = RMSE_tree)
+  tidy(m1, digits = 2) %>%
+ascii()
+#+END_SRC
+
+#+RESULTS:
+#+begin_example
+|    | term                                   | estimate | std.error | statistic | p.value |
+|----+----------------------------------------+----------+-----------+-----------+---------|
+| 1  | (Intercept)                            | 42.29    | 1.85      | 22.89     | 0.00    |
+| 2  | imagepanshpSPOT                        | -5.24    | 2.61      | -2.01     | 0.05    |
+| 3  | modelrf_resp                           | 0.05     | 1.56      | 0.03      | 0.97    |
+| 4  | modelsvm_resp                          | -4.90    | 1.56      | -3.14     | 0.00    |
+| 5  | target.typemultinomial                 | -0.76    | 1.28      | -0.59     | 0.55    |
+| 6  | n.points                               | -0.04    | 0.01      | -5.20     | 0.00    |
+| 7  | segment.size                           | -0.17    | 0.02      | -7.10     | 0.00    |
+| 8  | n.points:segment.size                  | -0.00    | 0.00      | -0.82     | 0.41    |
+| 9  | imagepanshpSPOT:modelrf_resp           | -0.88    | 2.21      | -0.40     | 0.69    |
+| 10 | imagepanshpSPOT:modelsvm_resp          | 9.12     | 2.21      | 4.13      | 0.00    |
+| 11 | imagepanshpSPOT:target.typemultinomial | -3.40    | 1.80      | -1.88     | 0.06    |
+| 12 | imagepanshpSPOT:n.points               | 0.01     | 0.01      | 0.66      | 0.51    |
+| 13 | imagepanshpSPOT:segment.size           | 0.20     | 0.03      | 6.02      | 0.00    |
+| 14 | imagepanshpSPOT:n.points:segment.size  | 0.00     | 0.00      | 0.02      | 0.99    |
+#+end_example
+
+
+
 ** Classify Every Urban Area in the State
 
 
@@ -2589,6 +4156,45 @@ ascii()
 
 
 
+
+** plot grid on google earth
+
+#+BEGIN_SRC R :results graphics :file figs/grid200m-3.on.GoogleEarth.png
+      grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
+
+      grd <- spTransform(grd, CRS("+init=epsg:4326"))
+
+    xy <- coordinates(grd)
+    grd@data$x <- xy[,1]
+    grd@data$y <- xy[,2]
+
+      grd.200m3 <- grd[grd@data$unq__ID == "mad-200m-3",]
+
+      b <- bbox(grd.200m3)
+
+    library(ggmap)
+
+    mp <- get_map(b, maptype = "satellite", zoom = 18)
+
+    UTC_pal <- c(grass = "#ffff99", impervious = "#f0027f", tree = "#7fc97f", o = "#666666", soil ="#fdc086")
+
+    grd.200m3@data <- grd.200m3@data %>%
+        mutate(cover_type = mapvalues(cvr_typ, from = c("g","i","t","s"), to = c("grass","impervious","tree","soil")))
+
+    ggmap(mp) + geom_point(data = grd.200m3@data, aes(x = x, y = y, color = cover_type)) +
+        scale_color_manual(values = UTC_pal) +
+        theme(legend.text = element_text(size = rel(1.4)),
+              legend.title = element_text(size = rel(2))) +
+        labs(color = "Cover Type")
+
+
+
+
+
+#+END_SRC
+
+#+RESULTS:
+[[file:figs/grid200m-3.on.GoogleEarth.png]]
 
 ** delete this after spring break
 #+BEGIN_SRC R
