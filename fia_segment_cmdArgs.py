@@ -5,14 +5,6 @@ import gdal
 import os
 import numpy as np
 
-PixPerSegValue = sys.argv[1]
-compactnessValue = sys.argv[2]
-
-print 'average number of pixels per segment is ' + PixPerSegValue
-print 'compactness parameter is ' + compactnessValue
-
-ScaledPCADirectory = "ScaledPCATiles"
-SegTileDirectory = "SegmentationTiles"
 
 def build_tiff(source_raster_path, target_raster_path, image_array):
     source_raster = gdal.Open(source_raster_path)
@@ -23,7 +15,7 @@ def build_tiff(source_raster_path, target_raster_path, image_array):
     new_image.SetGeoTransform(source_raster.GetGeoTransform())
     new_image.SetProjection(source_raster.GetProjectionRef())
     new_image.GetRasterBand(1).WriteArray(image_array)
-    print 'Tiff made successfully'
+#    print 'Tiff made successfully'
     return
 
 
@@ -43,33 +35,62 @@ def seg_tiff(RowsColumnsArray, PixPerSeg, compactness):
     columns = RowsColumnsArray[1]
     num_segs = rows * columns / PixPerSeg
     array = RowsColumnsArray[2].astype(np.uint8)
-    print 'Making segments'
+#    print 'Making segments'
     segments = slic(array, n_segments=num_segs, compactness=compactness, enforce_connectivity=True)
-    print 'Made dem segments'
+#    print 'Made dem segments'
     return segments
+
+PixelSize = sys.argv[1]
+AreaForSegment = sys.argv[2]
+compactnessValue = sys.argv[3]
+image_name = sys.argv[4]
+
+PixPerSegValue = float(AreaForSegment) / float(PixelSize)
+
+
+print 'average number of pixels per segment is ' + str(PixPerSegValue)
+print 'compactness parameter is ' + compactnessValue
 
 
 bandsToUse = slice(0,3) # Use only principal components 1-3
 
-#files = os.listdir("../../../data2/erker-data2/DD_NAIP-imagery/wausau-ScaledPCATiles")
-#files = os.listdir(ScaledPCADirectory)
-files = os.listdir("ScaledPCATiles")
+image_directory = os.getcwd()
+
+files = os.listdir(image_directory)
+files = [x for x in files if x.endswith('_pca.tif')]
+files = [x for x in files if x.startswith(image_name)]
+
+print (files)
 
 
-#num_pix = np.array([[60, 30]])
-num_pix = np.array([[int(PixPerSegValue), int(compactnessValue)]])
+slic_params = np.array([[int(round(PixPerSegValue)), int(compactnessValue)]])
 
 
-# it would probably be better to create a directory for each combination of pix and compactness values
-# then save tiles into them.  Instead I append parameter values to the filename and it's clunky
 
 for f in files :
-    for pc in num_pix :
-        source_raster_path = os.path.expanduser(ScaledPCADirectory + '/' + f)
-        target_raster_path = os.path.expanduser(SegTileDirectory + '/' + f + '_N-%s_C-%s.tif') %(pc[0],pc[1])
-        RowsColumnsArray = create_array_forSeg_fromTiff(ScaledPCADirectory + "/" + f, bandsToUse)
+    f_out = f[:-8]
+    for pc in slic_params :
+        source_raster_path = os.path.expanduser(f)
+        target_raster_path = os.path.expanduser(f_out + '_N-%s_C-%s.tif') %(pc[0],pc[1])
+        RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
         segments = seg_tiff(RowsColumnsArray, PixPerSeg = pc[0], compactness = pc[1])
         build_tiff(source_raster_path, target_raster_path, segments)
+
+
+
+
+
+
+# # it would probably be better to create a directory for each combination of pix and compactness values
+# # then save tiles into them.  Instead I append parameter values to the filename and it's clunky
+
+# for f in files :
+#     for pc in slic_params :
+#         source_raster_path = os.path.expanduser(ScaledPCADirectory + '/' + f)
+#         target_raster_path = os.path.expanduser(SegTileDirectory + '/' + f + '_N-%s_C-%s.tif') %(pc[0],pc[1])
+#         RowsColumnsArray = create_array_forSeg_fromTiff(ScaledPCADirectory + "/" + f, bandsToUse)
+#         segments = seg_tiff(RowsColumnsArray, PixPerSeg = pc[0], compactness = pc[1])
+#         build_tiff(source_raster_path, target_raster_path, segments)
 
 
 
