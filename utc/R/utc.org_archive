@@ -1,0 +1,74 @@
+#    -*- mode: org -*-
+
+
+Archived entries from file /ssh:erker@kang:/home/erker/mydata2/Pjt_UTC/code/utc/R/utc.org
+
+
+* Build and Save Models
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-06-09 Thu 13:59
+:ARCHIVE_FILE: /ssh:erker@kang:/home/erker/mydata2/Pjt_UTC/code/utc/R/utc.org
+:ARCHIVE_OLPATH: Functions
+:ARCHIVE_CATEGORY: utc
+:END:
+#+BEGIN_SRC R
+  Build.and.Save.models <- function(
+                                    dir = dd.training.dir,
+                                    modelBuildingData = ModelBuildingRDS,
+                                    models.dir = Models.dir,
+                                    image.name){
+
+      dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
+          as.data.frame()
+
+      image.and.segmentation.stem = str_replace(modelBuildingData, ModelBuilding.appendage,"")
+
+      names <- colnames(dat)
+      names <- str_replace(names, "\\(",".")
+      names <- str_replace(names, "\\)",".")
+      names <- str_replace(names, "\\:",".")
+      colnames(dat) <- names
+
+      dat_G <- dat %>%
+          mutate(Class = as.character(Class),
+                 Class = ifelse(Class == "g", Class, "o"))
+
+      dat_I <- dat %>%
+          mutate(Class = as.character(Class),
+                 Class = ifelse(Class == "i", Class, "o"))
+
+      dat_T <- dat %>%
+          mutate(Class = as.character(Class),
+                 Class = ifelse(Class == "t", Class, "o"))
+
+                                          # Create Tasks
+      all.task <- makeClassifTask(id = paste0(image.name,"_all"), data = dat, target = "Class")
+      grass.task <- makeClassifTask(id = paste0(image.name,"_grass"), data = dat_G, target = "Class")
+      impervious.task <- makeClassifTask(id = paste0(image.name,"_impervious"), data = dat_I, target = "Class")
+      tree.task <- makeClassifTask(id = paste0(image.name,"_tree"), data = dat_T, target = "Class",positive = "t")
+
+      task.list <- list(all = all.task, grass = grass.task, impervious = impervious.task, tree = tree.task)
+
+                                          # Make Learners
+      RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
+      RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
+      SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
+
+      learner.list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
+
+                                          # Train Learners on Tasks, Make models
+                                          #         cl<-makeCluster(cores)
+                                          #         registerDoParallel(cl)
+
+      models <- foreach(tsk = task.list, .packages = "mlr") %do% {
+          foreach(lnr = learner.list) %do% {
+              mod <- train(lnr, tsk)
+              mod
+          }
+      }
+      saveRDS(models, file = paste0(models.dir,"/",image.and.segmentation.stem, models.appendage))
+  }
+
+#+END_SRC
+
+#+RESULTS:
