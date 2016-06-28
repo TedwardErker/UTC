@@ -1,3 +1,5 @@
+
+
 # This should be run from the virtual environment in the project directory
 import sys
 from skimage.segmentation import slic
