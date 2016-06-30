@@ -4983,3 +4983,78 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
     }
  #+END_SRC
 
+
+* Save Pixel Feature Dataframe
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-06-30 Thu 15:59
+:ARCHIVE_FILE: /ssh:kang:/home/erker/mydata2/Pjt_UTC/code/utc.org
+:ARCHIVE_OLPATH: Workflow/Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth/Training/For Each Training Tile/Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
+:ARCHIVE_CATEGORY: utc
+:END:
+ #+BEGIN_SRC R
+   pixel.feature.df <- Create.Pixel.Feature.df(tile.dir = dd.training.dir,
+                                               tile.name = i,
+                                               tile.appendage = ratio.tile.name.append,
+                                               texture.pattern = texture.pattern,
+                                               Pixel.DF.appendage = pixel.feature.df.appendage,
+                                               band.names = band.names.wRatios)
+
+#+END_SRC
+
+ #+results:
+
+
+* Add Texture
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-06-30 Thu 15:59
+:ARCHIVE_FILE: /ssh:kang:/home/erker/mydata2/Pjt_UTC/code/utc.org
+:ARCHIVE_OLPATH: Workflow/Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth/Training/For Each Training Tile/Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
+:ARCHIVE_CATEGORY: utc
+:END:
+#+begin_src R
+  out <- add.texture(tile.dir = dd.training.dir,
+              tile.name = i,
+              ratio.append = ratio.tile.name.append,
+              band.num = 8,
+              window = list(c(3,3), c(5,5)),
+              statistics = c("homogeneity", "contrast", "correlation"),
+              shift = list(c(0,1),c(1,0),c(1,1),c(-1,1)))
+
+#+end_src
+
+#+results:
+
+
+
+* Add Ratios
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-06-30 Thu 15:59
+:ARCHIVE_FILE: /ssh:kang:/home/erker/mydata2/Pjt_UTC/code/utc.org
+:ARCHIVE_OLPATH: Workflow/Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth/Training/For Each Training Tile/Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
+:ARCHIVE_CATEGORY: utc
+:END:
+#+BEGIN_SRC R
+   add.ratios.ndvi(tile.dir = dd.training.dir,
+                   tile.name = i)
+
+ #+END_SRC
+
+#+results:
+:  There were 50 or more warnings (use warnings() to see the first 50)
+
+
+* Perform PCA
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-06-30 Thu 15:59
+:ARCHIVE_FILE: /ssh:kang:/home/erker/mydata2/Pjt_UTC/code/utc.org
+:ARCHIVE_OLPATH: Workflow/Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth/Training/For Each Training Tile/Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
+:ARCHIVE_CATEGORY: utc
+:END:
+#+BEGIN_SRC R :results none
+	      image.pca(image.name = img.nm,
+                        tile.dir = dd.training.dir,
+                        tile.name = i,
+                        pca.di = dd.pca.dir)
+      }
+}
+   #+END_SRC

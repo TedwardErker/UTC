@@ -72,3 +72,87 @@ Archived entries from file /ssh:erker@kang:/home/erker/mydata2/Pjt_UTC/code/utc/
 #+END_SRC
 
 #+RESULTS:
+
+* old ratio function
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-06-29 Wed 13:02
+:ARCHIVE_FILE: /ssh:erker@kang:/home/erker/mydata2/Pjt_UTC/code/utc/R/utc.org
+:ARCHIVE_OLPATH: Functions
+:ARCHIVE_CATEGORY: utc
+:END:
+#+begin_src R
+  add.ratios.ndvi <- function(tile.dir,
+                              tile.name,
+                              out.tile.name.append = ratio.tile.name.append,
+                              band.names = c("blue","green","red","nir"),
+                              red.band.number = 3,
+                              nir.band.number = 4) {
+
+      in.tile.path <- str_c(tile.dir, "/", tile.name, ".tif")
+      tile <- stack(in.tile.path)
+      names(tile) <- band.names
+
+                                          # Create a ratio image for each band
+      ratio.brick <- ratio(tile)
+      ratio.brick <- ratio.brick*200 # rescale ndvi to save as 'INT1U'
+      names(ratio.brick) <- paste0(band.names,rep("_ratio",times = 4))
+      ndvi <- ndvi_nodrop(tile, red.band.number, nir.band.number)
+      ndvi <- (ndvi+1)*100 # rescale ndvi to savep as 'INT1U'
+
+                                          # if tile is not scaled 0-255, do it here
+      if (getRasterMax(tile) > 255) {
+          min <- getRasterMin(tile)
+          max <- getRasterMax(tile)
+          tile <- rescale.0.255(tile,min,max)
+      }
+
+      ratio.tile <- raster::stack(tile, ratio.brick, ndvi)
+      writeRaster(ratio.tile,
+                  filename = paste0(tile.dir,"/",tile.name,out.tile.name.append, ".tif"),
+                  overwrite = T,
+                  datatype = 'INT1U')
+  }
+#+END_SRC
+
+#+RESULTS:
+
+
+* old add texture [2016-06-29 Wed]
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-06-29 Wed 16:18
+:ARCHIVE_FILE: /ssh:erker@kang:/home/erker/mydata2/Pjt_UTC/code/utc/R/utc.org
+:ARCHIVE_OLPATH: Functions
+:ARCHIVE_CATEGORY: utc
+:END:
+#+begin_src R
+
+  add.texture <- function(tile.dir = dd.training.dir,
+                          tile.name = i,
+                          ratio.append = ratio.tile.name.append,
+                          band.num = 8,
+                          window = list(c(3,3), c(5,5)),
+                          statistics = c("homogeneity", "contrast", "correlation"),
+                          shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))) {
+
+      sta <- stack(paste0(tile.dir,"/",tile.name, ratio.append,".tif"))
+      ras <- sta[[band.num]]
+
+      out <- lapply(window, FUN = function(win) {
+          lapply(shift, FUN = function(sft) {
+              lapply(statistics, FUN = function(stcs) {
+                  win.size <- paste0("window-",win[1])
+                  shift.dir <- paste0("angle-",atan(sft[1]/sft[2])*180/pi) # calc shift angle
+                  tex.ras <- glcm(ras, window = win, statistics = stcs, shift = sft, na_opt = "ignore", na_val = NA)
+                  fn = paste0(tile.dir,"/", tile.name, "_stat-", stcs, "_", win.size,"_",shift.dir,".tif")
+                  writeRaster(tex.ras, filename = fn, overwrite = T)
+              })
+          })
+      })
+
+      out
+  }
+
+#+end_src
+
+#+results:
+

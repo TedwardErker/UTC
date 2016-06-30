@@ -7,17 +7,19 @@
 * Functions
 ** Extract Name from path
 #+BEGIN_SRC R
-  # Use basename instead!
-    extract.name.from.path <- function(path) {
-        str_extract(basename(path), "[A-Za-z0-9_]*.") %>%
-            str_sub(.,1,-2)
-    }
+      # Use basename instead!
+        extract.name.from.path <- function(path) {
+            str_extract(basename(path), "[A-Za-z0-9_]*.") %>%
+                str_sub(.,1,-2)
+        }
+
 #+END_SRC
 
 #+RESULTS:
 
 ** Reproject Shapefile to Image Coordinate Reference System
 #+BEGIN_SRC R
+
   Reproject_Shapefile_to_Image_CRS <- function(shapefile.dsn,
                                                shapefile.layer,
                                                image.path,
@@ -53,7 +55,7 @@
                  .packages = c("raster")) %dopar% {
                      r <- image
                      r <- crop(r, polygons[i])
-                     writeRaster(r, paste0(output.dir,"/",image.name,"-",i,".tif"),
+                     writeRaster(r, paste0(output.dir,"/",image.name,".",i,".tif"),
                                  overwrite = T)
                  }
     }
@@ -158,81 +160,169 @@
 
 #+RESULTS:
 
-** Make new ratio bands from image
-#+BEGIN_SRC R
-  ratio <- function(image_w4bands, numerator_bandNumber) {
-      r <- image_w4bands[,,numerator_bandNumber,drop = F] / sum(image_w4bands)
-      return(r)
-  }
+** add.features
+#+begin_src R
+  add.features <- function(image.dir,
+                              image.name,
+                              band.names,
+                              ndvi = T,
+                              ratio.bands,
+                              texture = T,
+                              texture.params.df) {
 
-  ndvi_nodrop <- function(image_w4bands,red_bandnumber,nir_bandnumber,...) {
-      red_band <- image_w4bands[[red_bandnumber]]
-      nir_band <- image_w4bands[[nir_bandnumber]]
-      ndvi <- (nir_band - red_band)/(nir_band + red_band)
-      return(ndvi)
-  }
+      img.path <- paste0(image.dir,"/",image.name,".tif")
+      img <- stack(img.path)
+      names(img) <- band.names
 
-  add.ratios.ndvi <- function(tile.dir,
-                              tile.name,
-                              out.tile.name.append = ratio.tile.name.append,
-                              band.names = c("blue","green","red","nir"),
-                              red.band.number = 3,
-                              nir.band.number = 4) {
+      save_each_band(image.path = img.path,
+                     band.names = band.names)
 
-      in.tile.path <- str_c(tile.dir, "/", tile.name, ".tif")
-      tile <- stack(in.tile.path)
-      names(tile) <- band.names
-
-                                          # Create a ratio image for each band
-      ratio.brick <- ratio(tile)
-      ratio.brick <- ratio.brick*200 # rescale ndvi to save as 'INT1U'
-      names(ratio.brick) <- paste0(band.names,rep("_ratio",times = 4))
-      ndvi <- ndvi_nodrop(tile, red.band.number, nir.band.number)
-      ndvi <- (ndvi+1)*100 # rescale ndvi to savep as 'INT1U'
-
-                                          # if tile is not scaled 0-255, do it here
-      if (getRasterMax(tile) > 255) {
-          min <- getRasterMin(tile)
-          max <- getRasterMax(tile)
-          tile <- rescale.0.255(tile,min,max)
+      if (ndvi == T) {
+          calc_ndvi(image.path = img.path,
+                    band.names = band.names)
       }
 
-      ratio.tile <- raster::stack(tile, ratio.brick, ndvi)
-      writeRaster(ratio.tile,
-                  filename = paste0(tile.dir,"/",tile.name,out.tile.name.append, ".tif"),
-                  overwrite = T,
-                  datatype = 'INT1U')
-  }
-#+END_SRC
+      if (length(ratio.bands > 0)) {
+          calc_ratios(image.path = img.path,
+                      band.names = band.names,
+                      ratio.bands = ratio.bands)
+      }
 
-#+RESULTS:
+      if (texture == T) {
+          calc.texture(texture.params.df = texture.params.df,
+                       image.dir = image.dir,
+                       image.basename = image.name)
+      }
+  }
+
+#+end_src
+
+#+results:
+
+** make.feature.df
+#+begin_src R
+  make.feature.df <- function(image.dir,
+                              image.name,
+                              band.names,
+                              ndvi = T,
+                              ratio.bands,
+                              texture = T,
+                              texture.params.df,
+                              feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
+                              pixel.df,
+#                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
+                              pca.features = c("blue","green","red","nir"),
+                              segmentation.params = list()) {
+
+      add.features(image.dir,
+                   image.name,
+                   band.names,
+                   ndvi = T,
+                   ratio.bands,
+                   texture = T,
+                   texture.params.df)
+
+if (pixel.df ==T) {
+       save.pixel.feature.df(image.dir = image.dir,
+                             image.name = image.name,
+                             feature.pattern)
+}
+
+      pca.transformation(image.dir = image.dir,
+                         image.name = image.name)
+
+  }
+
+#+end_src
+
+#+results:
+
+** Save each band
+#+begin_src R
+    save_each_band <- function(image.path, band.names) {
+      image <- stack(image.path)
+      names(image) <- band.names
+      image.name <- str_sub(basename(image.path),1,-5)
+      writeRaster(image, filename = paste0(dirname(image.path),"/",image.name,"_",names(image), ".tif"), bylayer = T, format = "GTiff", overwrite = T)
+  }
+
+#+end_src
+
+#+results:
+
+** Make new ratio bands from image
+#+BEGIN_SRC R
+    calc_ratios <- function(image.path, band.names, ratio.bands, scale200 = T) {
+        image <- stack(image.path)
+        names(image) <- band.names
+
+        ratios <- image[[ratio.bands,drop = F]] / sum(image)
+
+        if (scale200 == T) {
+          ratios <- ratios * 200
+  }
+
+        image.name <- str_sub(basename(image.path),1,-5)
+        names(ratios) <- paste0(image.name,"_ratio.",ratio.bands)
+        writeRaster(ratios, filename= paste0(dirname(image.path),"/",names(ratios),".tif"),
+                    bylayer = T, format= "GTiff", overwrite = T,
+                    datatype = 'INT1U')
+      }
+
+      calc_ndvi <- function(image.path, band.names, ndvi_appendage = "_ndvi", scale200 = T) {
+
+          image <- stack(image.path)
+          names(image) <- band.names
+
+          ndvi <- (image[["nir"]] - image[["red"]]) /  (image[["nir"]] + image[["red"]])
+
+        ndvi [ndvi < 0] <- 0
+
+          if (scale200 == T) {
+              ndvi <- ndvi * 200
+          }
+
+          image.dir <- dirname(image.path)
+          image.name <- str_sub(basename(image.path),1,-5)
+          writeRaster(ndvi, filename=paste0(image.dir,"/",image.name,ndvi_appendage,".tif"), bylayer=TRUE,format="GTiff", overwrite = T,datatype = 'INT1U')
+          return(ndvi)
+      }
+#+end_src
+
+#+results:
 
 ** Add Texture
 #+begin_src R
-  add.texture <- function(tile.dir = dd.training.dir,
-                          tile.name = i,
-                          ratio.append = ratio.tile.name.append,
-                          band.num = 8,
-                          window = list(c(3,3), c(5,5)),
-                          statistics = c("homogeneity", "contrast", "correlation"),
-                          shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))) {
+  named.glcm <- function(image.dir, image.basename, band.appendage, window, statistics, shift, na_opt, na_val,...) {
 
-      sta <- stack(paste0(tile.dir,"/",tile.name, ratio.append,".tif"))
-      ras <- sta[[band.num]]
+      image.path <- paste0(image.dir, "/", image.basename,band.appendage,".tif")
+      x <- raster(image.path)
 
-      out <- lapply(window, FUN = function(win) {
-          lapply(shift, FUN = function(sft) {
-              lapply(statistics, FUN = function(stcs) {
-                  win.size <- paste0("window-",win[1])
-                  shift.dir <- paste0("angle-",atan(sft[1]/sft[2])*180/pi) # calc shift angle
-                  tex.ras <- glcm(ras, window = win, statistics = stcs, shift = sft, na_opt = "ignore", na_val = NA)
-                  fn = paste0(tile.dir,"/", tile.name, "_stat-", stcs, "_", win.size,"_",shift.dir,".tif")
-                  writeRaster(tex.ras, filename = fn, overwrite = T)
-              })
-          })
-      })
+      texture <- glcm(x, window = window, statistics = statistics, shift = shift, na_opt = na_opt, na_val = na_val)
 
-      out
+      win.size <- paste0("window.",window[1])
+      shift.dir <- paste0("angle.",atan(shift[1]/shift[2])*180/pi) # calc shift angle
+
+      image.dir <- dirname(image.path)
+      image.name <- str_sub(basename(image.path),1,-5)
+      fn = paste0(image.dir,"/", image.basename,band.appendage, "_stat.", statistics, "_", win.size,"_",shift.dir,".tif")
+      writeRaster(texture, fn, overwrite = T)
+  }
+
+
+  calc.texture <- function(texture.params.df,
+                           image.dir,
+                           image.basename) {
+
+      texture <- mapply(named.glcm,
+                        image.dir = image.dir,
+                        image.basename = image.basename,
+                        band.appendage = texture.params.df$band.appendage,
+                        window = texture.params.df$window,
+                        statistics = texture.params.df$statistics,
+                        shift = texture.params.df$shift,
+                        na_opt = "ignore",
+                        na_val = NA)
   }
 
 #+end_src
@@ -241,6 +331,31 @@
 
 ** Image PCA
 #+BEGIN_SRC R
+
+  pca.transformation <- function(image.dir,
+                                 image.name,
+                                 feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
+                                 pca.model.name.append = pca.model.name.appendage,
+                                 out.image.appendage = pca.tile.name.append,
+                                 comps.to.use = c(1,2,3),
+                                 pca.dir = dd.pca.dir) {
+
+      s <- stack(list.files(image.dir, pattern = paste0(image.name,feature.pattern), full.names = T))
+      names(s) <- sub(x = names(s), pattern = ".*_", replacement = "")
+
+      pca.model <- readRDS(str_c(pca.dir,"/",str_extract(image.name, "[a-zA-Z]+"),pca.model.name.append))
+
+      r <- predict(s, pca.model, index = comps.to.use)
+
+      min.r <- getRasterMin(r)
+      max.r <- getRasterMax(r)
+      rescaled.r <- rescale.0.255(r, min.r, max.r)
+
+      out.path <- str_c(image.dir, "/", image.name, out.image.appendage, ".tif")
+      writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U', bylayer = F)
+  }
+
+
   getRasterMin <- function(t) {
       return(min(cellStats(t, stat = "min")))
   }
@@ -255,59 +370,92 @@
                                 (raster - min)/(max-min) * 255
   }
 
-  image.pca <- function(image.name,
-                        pca.model.name.append = pca.model.name.appendage,
-                        tile.dir,
-                        tile.name,
-                        in.image.appendage = ratio.tile.name.append,
-                        out.image.appendage = pca.tile.name.append,
-                        band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
-                        comps.to.use = c(1,2,3),
-                        pca.dir = dd.pca.dir) {
+  ## image.pca <- function(image.name,
+  ##                       pca.model.name.append = pca.model.name.appendage,
+  ##                       tile.dir,
+  ##                       tile.name,
+  ##                       in.image.appendage = ratio.tile.name.append,
+  ##                       out.image.appendage = pca.tile.name.append,
+  ##                       band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
+  ##                       comps.to.use = c(1,2,3),
+  ##                       pca.dir = dd.pca.dir) {
 
 
-      out.path <- str_c(tile.dir, "/", tile.name, out.image.appendage, ".tif")
+  ##     out.path <- str_c(tile.dir, "/", tile.name, out.image.appendage, ".tif")
 
-      s <- stack(str_c(tile.dir, "/", tile.name, in.image.appendage,".tif"))
-      names(s) <- band.names
+  ##     s <- stack(str_c(tile.dir, "/", tile.name, in.image.appendage,".tif"))
+  ##     names(s) <- band.names
 
-      pca.model <- readRDS(str_c(pca.dir,"/",image.name,pca.model.name.append))
+  ##     pca.model <- readRDS(str_c(pca.dir,"/",image.name,pca.model.name.append))
 
-      r <- predict(s, pca.model, index = comps.to.use)
+  ##     r <- predict(s, pca.model, index = comps.to.use)
 
-      min.r <- getRasterMin(r)
-      max.r <- getRasterMax(r)
-      rescaled.r <- rescale.0.255(r, min.r, max.r)
-      writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U')
-  }
+  ##     min.r <- getRasterMin(r)
+  ##     max.r <- getRasterMax(r)
+  ##     rescaled.r <- rescale.0.255(r, min.r, max.r)
+  ##     writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U')
+  ## }
 
 
   make.and.save.pca.transformation <- function(image.dir,
-                                             image.name,
+                                               image.name,
                                                pca.model.name.append = "_pca.rds",
-                                              max.sample.size = 10000,
-                                              core.num = cores,
-                                              band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
-                                              ratio.appendage = ratio.tile.name.append) {
-      tile.paths <- list.files(str_c(image.dir), pattern = paste0("*",ratio.appendage), full.names = T)
+                                               max.sample.size = 10000,
+                                               core.num = cores,
+                                               feature.pattern = ".*_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
+                                               ratio.appendage = ratio.tile.name.append) {
 
-      tile.names <- basename(tile.paths)
+      tile.paths <- list.files(image.dir, pattern = paste0(image.name,feature.pattern), full.names = T)
 
-      cl <- makeCluster(core.num)
+      tile.names <- str_match(tile.paths,"(.*\\.[0-9]+)_.*")[,2] %>%  unique() # get the image names of pca regions
+
+      cl <- makeCluster(cores)
       registerDoParallel(cl)
 
-      sr <- foreach (i = seq_along(tile.names), .packages = c("raster"), .combine ="rbind") %dopar% {
-          tile <- stack(tile.paths[i])
-          s <- sampleRandom(tile, ifelse(ncell(tile) > max.sample.size ,max.sample.size, ncell(tile)))
+      sr <- foreach (tile.name = tile.names, .packages = c("stringr","raster"), .combine ="rbind") %dopar% {
+          t.names <- str_extract(tile.paths, paste0(".*",tile.name,".*")) %>% na.omit()
+          tile <- stack(t.names)
+          names(tile) <- sub(x = names(tile), pattern = ".*_", replacement = "")
+          samp <- sampleRandom(tile, ifelse(ncell(tile) > max.sample.size ,max.sample.size, ncell(tile)))
+          colnames(samp) <- names(tile)
+          samp
       }
 
-      colnames(sr) <- band.names
-
+      stopImplicitCluster()
                                           # Perform PCA on sample
       pca <- prcomp(sr, scale = T)
       saveRDS(pca,paste0(image.dir,"/",image.name,pca.model.name.append))
       return(pca)
   }
+
+
+  ## make.and.save.pca.transformation <- function(image.dir,
+  ##                                              image.name,
+  ##                                              pca.model.name.append = "_pca.rds",
+  ##                                              max.sample.size = 10000,
+  ##                                              core.num = cores,
+  ##                                              band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
+  ##                                              ratio.appendage = ratio.tile.name.append) {
+  ##     tile.paths <- list.files(str_c(image.dir), pattern = paste0("*",ratio.appendage), full.names = T)
+
+  ##     tile.names <- basename(tile.paths)
+
+  ##     cl <- makeCluster(core.num)
+  ##     registerDoParallel(cl)
+
+  ##     sr <- foreach (i = seq_along(tile.names), .packages = c("raster"), .combine ="rbind") %dopar% {
+  ##         tile <- stack(tile.paths[i])
+  ##         s <- sampleRandom(tile, ifelse(ncell(tile) > max.sample.size ,max.sample.size, ncell(tile)))
+  ##     }
+
+  ##     colnames(sr) <- band.names
+
+  ##                                         # Perform PCA on sample
+  ##     pca <- prcomp(sr, scale = T)
+  ##     saveRDS(pca,paste0(image.dir,"/",image.name,pca.model.name.append))
+
+  ##     return(pca)
+  ## }
 
 
   image.pca.forWholeState <- function(pca.model.name.append = pca.model.name.appendage,
@@ -379,156 +527,24 @@
 
 #+RESULTS:
 
-** polygonize segment raster with gdal and add Class to shapefile
-
-#+BEGIN_SRC R
-  gdal_polygonizeR <- function(x, outshape=NULL, gdalformat = 'ESRI Shapefile',
-                               pypath=NULL, readpoly=TRUE, quiet=TRUE) {
-      if (isTRUE(readpoly)) require(rgdal)
-      if (is.null(pypath)) {
-          pypath <- Sys.which('gdal_polygonize.py')
-      }
-      if (!file.exists(pypath)) stop("Can't find gdal_polygonize.py on your system.")
-      owd <- getwd()
-      on.exit(setwd(owd))
-      setwd(dirname(pypath))
-      if (!is.null(outshape)) {
-          outshape <- sub('\\.shp$', '', outshape)
-          f.exists <- file.exists(paste(outshape, c('shp', 'shx', 'dbf'), sep='.'))
-          if (any(f.exists))
-              stop(sprintf('File already exists: %s',
-                           toString(paste(outshape, c('shp', 'shx', 'dbf'),
-                                          sep='.')[f.exists])), call.=FALSE)
-      } else outshape <- tempfile()
-      if (is(x, 'Raster')) {
-          require(raster)
-          writeRaster(x, {f <- tempfile(fileext='.asc')})
-          rastpath <- normalizePath(f)
-      } else if (is.character(x)) {
-          rastpath <- normalizePath(x)
-      } else stop('x must be a file path (character string), or a Raster object.')
-      system2('python', args=(sprintf('"%1$s" "%2$s" -f "%3$s" "%4$s.shp"',
-                                      pypath, rastpath, gdalformat, outshape)))
-      if (isTRUE(readpoly)) {
-          shp <- readOGR(dirname(outshape), layer = basename(outshape), verbose=!quiet)
-          return(shp)
-      }
-      return(NULL)
-  }
-
-
-  polygonize.and.add.Class <- function(image.dir,
-                                       image.name,
-                                       segment.appendage = segment.tile.name.append,
-                                       no.class = "N") {
-      seg <- raster(paste0(image.dir,"/",image.name,segment.appendage,'.tif'))
-      segPoly <- gdal_polygonizeR(seg)
-      segPoly$Class <- no.class
-      writeOGR(obj = segPoly,
-               dsn = paste0(image.dir,"/",image.name),
-               layer = paste0(image.name,segment.appendage),
-               driver = "ESRI Shapefile",
-               overwrite = T)
-  }
-
-
-
-
-
-
-#+END_SRC
-
-#+RESULTS:
-
-** other Functions
-#+BEGIN_SRC R
-
-  image_to_classified_image <- function()
-
-
-
-
-
-                                          # contained urban, don't intersect water = as is
-                                          # contained urban, intersect water = mask water
-                                          # intersect urban, don't intersect water = mask urban
-                                          # intersect urban, intersect water = mask urban & water
-                                          # if none of the above, don't write the raster
-
-
-
-      Mask_water_crops_urban <- function(image.full.path, water, crops, urban) {
-
-      }
-
-
-
-
-  Water_Urban_mask <- function(tile.path, tile.name, urban, water) {
-                                          # load image tile
-      tile <- stack(tile.path)
-                                          # get extent image and make sp object
-      et <- as(extent(tile), "SpatialPolygons")
-      proj4string(et) <- "+init=epsg:26916"
-                                          # Mask out non-urban areas
-      if(gContainsProperly(urban,et) & !gIntersects(water,et)){
-          writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
-      } else if (gContainsProperly(urban,et) & gIntersects(water,et)) {
-          tile <- mask(tile, water, inverse = T)
-          writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
-      } else if (gIntersects(urban, et) & !gIntersects(water,et)) {
-          tile <- mask(tile, urban)
-          writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
-      } else if (gIntersects(urban, et) & gIntersects(water,et)) {
-          tile <- mask(tile, urban)
-          tile <- mask(tile, water, inverse = T)
-          writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
-      }
-  }
-
-  Crop_mask <- function(tile.path, tile.name, CDL_stack, n_years){
-
-      tile <- stack(tile.path)
-      crops <- crop(CDL_stack, tile)
-
-                                          # These are the values in the CDL that correspond to non crop cover types and not water
-      NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
-                                          # open water is 111
-
-      NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
-                                          # open water is 111. I don't include it in the above list so that it gets masked
-
-                                          # I'm going to add 37, Other Hay/Non-alfalfa, to the non crop cover types
-      NonCroppedValues <- c(NonCroppedValues, 37)
-                                          # I'm going to add 36, Alfalfa, to the non crop cover types
-      NonCroppedValues <- c(NonCroppedValues, 36)
-
-                                          # find cells that have been assigned crop all three years
-      crops[crops %in% NonCroppedValues] <- 0
-      crops[!(crops %in% NonCroppedValues)] <- 1
-      cropsum <- overlay(crops, fun = sum)
-
-      dis.cropsum <- disaggregate(cropsum, fact = 20)
-      dis.cropsum <- resample(dis.cropsum, tile, "ngb")
-      masked_tile <- mask(tile, dis.cropsum, maskvalue = n_years)
-
-                                          #               Save Image
-      writeRaster(masked_tile, paste0(crop.masked.tiles.directory, "/", tile.name), overwrite = T)
-  }
-
-
-
-
-
-
-
-
-#+END_SRC
-
-#+RESULTS:
-
 ** Make Pixel Feature DF
+#+begin_src R
+      save.pixel.feature.df <- function(image.dir,
+                                      image.name,
+                                    feature.pattern,
+                                    pixel.feature.df.append = pixel.feature.df.appendage ) {
+    s <- stack(list.files(image.dir, pattern = paste0(image.name,feature.pattern), full.names = T))
+    s.df <- as.data.frame(s, xy = T)
+    saveRDS(s.df, file = paste0(image.dir, "/", image.name, pixel.feature.df.append, ".rds"))
+  }
+#+end_src
+
+#+results:
+
 #+BEGIN_SRC R
+
+
+
 
   Create.Pixel.Feature.df <- function(tile.dir = dd.training.dir,
                                       tile.name = i,
@@ -606,6 +622,32 @@
 #+END_SRC
 
 #+RESULTS:
+
+** Segment image
+This simply is a wrapper for the python script which is basically a
+wrapper for slic.
+
+#+begin_src R
+
+    segment  <- function(image.dir,
+                         image.name,
+                         compactness,
+                         segment.size) {
+
+          pixel_size <- ifelse(!is.na(str_extract(image.name,"madisonNAIP")), 1, 1.5)
+          compactness <- if(!is.na(str_extract(image.name,"madisonNAIP"))) compactness else round(2/3*compactness)
+
+          system(paste0("cd ",image.dir,";", "python ../../code/fia_segment_cmdArgs.py ",pixel_size," ",segment_size," ",compactness," ",image.name))
+  }
+
+#+end_src
+
+#+results:
+:  Error: unexpected ',' in:
+: "
+:                        pixel.size,"
+: Error: object 'compactness' not found
+: Error: unexpected '}' in "}"
 
 ** Make Segment Feature DF
 #+BEGIN_SRC R
@@ -799,6 +841,155 @@
 
     ##     bind_cols(coefs,error)
     ## }
+#+END_SRC
+
+#+RESULTS:
+
+
+** polygonize segment raster with gdal and add Class to shapefile
+
+#+BEGIN_SRC R
+  gdal_polygonizeR <- function(x, outshape=NULL, gdalformat = 'ESRI Shapefile',
+                               pypath=NULL, readpoly=TRUE, quiet=TRUE) {
+      if (isTRUE(readpoly)) require(rgdal)
+      if (is.null(pypath)) {
+          pypath <- Sys.which('gdal_polygonize.py')
+      }
+      if (!file.exists(pypath)) stop("Can't find gdal_polygonize.py on your system.")
+      owd <- getwd()
+      on.exit(setwd(owd))
+      setwd(dirname(pypath))
+      if (!is.null(outshape)) {
+          outshape <- sub('\\.shp$', '', outshape)
+          f.exists <- file.exists(paste(outshape, c('shp', 'shx', 'dbf'), sep='.'))
+          if (any(f.exists))
+              stop(sprintf('File already exists: %s',
+                           toString(paste(outshape, c('shp', 'shx', 'dbf'),
+                                          sep='.')[f.exists])), call.=FALSE)
+      } else outshape <- tempfile()
+      if (is(x, 'Raster')) {
+          require(raster)
+          writeRaster(x, {f <- tempfile(fileext='.asc')})
+          rastpath <- normalizePath(f)
+      } else if (is.character(x)) {
+          rastpath <- normalizePath(x)
+      } else stop('x must be a file path (character string), or a Raster object.')
+      system2('python', args=(sprintf('"%1$s" "%2$s" -f "%3$s" "%4$s.shp"',
+                                      pypath, rastpath, gdalformat, outshape)))
+      if (isTRUE(readpoly)) {
+          shp <- readOGR(dirname(outshape), layer = basename(outshape), verbose=!quiet)
+          return(shp)
+      }
+      return(NULL)
+  }
+
+
+  polygonize.and.add.Class <- function(image.dir,
+                                       image.name,
+                                       segment.appendage = segment.tile.name.append,
+                                       no.class = "N") {
+      seg <- raster(paste0(image.dir,"/",image.name,segment.appendage,'.tif'))
+      segPoly <- gdal_polygonizeR(seg)
+      segPoly$Class <- no.class
+      writeOGR(obj = segPoly,
+               dsn = paste0(image.dir,"/",image.name),
+               layer = paste0(image.name,segment.appendage),
+               driver = "ESRI Shapefile",
+               overwrite = T)
+  }
+
+
+
+
+
+
+#+END_SRC
+
+#+RESULTS:
+
+** other Functions
+#+BEGIN_SRC R
+
+  image_to_classified_image <- function()
+
+
+
+
+
+                                          # contained urban, don't intersect water = as is
+                                          # contained urban, intersect water = mask water
+                                          # intersect urban, don't intersect water = mask urban
+                                          # intersect urban, intersect water = mask urban & water
+                                          # if none of the above, don't write the raster
+
+
+
+      Mask_water_crops_urban <- function(image.full.path, water, crops, urban) {
+
+      }
+
+
+
+
+  Water_Urban_mask <- function(tile.path, tile.name, urban, water) {
+                                          # load image tile
+      tile <- stack(tile.path)
+                                          # get extent image and make sp object
+      et <- as(extent(tile), "SpatialPolygons")
+      proj4string(et) <- "+init=epsg:26916"
+                                          # Mask out non-urban areas
+      if(gContainsProperly(urban,et) & !gIntersects(water,et)){
+          writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+      } else if (gContainsProperly(urban,et) & gIntersects(water,et)) {
+          tile <- mask(tile, water, inverse = T)
+          writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+      } else if (gIntersects(urban, et) & !gIntersects(water,et)) {
+          tile <- mask(tile, urban)
+          writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+      } else if (gIntersects(urban, et) & gIntersects(water,et)) {
+          tile <- mask(tile, urban)
+          tile <- mask(tile, water, inverse = T)
+          writeRaster(tile, filename = str_c(masked.tiles.directory,"/",tile.name), overwrite = T)
+      }
+  }
+
+  Crop_mask <- function(tile.path, tile.name, CDL_stack, n_years){
+
+      tile <- stack(tile.path)
+      crops <- crop(CDL_stack, tile)
+
+                                          # These are the values in the CDL that correspond to non crop cover types and not water
+      NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
+                                          # open water is 111
+
+      NonCroppedValues <- c(0,63:65, 81:83, 87:88, 112, 121:124, 131, 141:143, 152, 176, 190, 195)
+                                          # open water is 111. I don't include it in the above list so that it gets masked
+
+                                          # I'm going to add 37, Other Hay/Non-alfalfa, to the non crop cover types
+      NonCroppedValues <- c(NonCroppedValues, 37)
+                                          # I'm going to add 36, Alfalfa, to the non crop cover types
+      NonCroppedValues <- c(NonCroppedValues, 36)
+
+                                          # find cells that have been assigned crop all three years
+      crops[crops %in% NonCroppedValues] <- 0
+      crops[!(crops %in% NonCroppedValues)] <- 1
+      cropsum <- overlay(crops, fun = sum)
+
+      dis.cropsum <- disaggregate(cropsum, fact = 20)
+      dis.cropsum <- resample(dis.cropsum, tile, "ngb")
+      masked_tile <- mask(tile, dis.cropsum, maskvalue = n_years)
+
+                                          #               Save Image
+      writeRaster(masked_tile, paste0(crop.masked.tiles.directory, "/", tile.name), overwrite = T)
+  }
+
+
+
+
+
+
+
+
 #+END_SRC
 
 #+RESULTS:

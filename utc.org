@@ -194,6 +194,10 @@ Same structure as DD_NAIP
 
 
 
+
+
+
+
 * Workflow
 ** Libraries
 #+BEGIN_SRC R
@@ -218,104 +222,6 @@ Same structure as DD_NAIP
 #+END_SRC
 
 #+results:
-#+begin_example
-rgeos version: 0.3-19, (SVN revision 524)
- GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
- Linking to sp version: 1.2-3
- Polygon checking: TRUE
-Loading required package: BBmisc
-
-Attaching package: ‘BBmisc’
-
-The following object is masked from ‘package:rgeos’:
-
-    symdiff
-
-Loading required package: ggplot2
-Loading required package: ParamHelpers
-Loading required package: sp
-rgdal: version: 1.1-10, (SVN revision 622)
- Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 2.1.0, released 2016/04/25
- Path to GDAL shared files: /usr/local/share/gdal
- Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
- Path to PROJ.4 shared files: (autodetected)
- Linking to sp version: 1.2-3
-
-Attaching package: ‘raster’
-
-The following object is masked from ‘package:mlr’:
-
-    resample
-
-The following object is masked from ‘package:ParamHelpers’:
-
-    getValues
-
-Attaching package: ‘dplyr’
-
-The following objects are masked from ‘package:plyr’:
-
-    arrange, count, desc, failwith, id, mutate, rename, summarise,
-    summarize
-
-The following objects are masked from ‘package:raster’:
-
-    intersect, select, union
-
-The following object is masked from ‘package:BBmisc’:
-
-    collapse
-
-The following objects are masked from ‘package:rgeos’:
-
-    intersect, setdiff, union
-
-The following objects are masked from ‘package:stats’:
-
-    filter, lag
-
-The following objects are masked from ‘package:base’:
-
-    intersect, setdiff, setequal, union
-
-Attaching package: ‘tidyr’
-
-The following object is masked from ‘package:raster’:
-
-    extract
-
-The following object is masked from ‘package:ascii’:
-
-    expand
-foreach: simple, scalable parallel programming from Revolution Analytics
-Use Revolution R for scalability, fault tolerance and more.
-http://www.revolutionanalytics.com
-Loading required package: iterators
-Loading required package: parallel
-randomForest 4.6-12
-Type rfNews() to see new features/changes/bug fixes.
-
-Attaching package: ‘randomForest’
-
-The following object is masked from ‘package:dplyr’:
-
-    combine
-
-The following object is masked from ‘package:ggplot2’:
-
-    margin
-
-Attaching package: ‘kernlab’
-
-The following objects are masked from ‘package:raster’:
-
-    buffer, rotated
-
-The following object is masked from ‘package:ggplot2’:
-
-    alpha
-#+end_example
 
 
 ** set figure Cairo
@@ -377,6 +283,21 @@ The following object is masked from ‘package:ggplot2’:
   grid.pattern = "[a-zA-Z]{3}-[0-9]+m-[0-9]+_"
   texture.pattern = "stat-.*_window-.*_angle[-]+[0-9]+"
 #+END_SRC
+
+#+results:
+
+**** Texture Params
+#+begin_src R
+
+  band.for.texture.appendage = "_ratio.nir"
+  window <- list(c(3,3), c(5,5))
+  statistics = list("homogeneity", "contrast", "correlation")
+  shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
+
+  texture.params <- expand.grid(band.appendage = band.for.texture.appendage,window = window, statistics = statistics, shift = shift, stringsAsFactors = F)
+
+
+#+end_src
 
 #+results:
 
@@ -501,7 +422,7 @@ In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
 
 **** number of cores
 #+BEGIN_SRC R
-  cores <- 40
+  cores <- 13
 
 #+END_SRC
 
@@ -518,33 +439,8 @@ In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
 ** Functions
 Load functions from utc/R/utc.org
 ** Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth
-*** Training
-**** Make Training Tiles
-  1) Input
-     - Training Region Shapefile
-     - Image.path
-  2) Operation
-     - Reproject Shapefiles to that of image
-     - Crop image to each polygon in the shapefile
-  3) Output
-#+BEGIN_SRC R
-
-  foreach(img.pth = image.paths) %do% {
-
-  Reproject_Shapefile_to_Image_CRS(training.region.dsn,
-                                         training.region.layer,
-                                         img.pth,
-                                         training.region.imageCRS.dsn)
-
-  Crop_image_to_each_Shapefile_polygon(training.region.imageCRS.dsn,
-                                       training.region.layer,
-                                       img.pth,
-                                       cores = cores,
-                                       output.dir = dd.training.dir)
-#+END_SRC
-
-**** make pca transformation/rotation for slic segmentation algorithm.
-***** read in pca model if it exists.  If I run this, don't run rest of pca code in this subtre
+*** make pca transformation/rotation for slic segmentation algorithm.
+**** read in pca model if it exists.  If I run this, don't run rest of pca code in this subtre
 #+BEGIN_SRC R :eval no
   ## pca <- foreach(i = seq_along(image.names)) %do% {
   ##    readRDS(str_c(dd.pca.dir,"/madisonNAIP_pca.rds"))
@@ -553,8 +449,10 @@ Load functions from utc/R/utc.org
 
 #+results:
 
-***** Reproject PCA Region Shapefile to Image
+**** Reproject PCA Region Shapefile to Image
 #+BEGIN_SRC R
+  foreach(img.pth = image.paths) %do% {
+
          Reproject_Shapefile_to_Image_CRS(pca.region.dsn,
                                          pca.region.layer,
                                          img.pth,
@@ -562,2183 +460,144 @@ Load functions from utc/R/utc.org
 #+END_SRC
 
 #+results:
-:  OGR data source with driver: ESRI Shapefile
-: Source: "../RD_PCA_Regions/Madison_PCA_Regions", layer: "PCA_regions"
-: with 8 features
-: It has 1 fields
+:  Error in stack(image.path) (from #5) :
+:   error in evaluating the argument 'x' in selecting a method for function 'stack': Error: object 'img.pth' not found
 
-***** Crop image to create a smaller image around each of the polygons
+**** Crop image to create a smaller image around each of the polygons
 #+BEGIN_SRC R :results none
        Crop_image_to_each_Shapefile_polygon(pca.region.imageCRS.dsn,
                                         pca.region.layer,
                                         img.pth,
                                         cores = cores,
                                         output.dir = dd.pca.dir)
-     }
+}
 #+END_SRC
 
-***** Add Ratios
+**** Add Features (ratios and ndvi)
 #+BEGIN_SRC R
-     cl <- makeCluster(cores)
-     registerDoParallel(cl)
+         cl <- makeCluster(cores)
+         registerDoParallel(cl)
 
-      tile.names <- list.files(dd.pca.dir) %>%
-          str_extract(., pattern = ".*[0-9]+.tif") %>%
-              str_extract(., pattern = ".*[0-9]+") %>%
-                  na.omit()
+          tile.names <- list.files(dd.pca.dir) %>%
+              str_extract(., pattern = ".*[0-9]+.tif") %>%
+                  str_extract(., pattern = ".*[0-9]+") %>%
+                      na.omit()
 
-     ratios <- foreach (j = tile.names,
-              .packages = c("raster","stringr")) %dopar% {
-                  add.ratios.ndvi(tile.dir = dd.pca.dir,
-                                  tile.name = j)
-              }
+         ratios <- foreach (j = tile.names,
+                  .packages = c("raster","stringr")) %dopar% {
+                      add.features(image.dir = dd.pca.dir,
+                                   image.name = j,
+                                   band.names = c("blue","green","red","nir"),
+                                   ratio.bands = c("blue","green","red","nir"),
+                                   texture = F)
+                  }
 
-  stopCluster(cl)
+      stopCluster(cl)
  #+END_SRC
 
-***** Create and Save PCA model/rotation
+#+results:
+
+**** Create and Save PCA model/rotation
 #+BEGIN_SRC R :results none
   pca <- foreach(img.nm = image.names) %do% {
               make.and.save.pca.transformation(image.dir = dd.pca.dir,
-                                               image.name = img.nm,
-                                               band.names = band.names.wRatios
-                                               )
-
+                                               image.name = img.nm)
   }
  #+END_SRC
 
+*** Training
+**** Make Training Tiles
+
+#+BEGIN_SRC R :results none
+
+  foreach(img.pth = image.paths) %do% {
+
+      Reproject_Shapefile_to_Image_CRS(training.region.dsn,
+                                       training.region.layer,
+                                       img.pth,
+                                       training.region.imageCRS.dsn)
+
+      Crop_image_to_each_Shapefile_polygon(training.region.imageCRS.dsn,
+                                           training.region.layer,
+                                           img.pth,
+                                           cores = cores,
+                                           output.dir = dd.training.dir)
+}
+
+#+END_SRC
 
 **** For Each Training Tile
-***** Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
-  1) Input
-     - Testing Region Shapefiles
-     - image
-  2) Operation
-     - Reproject Shapefiles to that of image
-     - Crop image to each polygon in the shapefile
-     - Derive PixelfeatureDFs and SegmentationFeatureDF from each tile of the image in region of each polygon
-  3) Output
-     - SegmentationFeatureDFs for every training polygon
-     - PixelFeatureDFs for every pixel
 
-****** Start R Loop, for every smaller image, do in parallel, :
-#+BEGIN_SRC R
-
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
-
-    pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
-
-                                            #img.nm <- image.names[1]
-
-        tile.names <- list.files(dd.training.dir) %>%
-            str_extract(., pattern = str_c(img.nm,"-[0-9]+.tif")) %>%
-            str_extract(., pattern = str_c(img.nm,"-[0-9]+")) %>%
-            na.omit()
-
-        foreach (i = tile.names,
-                 .packages = c("glcm","raster","stringr")) %dopar% {
-
-  #i <- tile.names[1]
-   #+END_SRC
-
-****** Add Ratios
-#+BEGIN_SRC R
-   add.ratios.ndvi(tile.dir = dd.training.dir,
-                   tile.name = i)
-
- #+END_SRC
-
-#+results:
-:  There were 50 or more warnings (use warnings() to see the first 50)
-
-****** Add Texture
 #+begin_src R
-  out <- add.texture(tile.dir = dd.training.dir,
-              tile.name = i,
-              ratio.append = ratio.tile.name.append,
-              band.num = 8,
-              window = list(c(3,3), c(5,5)),
-              statistics = c("homogeneity", "contrast", "correlation"),
-              shift = list(c(0,1),c(1,0),c(1,1),c(-1,1)))
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+  pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
+
+                                          #img.nm <- image.names[1]
+
+      tile.names <- list.files(dd.training.dir) %>%
+          str_extract(., pattern = str_c(img.nm,".[0-9]+.tif")) %>%
+          str_extract(., pattern = str_c(img.nm,".[0-9]+")) %>%
+          na.omit()
+
+      foreach (i = tile.names,
+               .packages = c("glcm","raster","stringr")) %dopar% {
 
 #+end_src
 
-#+results:
+***** Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
 
+#+begin_src R
 
-****** Save Pixel Feature Dataframe
- #+BEGIN_SRC R
-   pixel.feature.df <- Create.Pixel.Feature.df(tile.dir = dd.training.dir,
-                                               tile.name = i,
-                                               tile.appendage = ratio.tile.name.append,
-                                               texture.pattern = texture.pattern,
-                                               Pixel.DF.appendage = pixel.feature.df.appendage,
-                                               band.names = band.names.wRatios)
+    feature.dfs <- make.feature.df(image.dir = dd.training.dir,
+                    image.name = i,
+                    band.names = c("blue","green","red","nir"),
+                    ndvi = T,
+                    ratio.bands = c("blue","green","red","nir"),
+                    texture.params.df = texture.params,
+                    pixel.df = T)
 
-#+END_SRC
+    }
+    }
+#+end_src
 
- #+results:
-
-****** Perform PCA
-#+BEGIN_SRC R :results none
-	      image.pca(image.name = img.nm,
-                        tile.dir = dd.training.dir,
-                        tile.name = i,
-                        pca.di = dd.pca.dir)
-      }
-}
-   #+END_SRC
 ****** Segmentation
 
-I ran
-conda create -n utc --file Requirements.txt
-to install the python environment needed to run this code.
-
 #+BEGIN_SRC R
-  system("source activate utc")
+  #  system("source activate utc")
+  #  system("export PATH=/home/RUSSELL/erker/.conda/envs/utc/bin:$PATH")
 
-  system("export PATH=/home/RUSSELL/erker/.conda/envs/utc/bin:$PATH")
-
-    segment_size <- c(30,60,105)
-    compactness <- c(15,30,32)
-    o.wd <- getwd()
+      segment_size <- c(30,60,105)
+      compactness <- c(15,30,32)
+      o.wd <- getwd()
 
 
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
+      cl <- makeCluster(cores)
+      registerDoParallel(cl)
 
-    for(img.nm in image.names) {
+      for(img.nm in image.names) {
 
-        tile.names <- list.files(dd.training.dir) %>%
-            str_extract(., pattern = str_c(img.nm,"-[0-9]+.tif")) %>%
-            str_extract(., pattern = str_c(img.nm,"-[0-9]+")) %>%
-            na.omit()
+          tile.names <- list.files(dd.training.dir) %>%
+              str_extract(., pattern = str_c(img.nm,".[0-9]+.tif")) %>%
+              str_extract(., pattern = str_c(img.nm,".[0-9]+")) %>%
+              na.omit()
 
-        pixel_size <- ifelse(img.nm == "madisonNAIP", 1, 1.5)
-        compactness <- if(img.nm == "madisonNAIP") compactness else round(2/3*compactness)
+          pixel_size <- ifelse(img.nm == "madisonNAIP", 1, 1.5)
+          compactness <- if(img.nm == "madisonNAIP") compactness else round(2/3*compactness)
 
-        for(j in 1:length(segment_size)) {
+          for(j in 1:length(segment_size)) {
 
-            foreach (i = tile.names) %dopar% {
-                system(paste0("export PATH=/home/RUSSELL/erker/.conda/envs/utc/bin:$PATH;","cd ",dd.training.dir,";", "python ../../code/fia_segment_cmdArgs.py ",pixel_size," ",segment_size[j]," ",compactness[j]," ",i))
-             }
-        }
-    }
+              foreach (i = tile.names) %dopar% {
+                  system(paste0("cd ",dd.training.dir,";", "python ../../code/fia_segment_cmdArgs.py ",pixel_size," ",segment_size[j]," ",compactness[j]," ",i))
+               }
+          }
+      }
 
-    setwd(o.wd)
+      setwd(o.wd)
 #+END_SRC
 
 #+results:
-#+begin_example
-sh: 1: source: not found
- average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-17_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-12_pca.tif']
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-5_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-7_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-6_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-9_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-14_pca.tif']
-['madisonNAIP-11_pca.tif']
-RuntimeErrorRuntimeError: module compiled against API version a but this version of numpy is 9
-: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-      File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-_gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to importImportError:
-numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-19_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-4_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-15_pca.tif']
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-10_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-average number of pixels per segment is 30.0
-compactness parameter is 15
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-18_pca.tif']
-['madisonNAIP-13_pca.tif']
-['madisonNAIP-11_pca.tif', 'madisonNAIP-1_pca.tif', 'madisonNAIP-19_pca.tif', 'madisonNAIP-18_pca.tif', 'madisonNAIP-16_pca.tif', 'madisonNAIP-14_pca.tif', 'madisonNAIP-13_pca.tif', 'madisonNAIP-12_pca.tif', 'madisonNAIP-15_pca.tif', 'madisonNAIP-17_pca.tif', 'madisonNAIP-10_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-RuntimeError: module compiled against API version a but this version of numpy is 9
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-Traceback (most recent call last):
-    _gdal_array = swig_import_helper()
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-RuntimeError    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-: ImportError:     module compiled against API version a but this version of numpy is 9RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-numpy.core.multiarray failed to import
-
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import    import gdalnumeric
-
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-2_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-3_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-8_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP-16_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-11_pca.tif']
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-12_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-16_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-6_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-11_pca.tif', 'madisonNAIP-1_pca.tif', 'madisonNAIP-19_pca.tif', 'madisonNAIP-18_pca.tif', 'madisonNAIP-16_pca.tif', 'madisonNAIP-14_pca.tif', 'madisonNAIP-13_pca.tif', 'madisonNAIP-12_pca.tif', 'madisonNAIP-15_pca.tif', 'madisonNAIP-17_pca.tif', 'madisonNAIP-10_pca.tif']
-['madisonNAIP-8_pca.tif']
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-18_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-4_pca.tif']
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-9_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-2_pca.tif']
-['madisonNAIP-14_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-RuntimeError    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-:   File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-module compiled against API version a but this version of numpy is 9
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-    import gdalnumeric
-ImportError  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-: numpy.core.multiarray failed to import
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-7_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-13_pca.tif']
-['madisonNAIP-5_pca.tif']
-RuntimeErrorRuntimeError: module compiled against API version a but this version of numpy is 9
-: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-        RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-        array = source_raster.ReadAsArray()
-array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-      File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-      File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-      File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-_gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to importImportError:
-numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-17_pca.tif']
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-19_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-10_pca.tif']
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-15_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP-3_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-17_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-2_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-12_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-7_pca.tif']
-['madisonNAIP-14_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-RuntimeError:   File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-module compiled against API version a but this version of numpy is 9
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-Traceback (most recent call last):
-      File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-        import gdalnumeric
-_mod = imp.load_module('_gdal_array', fp, pathname, description)
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-ImportError: numpy.core.multiarray failed to import
-from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-19_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-average number of pixels per segment is 105.0
-compactness parameter is 32
-compactness parameter is 32
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-11_pca.tif', 'madisonNAIP-1_pca.tif', 'madisonNAIP-19_pca.tif', 'madisonNAIP-18_pca.tif', 'madisonNAIP-16_pca.tif', 'madisonNAIP-14_pca.tif', 'madisonNAIP-13_pca.tif', 'madisonNAIP-12_pca.tif', 'madisonNAIP-15_pca.tif', 'madisonNAIP-17_pca.tif', 'madisonNAIP-10_pca.tif']
-['madisonNAIP-6_pca.tif']
-['madisonNAIP-15_pca.tif']
-RuntimeError: RuntimeErrormodule compiled against API version a but this version of numpy is 9RuntimeError
-: : module compiled against API version a but this version of numpy is 9
-module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    array = source_raster.ReadAsArray()
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-      File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-import gdalnumeric
-    from osgeo.gdal_array import *
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    from osgeo.gdal_array import *
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _gdal_array = swig_import_helper()
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-      File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-_mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: ImportError:     numpy.core.multiarray failed to import_mod = imp.load_module('_gdal_array', fp, pathname, description)
-numpy.core.multiarray failed to import
-
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-11_pca.tif']
-['madisonNAIP-18_pca.tif']
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-9_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-RuntimeError: module compiled against API version a but this version of numpy is 9
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-Traceback (most recent call last):
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-16_pca.tif']
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-13_pca.tif']
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-10_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    average number of pixels per segment is 105.0
-_mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: compactness parameter is 32
-numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-['madisonNAIP-8_pca.tif']
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-3_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-4_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 105.0
-compactness parameter is 32
-['madisonNAIP-5_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-14_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-17_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-13_pca.tif']
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-14_pca.tif', 'panshpSPOT-19_pca.tif', 'panshpSPOT-10_pca.tif', 'panshpSPOT-12_pca.tif', 'panshpSPOT-13_pca.tif', 'panshpSPOT-1_pca.tif', 'panshpSPOT-15_pca.tif', 'panshpSPOT-17_pca.tif', 'panshpSPOT-18_pca.tif', 'panshpSPOT-11_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-3_pca.tif']
-['panshpSPOT-6_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-10_pca.tif']
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-19_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-12_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-8_pca.tif']
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-18_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-4_pca.tif']
-['panshpSPOT-15_pca.tif']
-average number of pixels per segment is 20.0
-compactness parameter is 10
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-['panshpSPOT-2_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-[]
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-5_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-7_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-9_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 20.0
-compactness parameter is 10
-['panshpSPOT-11_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-2_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-compactness parameter is 20
-[]
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-3_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-4_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-14_pca.tif', 'panshpSPOT-19_pca.tif', 'panshpSPOT-10_pca.tif', 'panshpSPOT-12_pca.tif', 'panshpSPOT-13_pca.tif', 'panshpSPOT-1_pca.tif', 'panshpSPOT-15_pca.tif', 'panshpSPOT-17_pca.tif', 'panshpSPOT-18_pca.tif', 'panshpSPOT-11_pca.tif']
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-13_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-compactness parameter is 20
-RuntimeError: module compiled against API version a but this version of numpy is 9
-['panshpSPOT-7_pca.tif']
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-10_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-average number of pixels per segment is 40.0
-compactness parameter is 20
-compactness parameter is 20
-['panshpSPOT-5_pca.tif']
-['panshpSPOT-12_pca.tif']
-RuntimeErrorRuntimeError: module compiled against API version a but this version of numpy is 9
-: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-        array = source_raster.ReadAsArray()
-array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-        import gdalnumeric
-import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: ImportErrornumpy.core.multiarray failed to import
-: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-15_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-compactness parameter is 20
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-11_pca.tif']
-['panshpSPOT-19_pca.tif']
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-17_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-average number of pixels per segment is 40.0
-compactness parameter is 20
-compactness parameter is 20
-['panshpSPOT-9_pca.tif']
-['panshpSPOT-8_pca.tif']
-RuntimeErrorRuntimeError: module compiled against API version a but this version of numpy is 9
-: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-        import gdalnumeric
-import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-        from osgeo.gdal_array import *
-from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-        _gdal_array = swig_import_helper()
-_gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportErrorImportError: : numpy.core.multiarray failed to importnumpy.core.multiarray failed to import
-
-average number of pixels per segment is 40.0
-compactness parameter is 20
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-6_pca.tif']
-['panshpSPOT-18_pca.tif']
-RuntimeErrorRuntimeError: module compiled against API version a but this version of numpy is 9
-: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-    array = source_raster.ReadAsArray()
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-    ImportError: from osgeo.gdal_array import *
-numpy.core.multiarray failed to import  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 40.0
-compactness parameter is 20
-['panshpSPOT-14_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-17_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-14_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-15_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-7_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-5_pca.tif']
-average number of pixels per segment is 70.0
-compactness parameter is 21
-[]
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-4_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-18_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-14_pca.tif', 'panshpSPOT-19_pca.tif', 'panshpSPOT-10_pca.tif', 'panshpSPOT-12_pca.tif', 'panshpSPOT-13_pca.tif', 'panshpSPOT-1_pca.tif', 'panshpSPOT-15_pca.tif', 'panshpSPOT-17_pca.tif', 'panshpSPOT-18_pca.tif', 'panshpSPOT-11_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-6_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-13_pca.tif']
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-12_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    average number of pixels per segment is 70.0
-array = source_raster.ReadAsArray()
-average number of pixels per segment is 70.0
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-compactness parameter is 21
-compactness parameter is 21
-average number of pixels per segment is 70.0
-compactness parameter is 21
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-10_pca.tif']
-['panshpSPOT-19_pca.tif']
-['panshpSPOT-2_pca.tif']
-['panshpSPOT-11_pca.tif']
-RuntimeErrorRuntimeErrorRuntimeErrorRuntimeError: : : module compiled against API version a but this version of numpy is 9module compiled against API version a but this version of numpy is 9module compiled against API version a but this version of numpy is 9
-
-: module compiled against API version a but this version of numpy is 9
-
-Traceback (most recent call last):
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-        RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-        array = source_raster.ReadAsArray()
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-array = source_raster.ReadAsArray()
-      File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-            import gdalnumeric
-    import gdalnumeric
-import gdalnumeric
-import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-        from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    from osgeo.gdal_array import *
-from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-        _gdal_array = swig_import_helper()
-    _gdal_array = swig_import_helper()
-      File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-_gdal_array = swig_import_helper()
-_gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-      File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError_mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to importImportError: :
-ImportErrornumpy.core.multiarray failed to importnumpy.core.multiarray failed to import:
-
-numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-compactness parameter is 21
-['panshpSPOT-3_pca.tif']
-RuntimeError: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-    RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-    array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-    import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-    _mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportError: numpy.core.multiarray failed to import
-average number of pixels per segment is 70.0
-average number of pixels per segment is 70.0
-compactness parameter is 21
-compactness parameter is 21
-['panshpSPOT-9_pca.tif']
-['panshpSPOT-8_pca.tif']
-RuntimeErrorRuntimeError: module compiled against API version a but this version of numpy is 9
-: module compiled against API version a but this version of numpy is 9
-Traceback (most recent call last):
-Traceback (most recent call last):
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-  File "../../code/fia_segment_cmdArgs.py", line 75, in <module>
-        RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-  File "../../code/fia_segment_cmdArgs.py", line 26, in create_array_forSeg_fromTiff
-        array = source_raster.ReadAsArray()
-array = source_raster.ReadAsArray()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal.py", line 840, in ReadAsArray
-        import gdalnumeric
-import gdalnumeric
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdalnumeric.py", line 1, in <module>
-    from osgeo.gdal_array import *
-    from osgeo.gdal_array import *
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 25, in <module>
-    _gdal_array = swig_import_helper()
-    _gdal_array = swig_import_helper()
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-  File "/usr/bin/anaconda2/lib/python2.7/site-packages/osgeo/gdal_array.py", line 21, in swig_import_helper
-        _mod = imp.load_module('_gdal_array', fp, pathname, description)
-_mod = imp.load_module('_gdal_array', fp, pathname, description)
-ImportErrorImportError: : numpy.core.multiarray failed to importnumpy.core.multiarray failed to import
-#+end_example
 
 
 ****** Create Segment Feature Dataframe
@@ -3064,6 +923,53 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
 
 #+END_SRC
 **** Make PixelFeatureDFs and SegmentationFeatureDFs for Accuracy Regions
+
+***** For Each Testing Tile
+
+#+begin_src R
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+  pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
+
+                                          #img.nm <- image.names[1]
+
+      tile.names <- list.files(dd.accuracy.dir) %>%
+          str_extract(., pattern = str_c(img.nm,".[0-9]+.tif")) %>%
+          str_extract(., pattern = str_c(img.nm,".[0-9]+")) %>%
+          na.omit()
+
+      foreach (i = tile.names[1:2],
+               .packages = c("glcm","raster","stringr")) %dopar% {
+
+#+end_src
+
+****** Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
+
+#+begin_src R
+
+  band.appendage = "_ratio.nir"
+  window <- list(c(3,3), c(5,5))
+  statistics = list("homogeneity", "contrast", "correlation")
+  shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
+
+  texture.params <- expand.grid(band.appendage = band.appendage,window = window, statistics = statistics, shift = shift, stringsAsFactors = F)
+
+
+        make.feature.df(image.dir = dd.training.dir,
+                        image.name = i,
+                        band.names = c("blue","green","red","nir"),
+                        ndvi = T,
+                        ratio.bands = c("blue","green","red","nir"),
+                        texture.params.df = texture.params)
+
+      }
+  }
+#+end_src
+
+
+
+
   1) Input
      - Testing Region Shapefiles
      - image
@@ -3075,7 +981,7 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
      - SegmentationFeatureDFs for every training polygon
      - PixelFeatureDFs for every pixel
 
-****** Start R Loop, for every smaller image, do in parallel, :
+******* Start R Loop, for every smaller image, do in parallel, :
 #+BEGIN_SRC R
   cl <- makeCluster(cores)
   registerDoParallel(cl)
@@ -3091,14 +997,14 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
                 .packages = c("raster","stringr")) %dopar% {
    #+END_SRC
 
-****** Add Ratios
+******* Add Ratios
 #+BEGIN_SRC R
    add.ratios.ndvi(tile.dir = dd.accuracy.dir,
                    tile.name = i)
 
 
  #+END_SRC
-****** Save Pixel Feature Dataframe
+******* Save Pixel Feature Dataframe
  #+BEGIN_SRC R
 
           pixel.feature.df <- Create.Pixel.Feature.df(tile.dir = dd.accuracy.dir,
@@ -3109,7 +1015,7 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
 
 #+END_SRC
 
-****** Perform PCA
+******* Perform PCA
 #+BEGIN_SRC R :results none
 	      image.pca(image.name = img.nm,
                         tile.dir = dd.accuracy.dir,
@@ -3118,7 +1024,7 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
       }
 }
    #+END_SRC
-****** Segmentation
+******* Segmentation
 
 #+NAME: accuracy.dir
 #+BEGIN_SRC R
@@ -3141,9 +1047,11 @@ message(dd.accuracy.dir)
 
 #+END_SRC
 
+#+results:
+
 #+END_SRC
 
-****** Create Segment Feature Dataframe
+******* Create Segment Feature Dataframe
  #+BEGIN_SRC R :results none
    cl <- makeCluster(cores)
    registerDoParallel(cl)
@@ -5434,6 +3342,9 @@ wtm <- CRS("+init=epsg:3070")
 #+BEGIN_SRC R
 cores <- detectCores() - 2
 #+END_SRC
+
+#+results:
+: Error: could not find function "detectCores"
 
 *** Urban, Water, and Wetland shapefiles
 #+BEGIN_SRC R
