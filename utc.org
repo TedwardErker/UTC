@@ -398,6 +398,9 @@ The following objects are masked from 'package:raster':
 
   segment.params <- data.frame(compactness = compactness, segment.size = segment.size)
 #+end_src
+
+#+results:
+
 **** Input Shapefile DSNs and Layers
 #+BEGIN_SRC R
 
@@ -647,18 +650,18 @@ Load functions from utc/R/utc.org
 
 #+begin_src R
 
-        feature.dfs <- make.feature.df(image.dir = dd.training.dir,
-                        image.name = i,
-                        band.names = c("blue","green","red","nir"),
-                        ndvi = T,
-                        ratio.bands = c("blue","green","red","nir"),
-                        texture.params.df = texture.params,
-                        pixel.df = T,
-                        segmentation = T,
-                        segment.params.df = segment.params)
+  feature.dfs <- make.feature.df(image.dir = dd.training.dir,
+                  image.name = i,
+                  band.names = c("blue","green","red","nir"),
+                  ndvi = T,
+                  ratio.bands = c("blue","green","red","nir"),
+                  texture.params.df = texture.params,
+                  pixel.df = T,
+                  segmentation = T,
+                  segment.params.df = segment.params)
 
-        }
-        }
+  }
+  }
 #+end_src
 
 #+results:

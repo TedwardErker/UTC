@@ -16,7 +16,6 @@
 #+END_SRC
 
 #+RESULTS:
-: [1] "org_babel_R_eoe"
 
 ** Reproject Shapefile to Image Coordinate Reference System
 #+BEGIN_SRC R
@@ -214,7 +213,8 @@
                                           #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
                               pca.features = c("blue","green","red","nir"),
                               segmentation = T,
-                              segment.params.df) {
+                              segment.params.df,
+                              segment.feature.df = T) {
 
       add.features(image.dir,
                    image.name,
@@ -225,29 +225,43 @@
                    texture.params.df)
 
       if (pixel.df ==T) {
+
           save.pixel.feature.df(image.dir = image.dir,
                                 image.name = image.name,
-                                feature.pattern)
-      }
+                                feature.pattern)}
 
       pca.transformation(image.dir = image.dir,
                          image.name = image.name)
 
       if (segmentation == T) {
+
           segment.multiple(image.dir = image.dir,
                            image.name = image.name,
-                           segment.params.df = segment.params.df)
+                           segment.params.df = segment.params.df)}
+
+      if (segment.feature.df == T) {
 
           make.segment.feature.df(image.dir = image.dir,
                                   image.name = image.name,
-                                  feature.pattern = feature.pattern)
-  }
+                                  feature.pattern = feature.pattern)}
+
 
   }
 #+end_src
 
 #+results:
 
+** make.model.building.df
+take output of "make.feature.df" and make
+model building df (feature dataframes with class assignment).
+
+#+begin_src R
+
+  make.model.building.df <- function(){
+
+}
+
+#+end_src
 ** Save each band
 #+begin_src R
     save_each_band <- function(image.path, band.names) {
@@ -662,22 +676,19 @@ wrapper for slic.
       system(paste0("cd ",image.dir,";", "python ../../code/fia_segment_cmdArgs.py ",pixel_size," ",segment.size," ",compactness," ",image.name))
   }
 
-  segment(dd.training.dir, "madisonNAIP.3", 15, 30)
+#  segment(dd.training.dir, "madisonNAIP.3", 15, 30)
 
 #+end_src
 
 #+results:
-: Error in paste0("cd ", image.dir, ";", "python ../../code/fia_segment_cmdArgs.py ",  (from #9) :
-:   object 'dd.training.dir' not found
+: [1] "org_babel_R_eoe"
 
 ** Make Segment Feature DF
 #+begin_src R
 
   make.segment.feature.df.foreach.segmentation <- function(image.dir,
                                                            image.name,
-                                                           segmentation.pattern = "_N-[0-9]+_C-[0-9]+.*",
-                                                           ) {
-
+                                                           segmentation.pattern = "_N-[0-9]+_C-[0-9]+.*") {
 
       segmentation.files <-  list.files(image.dir, pattern = paste0(image.name,segmentation.pattern))
       segmentation.param.appendages <- str_match(segmentation.files,paste0(image.name,"(_.*).tif"))[,2] %>% na.omit()
@@ -731,27 +742,13 @@ wrapper for slic.
       out
   }
 
-  }
 
-  make.segment.feature.df(dd.training.dir, "madisonNAIP.1", segmentation.param.appendage = "_N-100_C-10", feature.pattern = feature.pattern)
+
+#  make.segment.feature.df(dd.training.dir, "madisonNAIP.1", segmentation.param.appendage = "_N-100_C-10", feature.pattern = feature.pattern)
 
 #+end_src
 
 #+results:
-#+begin_example
- Error: unexpected ')' in:
-"                                                         segmentation.pattern = "_N-[0-9]+_C-[0-9]+.*",
-                                                         )"
-Error in list.files(image.dir, pattern = paste0(image.name, segmentation.pattern)) :
-  object 'image.dir' not found
-Error in paste0(image.name, "(_.*).tif") : object 'image.name' not found
- Error in lapply(X = X, FUN = FUN, ...) :
-  object 'segmentation.param.appendages' not found
-Error: unexpected '}' in "}"
-Error: unexpected '}' in "}"
-Error in list.files(image.dir, pattern = paste0(image.name, feature.pattern),  (from #7) :
-  object 'dd.training.dir' not found
-#+end_example
 
 #+BEGIN_SRC R
 
@@ -947,7 +944,6 @@ Error in list.files(image.dir, pattern = paste0(image.name, feature.pattern),  (
 #+END_SRC
 
 #+RESULTS:
-
 
 ** polygonize segment raster with gdal and add Class to shapefile
 
@@ -1166,47 +1162,47 @@ Error in list.files(image.dir, pattern = paste0(image.name, feature.pattern),  (
   }
 
                                           # this is an old way
-  create.df.toBuildModel.fromTrainingPolygons.and.SegmentFeatureDFs <- function(manuallyClassifiedPolygondir,
-                                                                                image.dir,
-                                                                                segment.feature.df.appendage = segment.feature.df.name.append,
-                                                                                modelBuildingData.name = "modelBuildingData.rds") {
+  ## create.df.toBuildModel.fromTrainingPolygons.and.SegmentFeatureDFs <- function(manuallyClassifiedPolygondir,
+  ##                                                                               image.dir,
+  ##                                                                               segment.feature.df.appendage = segment.feature.df.name.append,
+  ##                                                                               modelBuildingData.name = "modelBuildingData.rds") {
 
-      segment.feature.df.appendage = segment.feature.df.name.append
+  ##     segment.feature.df.appendage = segment.feature.df.name.append
 
-                                          # list shapefiles with manually classified polygons
-      trainingShapefiles <- list.files(manuallyClassifiedPolygondir) %>%
-          str_sub(.,end = nchar(.)-4) %>%
-          unique()
+  ##                                         # list shapefiles with manually classified polygons
+  ##     trainingShapefiles <- list.files(manuallyClassifiedPolygondir) %>%
+  ##         str_sub(.,end = nchar(.)-4) %>%
+  ##         unique()
 
-                                          # load training data from shapefiles into memory
-      shapelist.data <- lapply(trainingShapefiles, function(shp) {
-          readOGR(dsn = manuallyClassifiedPolygondir, layer = shp)@data %>%
-                                                                     na.omit() %>%
-                                                                     rename(zone = DN) %>%
-                                                                     filter(Class != "N")
-      })
+  ##                                         # load training data from shapefiles into memory
+  ##     shapelist.data <- lapply(trainingShapefiles, function(shp) {
+  ##         readOGR(dsn = manuallyClassifiedPolygondir, layer = shp)@data %>%
+  ##                                                                    na.omit() %>%
+  ##                                                                    rename(zone = DN) %>%
+  ##                                                                    filter(Class != "N")
+  ##     })
 
-      names(shapelist.data) <- trainingShapefiles
+  ##     names(shapelist.data) <- trainingShapefiles
 
 
-                                          # list .rds segment feature dataframe files
-      segmentFeatureDF.rds.files <- list.files(image.dir, full.names = T) %>%
-          str_extract(pattern = str_c(".*",segment.feature.df.appendage,".rds")) %>%
-          na.omit()
+  ##                                         # list .rds segment feature dataframe files
+  ##     segmentFeatureDF.rds.files <- list.files(image.dir, full.names = T) %>%
+  ##         str_extract(pattern = str_c(".*",segment.feature.df.appendage,".rds")) %>%
+  ##         na.omit()
 
-      trainingData <- list()
+  ##     trainingData <- list()
 
-      foreach(j = seq_along(shapelist.data)) %do% {
-          d <- readRDS(segmentFeatureDF.rds.files[j])
-          trainingData[[j]] <- left_join(shapelist.data[[j]],d, by = c("zone" = "segment"))
-      }
+  ##     foreach(j = seq_along(shapelist.data)) %do% {
+  ##         d <- readRDS(segmentFeatureDF.rds.files[j])
+  ##         trainingData[[j]] <- left_join(shapelist.data[[j]],d, by = c("zone" = "segment"))
+  ##     }
 
-      trainingData <- bind_rows(trainingData) %>%
-          filter(Class != "N")
+  ##     trainingData <- bind_rows(trainingData) %>%
+  ##         filter(Class != "N")
 
-      saveRDS(trainingData, file = str_c(image.dir, "/",modelBuildingData.name))
+  ##     saveRDS(trainingData, file = str_c(image.dir, "/",modelBuildingData.name))
 
-  }
+  ## }
 
 #+END_SRC
 #+RESULTS:
