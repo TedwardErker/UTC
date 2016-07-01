@@ -222,6 +222,96 @@ Same structure as DD_NAIP
 #+END_SRC
 
 #+results:
+#+begin_example
+rgeos version: 0.3-11, (SVN revision 479)
+ GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
+ Linking to sp version: 1.1-0
+ Polygon checking: TRUE
+Loading required package: BBmisc
+
+Attaching package: 'BBmisc'
+
+The following object is masked from 'package:rgeos':
+
+    symdiff
+
+Loading required package: ggplot2
+Loading required package: ParamHelpers
+Loading required package: sp
+rgdal: version: 1.0-4, (SVN revision 548)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.11.2, released 2015/02/10
+ Path to GDAL shared files: /Library/Frameworks/R.framework/Versions/3.2/Resources/library/rgdal/gdal
+ Loaded PROJ.4 runtime: Rel. 4.9.1, 04 March 2015, [PJ_VERSION: 491]
+ Path to PROJ.4 shared files: /Library/Frameworks/R.framework/Versions/3.2/Resources/library/rgdal/proj
+ Linking to sp version: 1.1-1
+
+Attaching package: 'raster'
+
+The following object is masked from 'package:mlr':
+
+    resample
+
+The following object is masked from 'package:ParamHelpers':
+
+    getValues
+
+Attaching package: 'dplyr'
+
+The following objects are masked from 'package:plyr':
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from 'package:raster':
+
+    intersect, select, union
+
+The following object is masked from 'package:BBmisc':
+
+    collapse
+
+The following objects are masked from 'package:rgeos':
+
+    intersect, setdiff, union
+
+The following objects are masked from 'package:stats':
+
+    filter, lag
+
+The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union
+
+Attaching package: 'tidyr'
+
+The following object is masked from 'package:raster':
+
+    extract
+
+The following object is masked from 'package:ascii':
+
+    expand
+foreach: simple, scalable parallel programming from Revolution Analytics
+Use Revolution R for scalability, fault tolerance and more.
+http://www.revolutionanalytics.com
+Loading required package: iterators
+Loading required package: parallel
+randomForest 4.6-12
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: 'randomForest'
+
+The following object is masked from 'package:dplyr':
+
+    combine
+
+Attaching package: 'kernlab'
+
+The following objects are masked from 'package:raster':
+
+    buffer, rotated
+#+end_example
 
 
 ** set figure Cairo
@@ -301,6 +391,13 @@ Same structure as DD_NAIP
 
 #+results:
 
+**** Segmentation Params
+#+begin_src R
+  segment.size <- c(rep(30,3),rep(60,3),rep(100,3))
+  compactness <- segment.size * c(.1, .5, 3)
+
+  segment.params <- data.frame(compactness = compactness, segment.size = segment.size)
+#+end_src
 **** Input Shapefile DSNs and Layers
 #+BEGIN_SRC R
 
@@ -423,7 +520,7 @@ In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
 **** number of cores
 #+BEGIN_SRC R
   cores <- 13
-
+cores <- 4
 #+END_SRC
 
 #+results:
@@ -526,13 +623,13 @@ Load functions from utc/R/utc.org
 
 #+END_SRC
 
-**** For Each Training Tile
+**** Make Feature and model building data frames, for Each Training Tile
 
 #+begin_src R
   cl <- makeCluster(cores)
   registerDoParallel(cl)
 
-  pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
+  pixel.added.features.raster.list <- foreach(img.nm = image.names[1]) %do% {
 
                                           #img.nm <- image.names[1]
 
@@ -541,7 +638,7 @@ Load functions from utc/R/utc.org
           str_extract(., pattern = str_c(img.nm,".[0-9]+")) %>%
           na.omit()
 
-      foreach (i = tile.names,
+      foreach (i = tile.names[1],
                .packages = c("glcm","raster","stringr")) %dopar% {
 
 #+end_src
@@ -550,17 +647,50 @@ Load functions from utc/R/utc.org
 
 #+begin_src R
 
-    feature.dfs <- make.feature.df(image.dir = dd.training.dir,
-                    image.name = i,
-                    band.names = c("blue","green","red","nir"),
-                    ndvi = T,
-                    ratio.bands = c("blue","green","red","nir"),
-                    texture.params.df = texture.params,
-                    pixel.df = T)
+        feature.dfs <- make.feature.df(image.dir = dd.training.dir,
+                        image.name = i,
+                        band.names = c("blue","green","red","nir"),
+                        ndvi = T,
+                        ratio.bands = c("blue","green","red","nir"),
+                        texture.params.df = texture.params,
+                        pixel.df = T,
+                        segmentation = T,
+                        segment.params.df = segment.params)
 
-    }
-    }
+        }
+        }
 #+end_src
+
+#+results:
+#+begin_example
+ average number of pixels per segment is 30.0
+compactness parameter is 3
+['madisonNAIP.1_pca.tif']
+average number of pixels per segment is 30.0
+compactness parameter is 15
+['madisonNAIP.1_pca.tif']
+average number of pixels per segment is 30.0
+compactness parameter is 90
+['madisonNAIP.1_pca.tif']
+average number of pixels per segment is 60.0
+compactness parameter is 6
+['madisonNAIP.1_pca.tif']
+average number of pixels per segment is 60.0
+compactness parameter is 30
+['madisonNAIP.1_pca.tif']
+average number of pixels per segment is 60.0
+compactness parameter is 180
+['madisonNAIP.1_pca.tif']
+average number of pixels per segment is 100.0
+compactness parameter is 10
+['madisonNAIP.1_pca.tif']
+average number of pixels per segment is 100.0
+compactness parameter is 50
+['madisonNAIP.1_pca.tif']
+average number of pixels per segment is 100.0
+compactness parameter is 300
+['madisonNAIP.1_pca.tif']
+#+end_example
 
 ****** Segmentation
 

@@ -16,6 +16,7 @@
 #+END_SRC
 
 #+RESULTS:
+: [1] "org_babel_R_eoe"
 
 ** Reproject Shapefile to Image Coordinate Reference System
 #+BEGIN_SRC R
@@ -210,9 +211,10 @@
                               texture.params.df,
                               feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
                               pixel.df,
-#                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
+                                          #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
                               pca.features = c("blue","green","red","nir"),
-                              segmentation.params = list()) {
+                              segmentation = T,
+                              segment.params.df) {
 
       add.features(image.dir,
                    image.name,
@@ -222,17 +224,26 @@
                    texture = T,
                    texture.params.df)
 
-if (pixel.df ==T) {
-       save.pixel.feature.df(image.dir = image.dir,
-                             image.name = image.name,
-                             feature.pattern)
-}
+      if (pixel.df ==T) {
+          save.pixel.feature.df(image.dir = image.dir,
+                                image.name = image.name,
+                                feature.pattern)
+      }
 
       pca.transformation(image.dir = image.dir,
                          image.name = image.name)
 
+      if (segmentation == T) {
+          segment.multiple(image.dir = image.dir,
+                           image.name = image.name,
+                           segment.params.df = segment.params.df)
+
+          make.segment.feature.df(image.dir = image.dir,
+                                  image.name = image.name,
+                                  feature.pattern = feature.pattern)
   }
 
+  }
 #+end_src
 
 #+results:
@@ -534,6 +545,7 @@ if (pixel.df ==T) {
                                     feature.pattern,
                                     pixel.feature.df.append = pixel.feature.df.appendage ) {
     s <- stack(list.files(image.dir, pattern = paste0(image.name,feature.pattern), full.names = T))
+    names(s) <- sub(x = names(s), pattern = "(madisonNAIP|panshpSPOT).[0-9]+_", replacement = "")
     s.df <- as.data.frame(s, xy = T)
     saveRDS(s.df, file = paste0(image.dir, "/", image.name, pixel.feature.df.append, ".rds"))
   }
@@ -628,28 +640,119 @@ This simply is a wrapper for the python script which is basically a
 wrapper for slic.
 
 #+begin_src R
+  segment.multiple <- function(image.dir,
+                               image.name,
+                               segment.params.df) {
+      segments <- mapply(segment,
+                         image.dir = image.dir,
+                         image.name = image.name,
+                         compactness = segment.params.df$compactness,
+                         segment.size = segment.params.df$segment.size)
 
-    segment  <- function(image.dir,
-                         image.name,
-                         compactness,
-                         segment.size) {
-
-          pixel_size <- ifelse(!is.na(str_extract(image.name,"madisonNAIP")), 1, 1.5)
-          compactness <- if(!is.na(str_extract(image.name,"madisonNAIP"))) compactness else round(2/3*compactness)
-
-          system(paste0("cd ",image.dir,";", "python ../../code/fia_segment_cmdArgs.py ",pixel_size," ",segment_size," ",compactness," ",image.name))
   }
+
+  segment  <- function(image.dir,
+                       image.name,
+                       compactness,
+                       segment.size) {
+
+      pixel_size <- ifelse(!is.na(str_extract(image.name,"madisonNAIP")), 1, 1.5)
+      compactness <- if(!is.na(str_extract(image.name,"madisonNAIP"))) compactness else round(2/3*compactness)
+
+      system(paste0("cd ",image.dir,";", "python ../../code/fia_segment_cmdArgs.py ",pixel_size," ",segment.size," ",compactness," ",image.name))
+  }
+
+  segment(dd.training.dir, "madisonNAIP.3", 15, 30)
 
 #+end_src
 
 #+results:
-:  Error: unexpected ',' in:
-: "
-:                        pixel.size,"
-: Error: object 'compactness' not found
-: Error: unexpected '}' in "}"
+: Error in paste0("cd ", image.dir, ";", "python ../../code/fia_segment_cmdArgs.py ",  (from #9) :
+:   object 'dd.training.dir' not found
 
 ** Make Segment Feature DF
+#+begin_src R
+
+  make.segment.feature.df.foreach.segmentation <- function(image.dir,
+                                                           image.name,
+                                                           segmentation.pattern = "_N-[0-9]+_C-[0-9]+.*",
+                                                           ) {
+
+
+      segmentation.files <-  list.files(image.dir, pattern = paste0(image.name,segmentation.pattern))
+      segmentation.param.appendages <- str_match(segmentation.files,paste0(image.name,"(_.*).tif"))[,2] %>% na.omit()
+
+
+    out <- lapply(X = segmentation.param.appendages, FUN = function(segmentation.param.appendage) {
+          make.segment.feature.df(image.dir = image.dir,
+                                  image.name = image.name,
+                                  segmentation.param.appendage = segmentation.param.appendage,
+                                  feature.pattern = feature.pattern)
+      })
+
+  }
+
+
+  make.segment.feature.df <- function(image.dir,
+                                      image.name,
+                                      segmentation.param.appendage,
+                                      feature.pattern,
+                                      segment.feature.appendage = "_SegmentFeatureDF.rds") {
+
+      fea <- stack(list.files(image.dir, pattern = paste0(image.name,feature.pattern), full.names = T))
+      names(fea) <- sub(x = names(fea), pattern = "(madisonNAIP|panshpSPOT).[0-9]+_", replacement = "")
+
+      seg.path <- paste0(image.dir,"/",image.name,segmentation.param.appendage, ".tif")
+      seg <- raster(seg.path)
+
+                                          # Create a data_frame where mean and variances are calculated by zone
+      x <- as.data.frame(fea, xy = T)
+      s <- as.data.frame(seg)
+      colnames(s) <- "segment"
+      r <- bind_cols(x,s)
+      r2 <- r %>%
+          group_by(segment)
+
+      mean.and.sd <- r2 %>%
+          summarize_each(funs(mean(.,na.rm = T), sd(., na.rm = T))) %>%
+          select(-x_mean, -y_mean)
+
+      image.name.df = data.frame(image.name = rep(image.name, nrow(mean.and.sd)))
+
+      out <- bind_cols(mean.and.sd, image.name.df)
+
+
+      names <- colnames(out)
+      names <- str_replace(names, "\\(",".")
+      names <- str_replace(names, "\\)",".")
+      names <- str_replace(names, "\\:",".")
+      colnames(out) <- names
+      saveRDS(out, file = paste0(image.dir,"/",image.name,segmentation.param.appendage,segment.feature.appendage))
+      out
+  }
+
+  }
+
+  make.segment.feature.df(dd.training.dir, "madisonNAIP.1", segmentation.param.appendage = "_N-100_C-10", feature.pattern = feature.pattern)
+
+#+end_src
+
+#+results:
+#+begin_example
+ Error: unexpected ')' in:
+"                                                         segmentation.pattern = "_N-[0-9]+_C-[0-9]+.*",
+                                                         )"
+Error in list.files(image.dir, pattern = paste0(image.name, segmentation.pattern)) :
+  object 'image.dir' not found
+Error in paste0(image.name, "(_.*).tif") : object 'image.name' not found
+ Error in lapply(X = X, FUN = FUN, ...) :
+  object 'segmentation.param.appendages' not found
+Error: unexpected '}' in "}"
+Error: unexpected '}' in "}"
+Error in list.files(image.dir, pattern = paste0(image.name, feature.pattern),  (from #7) :
+  object 'dd.training.dir' not found
+#+end_example
+
 #+BEGIN_SRC R
 
   Create.Segment.Feature.df <- function(tile.dir,
