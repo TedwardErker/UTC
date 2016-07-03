@@ -11,6 +11,17 @@ Madison Area.
 
 A reproducible workflow to apply this to any city in WI (or perhaps
 country) with minimal work from user.
+** Automated workflow
+I need to be able to run the whole script with one key stroke and get
+a series of tables and figures that show the performance of the
+classifiers.  Additionally (and more challenging) I need to be able to
+easily add in
+1) new training data
+2) new features (esp additional texture layers and segmentations,
+   possibly more moments than mean and sd in segments.)
+3) new classifiers (more than just svm and rf)
+4) new classes?
+
 
 ** Best Classifer
 To make this map I need to find the best classifier to apply to the
@@ -54,10 +65,6 @@ Images x segmentation x classification method
    2) Plotwise
       1) google earth grids, changing area under consideration
       2) field plot, changing definition of tree
-
-
-
-
 
 Pointwise - confusion matrix
 
@@ -222,6 +229,107 @@ Same structure as DD_NAIP
 #+END_SRC
 
 #+results:
+#+begin_example
+rgeos version: 0.3-13, (SVN revision 508)
+ GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
+ Linking to sp version: 1.2-0
+ Polygon checking: TRUE
+Loading required package: BBmisc
+
+Attaching package: 'BBmisc'
+
+The following object is masked from 'package:rgeos':
+
+    symdiff
+
+Loading required package: ggplot2
+Need help? Try the ggplot2 mailing list:
+http://groups.google.com/group/ggplot2.
+Loading required package: ParamHelpers
+Loading required package: stringi
+Loading required package: sp
+rgdal: version: 1.0-7, (SVN revision 559)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
+ Path to GDAL shared files: /usr/local/Cellar/gdal/1.11.3/share/gdal
+ Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
+ Path to PROJ.4 shared files: (autodetected)
+ Linking to sp version: 1.2-0
+
+Attaching package: 'raster'
+
+The following object is masked from 'package:mlr':
+
+    resample
+
+The following object is masked from 'package:ParamHelpers':
+
+    getValues
+
+Attaching package: 'dplyr'
+
+The following objects are masked from 'package:plyr':
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from 'package:raster':
+
+    intersect, select, union
+
+The following object is masked from 'package:BBmisc':
+
+    collapse
+
+The following objects are masked from 'package:rgeos':
+
+    intersect, setdiff, union
+
+The following objects are masked from 'package:stats':
+
+    filter, lag
+
+The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union
+
+Attaching package: 'tidyr'
+
+The following object is masked from 'package:raster':
+
+    extract
+
+The following object is masked from 'package:ascii':
+
+    expand
+foreach: simple, scalable parallel programming from Revolution Analytics
+Use Revolution R for scalability, fault tolerance and more.
+http://www.revolutionanalytics.com
+Loading required package: iterators
+Loading required package: parallel
+randomForest 4.6-12
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: 'randomForest'
+
+The following object is masked from 'package:dplyr':
+
+    combine
+
+The following object is masked from 'package:ggplot2':
+
+    margin
+
+Attaching package: 'kernlab'
+
+The following objects are masked from 'package:raster':
+
+    buffer, rotated
+
+The following object is masked from 'package:ggplot2':
+
+    alpha
+#+end_example
 
 
 ** set figure Cairo
@@ -335,7 +443,9 @@ Same structure as DD_NAIP
 
 
   grid.accuracy.region.dsn <- "../RD_Accuracy/Grids"
+  grid.accuracy.region.dsn <- "../DD/reprojected.Accuracy.Regions"
   grid.accuracy.region.layer <- "All_Grids_Accuracy_Assessment_Added_pts"
+  grid.accuracy.region.layer <- "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts"
 
   field.accuracy.region.dsn <- "../RD_Accuracy/FieldData"
   field.accuracy.region.layer <- "fieldPoints"
@@ -388,16 +498,25 @@ Warning message:
 In dir.create(dd.accuracy.classified.dir) :
   '../DD/Accuracy/ClassifiedTiles' already exists
 [[1]]
-[1] TRUE
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/Madison_Training' already exists
 [[1]]
-[1] TRUE
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/Madison_pca' already exists
 [[1]]
 [1] FALSE
 
 Warning message:
 In dir.create(x) : '../DD/Accuracy' already exists
 [[1]]
-[1] TRUE
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/Models' already exists
 #+end_example
 
 **** Define Derived Shapefile DSNs and Layers
@@ -415,19 +534,40 @@ In dir.create(x) : '../DD/Accuracy' already exists
 #+END_SRC
 
 #+results:
-: [[1]]
-: [1] TRUE
-: [[1]]
-: [1] TRUE
-: [[1]]
-: [1] FALSE
-:
-: Warning message:
-: In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
+#+begin_example
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
+#+end_example
+
+**** Calc Accuracy Inputs
+#+begin_src R
+     mad.grid.id.pattern = "mad.[0-9]+m.[0-9]+"
+     image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
+     target.pattern = "all|grass|impervious|tree"
+     model.pattern = "rf_prob|rf_resp|svm_resp"
+     seg.prms = "N-[0-9]+_C-[0-9]+|Pixel"
+
+#+end_src
+
+#+results:
 
 **** number of cores
 #+BEGIN_SRC R
   cores <- 15
+cores<-2
 #+END_SRC
 
 #+results:
@@ -763,7 +903,7 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
 
 #+end_src
 
-*** NEXT Testing/Accuracy : Make the first part of this a function that works on training and testing rasters
+*** Testing/Accuracy
 **** Make tiles at accuracy regions
 
 make this i = 1:2 (or 1:3) to do all the accuracy regions
@@ -792,8 +932,7 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 #+END_SRC
 
-
-**** Make PixelFeatureDFs and SegmentationFeatureDFs for Accuracy Regions for each tile
+**** Make Feature data frames, for each Accuracy Region tile
 
  #+begin_src R :results silent
    cl <- makeCluster(cores)
@@ -827,9 +966,17 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 #+end_src
 
-**** Classify Tiles at accuracy regions
+**** NEXT Classify Tiles at accuracy regions
 I need to find a way to associate the class with the number. So that
 it stays and doesn't reorder alphabetically.
+
+Somehow the pixel classification does this correctly (it creates a
+.xml meta datafile.)
+
+I need to make this so that I don't have to specify the factor levels
+of the classes.  The raster predict function appears smart in this
+way.  I should look at it.
+
 #+BEGIN_SRC R
    cl <- makeCluster(cores)
    registerDoParallel(cl)
@@ -849,7 +996,7 @@ it stays and doesn't reorder alphabetically.
 
 
            foreach(tile.nm = tile.names,
-                   .packages = c("dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
+                   .packages = c("dplyr","raster","stringr","mlr","foreach","doParallel")) %do% {
 
                foreach(model = models) %do% {
 
@@ -858,6 +1005,7 @@ it stays and doesn't reorder alphabetically.
                    if(grepl("N-[0-9]+_C-[0-9]+",segmentation.params)) {
                           segment.tile.name.append <- paste0("_",segmentation.params,".tif")
                           segment.feature.df.name.append <- paste0("_",segmentation.params,segmentFeatureDF.appendage)
+
 
                           classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
                                           model.dir = Models.dir,
@@ -893,44 +1041,29 @@ it stays and doesn't reorder alphabetically.
 
 
 
-
-
 **** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data
 #+BEGIN_SRC R
-
-
       grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
 
       xy <- coordinates(grd)
       grd@data$x <- xy[,1]
       grd@data$y <- xy[,2]
 
-
-
-
-      classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-          str_extract(., pattern = ".*.tif$") %>%
+  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+      str_extract(., pattern = ".*.tif$") %>%
           str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
           na.omit()
 
-      grid.names <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-          str_extract(., pattern = ".*.tif$") %>%
-          str_extract(., pattern = grid.pattern) %>%
-          str_sub(.,1,-2) %>%
-          unique() %>%
-          na.omit()
 
+  grid.names <- classified.tile.paths %>%
+      str_match(., paste0(".*(",grid.pattern,").*"))
 
-      grid.name = grid.names[3]
+  grid.names <- grid.names[,2] %>%
+      unique() %>%
+      na.omit()
 
-  grid.name = str_extract(grid.names, ".*150m-[56].*") %>% na.omit()
+  ## grid.name = str_extract(grid.names, ".*150m-[56].*") %>% na.omit()
 
-      mad.grid.id.pattern = "mad-[0-9]+m-[0-9]+"
-      grid.pattern = "[a-zA-Z]{3}-[0-9]+m-[0-9]+_"
-      image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
-      target.pattern = "all|grass|impervious|tree"
-      model.pattern = "rf_prob|rf_resp|svm_resp"
-      seg.prms = "N-[0-9]+_C-[0-9]+|Pixel"
 
 
       cl <- makeCluster(cores)
@@ -999,8 +1132,8 @@ it stays and doesn't reorder alphabetically.
 
 
 
-      saveRDS(error.df, str_c(derived.dir, "point2pixel.error.df.rds"))
-      readRDS(error.df, str_c(derived.dir, "point2pixel.error.df.rds"))
+      saveRDS(error.df, str_c(derived.dir, "/point2pixel.error.df.rds"))
+      readRDS(error.df, str_c(derived.dir, "/point2pixel.error.df.rds"))
 
 
       error.df %>%
@@ -1029,6 +1162,32 @@ it stays and doesn't reorder alphabetically.
 
 
 *** Summarize Accuracy Assessment Results
+
+What do I want the summary plots to look like?
+
+Start general, then show details.
+
+**** Factors underconsideration
+1) classifier
+2) definition of "truth", what we compare to: Grids, Field Data,
+   random points
+3) Segmentation
+4) which image (naip or spot)
+
+each combination is a point.
+
+segmentation are continuous variables
+
+
+
+
+
+messing around
+#+begin_src R
+  ras <- raster(paste0(dd.accuracy.dir,"/ClassifiedTiles/madisonNAIP.mad.200m.3_Pixel_madisonNAIP_all_rf_prob.tif"))
+#+end_src
+
+#+results:
 
 ** Test How Madison Model performs for Wausau
 *** Classify Wausau Accuracy Regions
