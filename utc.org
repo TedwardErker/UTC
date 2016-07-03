@@ -222,96 +222,6 @@ Same structure as DD_NAIP
 #+END_SRC
 
 #+results:
-#+begin_example
-rgeos version: 0.3-11, (SVN revision 479)
- GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
- Linking to sp version: 1.1-0
- Polygon checking: TRUE
-Loading required package: BBmisc
-
-Attaching package: 'BBmisc'
-
-The following object is masked from 'package:rgeos':
-
-    symdiff
-
-Loading required package: ggplot2
-Loading required package: ParamHelpers
-Loading required package: sp
-rgdal: version: 1.0-4, (SVN revision 548)
- Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 1.11.2, released 2015/02/10
- Path to GDAL shared files: /Library/Frameworks/R.framework/Versions/3.2/Resources/library/rgdal/gdal
- Loaded PROJ.4 runtime: Rel. 4.9.1, 04 March 2015, [PJ_VERSION: 491]
- Path to PROJ.4 shared files: /Library/Frameworks/R.framework/Versions/3.2/Resources/library/rgdal/proj
- Linking to sp version: 1.1-1
-
-Attaching package: 'raster'
-
-The following object is masked from 'package:mlr':
-
-    resample
-
-The following object is masked from 'package:ParamHelpers':
-
-    getValues
-
-Attaching package: 'dplyr'
-
-The following objects are masked from 'package:plyr':
-
-    arrange, count, desc, failwith, id, mutate, rename, summarise,
-    summarize
-
-The following objects are masked from 'package:raster':
-
-    intersect, select, union
-
-The following object is masked from 'package:BBmisc':
-
-    collapse
-
-The following objects are masked from 'package:rgeos':
-
-    intersect, setdiff, union
-
-The following objects are masked from 'package:stats':
-
-    filter, lag
-
-The following objects are masked from 'package:base':
-
-    intersect, setdiff, setequal, union
-
-Attaching package: 'tidyr'
-
-The following object is masked from 'package:raster':
-
-    extract
-
-The following object is masked from 'package:ascii':
-
-    expand
-foreach: simple, scalable parallel programming from Revolution Analytics
-Use Revolution R for scalability, fault tolerance and more.
-http://www.revolutionanalytics.com
-Loading required package: iterators
-Loading required package: parallel
-randomForest 4.6-12
-Type rfNews() to see new features/changes/bug fixes.
-
-Attaching package: 'randomForest'
-
-The following object is masked from 'package:dplyr':
-
-    combine
-
-Attaching package: 'kernlab'
-
-The following objects are masked from 'package:raster':
-
-    buffer, rotated
-#+end_example
 
 
 ** set figure Cairo
@@ -350,9 +260,10 @@ The following objects are masked from 'package:raster':
   ratio.tile.name.append <- "_ratio"
   pca.tile.name.append <- "_pca"
 
-  segment.params <- list(list(area = c(105,60,30), compactness = c(32,30,15)),
-                         list(area = c(105,60,30), compactness = c(21,20,10)))
-  names(segment.params) <- image.names
+# don't think I need these lines:
+  ## segment.params <- list(list(area = c(105,60,30), compactness = c(32,30,15)),
+  ##                        list(area = c(105,60,30), compactness = c(21,20,10)))
+  ## names(segment.params) <- image.names
 
   band.names.wRatios <- c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
 
@@ -370,7 +281,7 @@ The following objects are masked from 'package:raster':
 
   tile.id.col.nm.for.grid.and.field.accuracy <- c("unq__ID", "Plot")
 
-  grid.pattern = "[a-zA-Z]{3}-[0-9]+m-[0-9]+_"
+  grid.pattern = "[a-zA-Z]{3}\\.[0-9]+m\\.[0-9]+" #I removed "_" from end. <2016-07-02 Sat>
   texture.pattern = "stat-.*_window-.*_angle[-]+[0-9]+"
 #+END_SRC
 
@@ -384,6 +295,13 @@ The following objects are masked from 'package:raster':
   statistics = list("homogeneity", "contrast", "correlation")
   shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
 
+
+  band.for.texture.appendage = "_ratio.nir"
+  window <- list(c(3,3))
+  statistics = list("homogeneity", "correlation")
+  shift = list(c(0,1),c(-1,1))
+
+
   texture.params <- expand.grid(band.appendage = band.for.texture.appendage,window = window, statistics = statistics, shift = shift, stringsAsFactors = F)
 
 
@@ -395,6 +313,10 @@ The following objects are masked from 'package:raster':
 #+begin_src R
   segment.size <- c(rep(30,3),rep(60,3),rep(100,3))
   compactness <- segment.size * c(.1, .5, 3)
+
+  segment.size <- c(rep(30,1), rep(100,1))
+  compactness <- segment.size * c(.5)
+
 
   segment.params <- data.frame(compactness = compactness, segment.size = segment.size)
 #+end_src
@@ -466,25 +388,16 @@ Warning message:
 In dir.create(dd.accuracy.classified.dir) :
   '../DD/Accuracy/ClassifiedTiles' already exists
 [[1]]
-[1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/Madison_Training' already exists
+[1] TRUE
 [[1]]
-[1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/Madison_pca' already exists
+[1] TRUE
 [[1]]
 [1] FALSE
 
 Warning message:
 In dir.create(x) : '../DD/Accuracy' already exists
 [[1]]
-[1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/Models' already exists
+[1] TRUE
 #+end_example
 
 **** Define Derived Shapefile DSNs and Layers
@@ -502,28 +415,19 @@ In dir.create(x) : '../DD/Models' already exists
 #+END_SRC
 
 #+results:
-#+begin_example
-[[1]]
-[1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
-[[1]]
-[1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
-[[1]]
-[1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
-#+end_example
+: [[1]]
+: [1] TRUE
+: [[1]]
+: [1] TRUE
+: [[1]]
+: [1] FALSE
+:
+: Warning message:
+: In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
 
 **** number of cores
 #+BEGIN_SRC R
-  cores <- 13
-cores <- 4
+  cores <- 15
 #+END_SRC
 
 #+results:
@@ -626,13 +530,13 @@ Load functions from utc/R/utc.org
 
 #+END_SRC
 
-**** Make Feature and model building data frames, for Each Training Tile
+**** Make Feature data frames, for Each Training Tile
 
-#+begin_src R
+ #+begin_src R :results silent
   cl <- makeCluster(cores)
   registerDoParallel(cl)
 
-  pixel.added.features.raster.list <- foreach(img.nm = image.names[1]) %do% {
+  pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
 
                                           #img.nm <- image.names[1]
 
@@ -641,130 +545,26 @@ Load functions from utc/R/utc.org
           str_extract(., pattern = str_c(img.nm,".[0-9]+")) %>%
           na.omit()
 
-      foreach (i = tile.names[1],
-               .packages = c("glcm","raster","stringr")) %dopar% {
+      foreach (i = tile.names,
+               .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
+
+      feature.dfs <- make.feature.df(image.dir = dd.training.dir,
+                      image.name = i,
+                      band.names = c("blue","green","red","nir"),
+                      ndvi = T,
+                      ratio.bands = c("blue","green","red","nir"),
+                      texture.params.df = texture.params,
+                      pixel.df = T,
+                      segmentation = T,
+                      segment.params.df = segment.params)
+
+      }
+      }
 #+end_src
 
-***** Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
-
-#+begin_src R
-
-  feature.dfs <- make.feature.df(image.dir = dd.training.dir,
-                  image.name = i,
-                  band.names = c("blue","green","red","nir"),
-                  ndvi = T,
-                  ratio.bands = c("blue","green","red","nir"),
-                  texture.params.df = texture.params,
-                  pixel.df = T,
-                  segmentation = T,
-                  segment.params.df = segment.params)
-
-  }
-  }
-#+end_src
-
-#+results:
-#+begin_example
- average number of pixels per segment is 30.0
-compactness parameter is 3
-['madisonNAIP.1_pca.tif']
-average number of pixels per segment is 30.0
-compactness parameter is 15
-['madisonNAIP.1_pca.tif']
-average number of pixels per segment is 30.0
-compactness parameter is 90
-['madisonNAIP.1_pca.tif']
-average number of pixels per segment is 60.0
-compactness parameter is 6
-['madisonNAIP.1_pca.tif']
-average number of pixels per segment is 60.0
-compactness parameter is 30
-['madisonNAIP.1_pca.tif']
-average number of pixels per segment is 60.0
-compactness parameter is 180
-['madisonNAIP.1_pca.tif']
-average number of pixels per segment is 100.0
-compactness parameter is 10
-['madisonNAIP.1_pca.tif']
-average number of pixels per segment is 100.0
-compactness parameter is 50
-['madisonNAIP.1_pca.tif']
-average number of pixels per segment is 100.0
-compactness parameter is 300
-['madisonNAIP.1_pca.tif']
-#+end_example
-
-****** Segmentation
-
-#+BEGIN_SRC R
-  #  system("source activate utc")
-  #  system("export PATH=/home/RUSSELL/erker/.conda/envs/utc/bin:$PATH")
-
-      segment_size <- c(30,60,105)
-      compactness <- c(15,30,32)
-      o.wd <- getwd()
-
-
-      cl <- makeCluster(cores)
-      registerDoParallel(cl)
-
-      for(img.nm in image.names) {
-
-          tile.names <- list.files(dd.training.dir) %>%
-              str_extract(., pattern = str_c(img.nm,".[0-9]+.tif")) %>%
-              str_extract(., pattern = str_c(img.nm,".[0-9]+")) %>%
-              na.omit()
-
-          pixel_size <- ifelse(img.nm == "madisonNAIP", 1, 1.5)
-          compactness <- if(img.nm == "madisonNAIP") compactness else round(2/3*compactness)
-
-          for(j in 1:length(segment_size)) {
-
-              foreach (i = tile.names) %dopar% {
-                  system(paste0("cd ",dd.training.dir,";", "python ../../code/fia_segment_cmdArgs.py ",pixel_size," ",segment_size[j]," ",compactness[j]," ",i))
-               }
-          }
-      }
-
-      setwd(o.wd)
-#+END_SRC
-
-#+results:
-
-
-****** Create Segment Feature Dataframe
-#+BEGIN_SRC R :results none
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-  seg.feature.dfs <- foreach(img.nm = image.names) %do% {
-
-      tile.names <- list.files(dd.training.dir) %>%
-          str_extract(., pattern = str_c(img.nm,"-[0-9]+",segmentation.layer.pattern,".tif$")) %>%
-          na.omit()
-
-      seg.params <- unique(str_extract(tile.names, segmentation.layer.pattern))
-
-      foreach(seg.param.set = seg.params) %do% {
-
-          tile.names.sub <- tile.names[which(complete.cases(str_extract(tile.names,seg.param.set)))] %>%
-              str_sub(start = 1, end = -5)
-
-          out <- foreach (i = tile.names.sub,
-                          .packages = c("raster","stringr","dplyr","broom","tidyr")) %dopar% {
-                              seg.df <- Create.Segment.Feature.df(tile.dir = dd.training.dir,
-                                                                  tile.name = i)
-                              saveRDS(seg.df, file = paste0(dd.training.dir,"/", i,segmentFeatureDF.appendage))
-                          }
-          out
-      }
-  }
-    #+END_SRC
-
-
-***** Combine Feature Dataframes
-Pattern is image.name-Segmentation
+**** Combine Feature Dataframes
+Pattern is image.name_Segmentation
 #+BEGIN_SRC R :results none
   tile.dir <- dd.training.dir
   segmentation.layer.pattern
@@ -793,7 +593,7 @@ Pattern is image.name-Segmentation
   }
 #+END_SRC
 
-***** Create Model Building Dataframes, assign Class to feature dfs
+**** Create Model Building Dataframes, assign Class to feature dfs
   1) Input
      - Segmentation Layer from the Training Regions
      - Classified Training Polygons for each image (NAIP and panSPOT)
@@ -809,75 +609,8 @@ Pattern is image.name-Segmentation
 
   3) Output
      - Model Building Dataframes, 1 for each image and segmentation combination
+
 #+BEGIN_SRC R :results none
-
-  ## i <- 1
-  ## feature.df.rds <- featureDF.files[1]
-  ## SegmentFeatureDF = feature.df
-  ## training.sp = training.polygons
-  ## seg.tiles.dir = image.cropped.to.training.dir
-  ## feature.df.rds <- featureDF.files[6]
-  ## seg.params <- segment.params[1]
-  ## seg.file <- seg.files[6]
-  ## PixelFeatureDF = feature.df
-  ## training.sp = training.polygons
-
-  getSegment.class.and.features.Within.Polygon<-function(SegmentFeatureDF,
-                                                         training.sp,
-                                                         seg.tiles.dir,
-                                                         seg.params){
-      seg.files <- list.files(seg.tiles.dir, pattern = str_c(seg.params,".tif$"), full.names = T)
-                                          # find number of pixels in each segment
-      n.pixels.per.seg <- foreach(seg.file = seg.files, .combine = "rbind") %do% {
-          seg <- stack(seg.file)
-          s.df <- as.data.frame(seg) %>%
-              gather(key = tile.name, value = segment.id) %>%
-              group_by(segment.id, tile.name) %>%
-              summarize(n.pixels.per.seg = n())
-      }
-                                          # find number of pixels in each segment are in a polygon
-      n.pixels.per.seg.in.polygon <- foreach(seg.file = seg.files, .combine = "rbind") %do% {
-
-          seg <- stack(seg.file)
-          ei <- as(extent(seg), "SpatialPolygons")
-
-          if(gIntersects(ei, as(training.sp,"SpatialPolygons"))) {
-
-              a <- raster::extract(seg, as(training.sp,"SpatialPolygons"), df = T)
-
-              a <- a %>%
-                  gather(key = tile.name, value = segment.id, -ID) %>%
-                  rename(polygon.id = ID) %>%
-                  group_by(polygon.id, tile.name, segment.id) %>%
-                  summarize(n.pixels.per.seg.in.polygon = n())
-          }
-      }
-                                          # get pct of segment in a polygon,
-                                          # filter segments that have more than 50%,
-                                          #join Class information from polygons
-      if(!is.null(n.pixels.per.seg.in.polygon)) {
-
-          n.pixels <- left_join(n.pixels.per.seg.in.polygon,n.pixels.per.seg) %>%
-              mutate(pct.seg.in.polygon = n.pixels.per.seg.in.polygon/n.pixels.per.seg) %>%
-              filter(pct.seg.in.polygon >= .5) %>%
-              left_join(.,training.sp@data, by = c("polygon.id" = "id")) %>%
-              ungroup() %>%
-              mutate(tile.name = str_replace(tile.name, "\\.", "-"),
-                     tile.name =  str_extract(tile.name, ".*-[0-9]+_"),
-                     tile.name = str_sub(tile.name,1,-2)) %>%
-              mutate(segment = segment.id)
-
-          left_join(n.pixels, SegmentFeatureDF) %>%
-              dplyr::select(-segment,
-                            -segment.id,
-                            -tile.name,
-                            -polygon.id,
-                            -n.pixels.per.seg,
-                            -n.pixels.per.seg.in.polygon,
-                            -pct.seg.in.polygon)        %>%
-              filter(complete.cases(.))
-      }
-  }
 
   cl <- makeCluster(cores)
   registerDoParallel(cl)
@@ -910,12 +643,12 @@ Pattern is image.name-Segmentation
           }
 
           if(complete.cases(str_extract(feature.df.rds,   segmentation.layer.pattern))) {
-              segment.params <- str_extract(feature.df.rds, segmentation.layer.pattern)
+              segment.parameters <- str_extract(feature.df.rds, segmentation.layer.pattern)
               model.building.df <- getSegment.class.and.features.Within.Polygon(SegmentFeatureDF = feature.df,
                   training.sp = training.polygons,
                   seg.tiles.dir = dd.training.dir,
-                  seg.params = segment.params)
-              saveRDS(model.building.df, file = str_c(dd.training.dir,"/",img.nm,segment.params,ModelBuilding.appendage))
+                  seg.params = segment.parameters)
+              saveRDS(model.building.df, file = str_c(dd.training.dir,"/",img.nm,segment.parameters,ModelBuilding.appendage))
           }
       }
   }
@@ -930,7 +663,7 @@ Pattern is image.name-Segmentation
   cl <- makeCluster(cores)
   registerDoParallel(cl)
 
-  foreach(img.nm = image.names) %do% {
+  foreach(img.nm = image.names[1]) %do% {
 
               ModelBuildingRDSs <- list.files(dd.training.dir) %>%
                   str_extract(., str_c(img.nm,".*",ModelBuilding.appendage)) %>%
@@ -951,7 +684,7 @@ Pattern is image.name-Segmentation
 for tuning see:
 https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
 
-#+begin_src R
+#+begin_src R :eval no
  Build.and.Save.Tuned.models <- function( dir = dd.training.dir,
                                     modelBuildingData = ModelBuildingRDS,
                                     models.dir = Models.dir,
@@ -1032,11 +765,14 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
 
 *** NEXT Testing/Accuracy : Make the first part of this a function that works on training and testing rasters
 **** Make tiles at accuracy regions
+
+make this i = 1:2 (or 1:3) to do all the accuracy regions
+
 #+BEGIN_SRC R :results none
 
-    foreach(i = 1:2) %do% {
+    foreach(i = 1) %do% {
 
-      foreach(img.pth = image.paths) %do% {
+      foreach(img.pth = image.paths[1]) %do% {
 
           Reproject_Shapefile_to_Image_CRS(accuracy.region.dsn[i],
                                            accuracy.region.layer[i],
@@ -1055,185 +791,62 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
 
 
 #+END_SRC
-**** Make PixelFeatureDFs and SegmentationFeatureDFs for Accuracy Regions
-
-***** For Each Testing Tile
-
-#+begin_src R
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-  pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
-
-                                          #img.nm <- image.names[1]
-
-      tile.names <- list.files(dd.accuracy.dir) %>%
-          str_extract(., pattern = str_c(img.nm,".[0-9]+.tif")) %>%
-          str_extract(., pattern = str_c(img.nm,".[0-9]+")) %>%
-          na.omit()
-
-      foreach (i = tile.names[1:2],
-               .packages = c("glcm","raster","stringr")) %dopar% {
-
-#+end_src
-
-****** Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
-
-#+begin_src R
-
-  band.appendage = "_ratio.nir"
-  window <- list(c(3,3), c(5,5))
-  statistics = list("homogeneity", "contrast", "correlation")
-  shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
-
-  texture.params <- expand.grid(band.appendage = band.appendage,window = window, statistics = statistics, shift = shift, stringsAsFactors = F)
 
 
-        make.feature.df(image.dir = dd.training.dir,
-                        image.name = i,
-                        band.names = c("blue","green","red","nir"),
-                        ndvi = T,
-                        ratio.bands = c("blue","green","red","nir"),
-                        texture.params.df = texture.params)
+**** Make PixelFeatureDFs and SegmentationFeatureDFs for Accuracy Regions for each tile
 
-      }
-  }
-#+end_src
-
-
-
-
-  1) Input
-     - Testing Region Shapefiles
-     - image
-  2) Operation
-     - Reproject Shapefiles to that of image
-     - Crop image to each polygon in the shapefile
-     - Derive PixelfeatureDFs and SegmentationFeatureDF from each tile of the image in region of each polygon
-  3) Output
-     - SegmentationFeatureDFs for every training polygon
-     - PixelFeatureDFs for every pixel
-
-******* Start R Loop, for every smaller image, do in parallel, :
-#+BEGIN_SRC R
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-  pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
-
-      tile.names <- list.files(dd.accuracy.dir) %>%
-           str_extract(., pattern = str_c(img.nm,".*-[0-9]+.tif$")) %>%
-           str_extract(., pattern = str_c(img.nm,".*-[0-9]+")) %>%
-           na.omit()
-
-       foreach (i = tile.names,
-                .packages = c("raster","stringr")) %dopar% {
-   #+END_SRC
-
-******* Add Ratios
-#+BEGIN_SRC R
-   add.ratios.ndvi(tile.dir = dd.accuracy.dir,
-                   tile.name = i)
-
-
- #+END_SRC
-******* Save Pixel Feature Dataframe
- #+BEGIN_SRC R
-
-          pixel.feature.df <- Create.Pixel.Feature.df(tile.dir = dd.accuracy.dir,
-						      tile.name = i)
-
-
-
-
-#+END_SRC
-
-******* Perform PCA
-#+BEGIN_SRC R :results none
-	      image.pca(image.name = img.nm,
-                        tile.dir = dd.accuracy.dir,
-                        tile.name = i,
-                        pca.dir = dd.pca.dir)
-      }
-}
-   #+END_SRC
-******* Segmentation
-
-#+NAME: accuracy.dir
-#+BEGIN_SRC R
-message(dd.accuracy.dir)
-#+END_SRC
-
-
-#+BEGIN_SRC sh :var dir=accuracy.dir
-   cd $dir
-   # pixel size
-   # desired area for superpixel/segments
-   # compactness value
-   # imagename
-   python ../../code/fia_segment_cmdArgs.py 1 30 15 madisonNAIP &
-   python ../../code/fia_segment_cmdArgs.py 1 60 30 madisonNAIP &
-   python ../../code/fia_segment_cmdArgs.py 1 105 32 madisonNAIP &
-   python ../../code/fia_segment_cmdArgs.py 1.5 30 10 panshpSPOT &
-   python ../../code/fia_segment_cmdArgs.py 1.5 60 20 panshpSPOT &
-   python ../../code/fia_segment_cmdArgs.py 1.5 105 21 panshpSPOT &
-
-#+END_SRC
-
-#+results:
-
-#+END_SRC
-
-******* Create Segment Feature Dataframe
- #+BEGIN_SRC R :results none
+ #+begin_src R :results silent
    cl <- makeCluster(cores)
    registerDoParallel(cl)
 
-   seg.feature.dfs <- foreach(img.nm = image.names) %do% {
+   pixel.added.features.raster.list <- foreach(img.nm = image.names[1]) %do% {
+
+                                           #img.nm <- image.names[1]
 
        tile.names <- list.files(dd.accuracy.dir) %>%
-           str_extract(., pattern = str_c(img.nm,".*-[0-9]+",segmentation.layer.pattern,".tif$")) %>%
-               na.omit()
+           str_match(., pattern = str_c("(",img.nm,".",grid.pattern,")(.tif)"))
 
-       seg.params <- unique(str_extract(tile.names, segmentation.layer.pattern))
+       tile.names <- tile.names[,2] %>% na.omit()
 
-       foreach(seg.param.set = seg.params) %do% {
+       foreach (i = tile.names,
+                .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
-           tile.names.sub <- tile.names[which(complete.cases(str_extract(tile.names,seg.param.set)))]
-           tile.names.sub <- str_replace(tile.names.sub, ".tif","")
 
-           out <- foreach (i = tile.names.sub,
-                           .packages = c("raster","stringr","dplyr","broom","tidyr")) %dopar% {
-                               seg.df <- Create.Segment.Feature.df(tile.dir = dd.accuracy.dir,
-                                                         tile.name = i)
-                               saveRDS(seg.df, file = paste0(dd.accuracy.dir,"/", i, segmentFeatureDF.appendage))
-                           }
-           out
-       }
+                    feature.dfs <- make.feature.df(image.dir = dd.accuracy.dir,
+                                                   image.name = i,
+                                                   band.names = c("blue","green","red","nir"),
+                                                   ndvi = T,
+                                                   ratio.bands = c("blue","green","red","nir"),
+                                                   texture.params.df = texture.params,
+                                                   pixel.df = T,
+                                                   segmentation = T,
+                                                   segment.params.df = segment.params)
+
+                }
    }
 
-    #+END_SRC
+#+end_src
 
 **** Classify Tiles at accuracy regions
-
+I need to find a way to associate the class with the number. So that
+it stays and doesn't reorder alphabetically.
 #+BEGIN_SRC R
    cl <- makeCluster(cores)
    registerDoParallel(cl)
 
 
    classified.grid.tiles <-
-       foreach(img.nm = image.names) %do% {
+       foreach(img.nm = image.names[1]) %do% {
 
            models <- list.files(Models.dir) %>%
                str_extract(., str_c(".*",img.nm,".*")) %>%
                na.omit()
 
            tile.names <- list.files(dd.accuracy.dir) %>%
-               str_extract(., pattern = str_c(img.nm,".*[0-9]+.tif$")) %>%
-               str_replace(., segmentation.layer.pattern, "") %>%
-               str_replace(., ".tif", "") %>%
-                       na.omit() %>%
-                           unique()
+               str_match(., pattern = str_c("(",img.nm,".*?)_.*\\.tif$"))
+
+           tile.names <- tile.names[,2] %>% na.omit() %>% unique()
+
 
            foreach(tile.nm = tile.names,
                    .packages = c("dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
@@ -1272,6 +885,10 @@ message(dd.accuracy.dir)
   stopCluster(cl)
 #+END_SRC
 
+#+results:
+:  Error in { :
+:   task 1 failed - "task 1 failed - "task 1 failed - "object 'ratio.nir_stat.contrast_window.3_angle.0_mean' not found"""
+
 
 
 
@@ -1280,79 +897,6 @@ message(dd.accuracy.dir)
 
 **** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data
 #+BEGIN_SRC R
-      pts.on.classified.tile.plot <- function(pts, classified.tile, target = NULL) {
-          if(target == "a") {
-              pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
-              pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, fill = cvr_typ), shape = 21, color = "black", size =2, stroke = .2)
-          } else {
-              pts@data <- pts@data %>%
-                  mutate(cvr_typ = ifelse(cvr_typ == target, cvr_typ, "o"))
-                  pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
-          }
-          r.df <- as.data.frame(classified.tile, xy = T)
-          names(r.df) <- c("x","y","cvr_typ")
-          r.df <- r.df %>%
-              mutate(cvr_typ = mapvalues(cvr_typ, from = c(1,2,3,4), to = c("g","i","t","o")))
-          pxls.plot <- ggplot() + geom_raster(data = r.df, aes(x = x, y = y, fill = cvr_typ))
-          title <- ggtitle(label = names(classified.tile))
-          UTC_pal <- c(g = "#ffff99", i = "#f0027f", t = "#7fc97f", o = "#666666")
-          pxls.plot + pts.plot + title + scale_fill_manual(values = UTC_pal)+ scale_color_manual(values = UTC_pal) +
-  coord_equal()
-      }
-
-
-
-
-      calcErrorAllMultinomial <-  function(pts, tile, Pixel = F) {
-          classification <- raster::extract(classified.tile, pts)
-          if(Pixel == T) {
-              lvls <- levels(classified.tile)[[1]]
-              classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
-          } else {
-              classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
-          }
-          google = pts@data$cvr_typ
-          overall.error <- 1 - mean(classification == google)
-          pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
-          pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
-          pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
-          error <- c(overall.error = overall.error,
-                     pct.grass.classified.as.other = pct.grass.classified.as.other,
-                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
-                     pct.tree.classified.as.other = pct.tree.classified.as.other)
-          return(error)
-      }
-
-      calcErrorBinomial <-  function(pts, tile, target, Pixel = F) {
-          classification <- raster::extract(classified.tile, pts)
-          if(Pixel == T) {
-              lvls <- levels(classified.tile)[[1]]
-              classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
-          } else {
-              classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
-          }
-          classification <- ifelse(classification == target, classification, "o")
-          google <- pts@data$cvr_typ
-          google <- ifelse(google == target, google, "o")
-          overall.error <- 1 - mean(classification == google)
-          pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
-          pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
-          pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
-          error <- c(overall.error = overall.error,
-                     pct.grass.classified.as.other = pct.grass.classified.as.other,
-                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
-                     pct.tree.classified.as.other = pct.tree.classified.as.other)
-          return(error)
-      }
-
-
-
-
-      calcConfusionMat <- function(pts, tile) {
-          classification <- raster::extract(classified.tile, pts)
-          classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
-          table(classification, google = pts@data$cvr_typ)
-      }
 
 
       grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)

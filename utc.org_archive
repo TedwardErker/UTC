@@ -5058,3 +5058,85 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
       }
 }
    #+END_SRC
+
+* Segmentation
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-07-01 Fri 11:56
+:ARCHIVE_FILE: /ssh:kang:/home/erker/mydata2/Pjt_UTC/code/utc.org
+:ARCHIVE_OLPATH: Workflow/Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth/Training/Make Feature and model building data frames, for Each Training Tile/Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
+:ARCHIVE_CATEGORY: utc
+:END:
+
+#+BEGIN_SRC R
+  #  system("source activate utc")
+  #  system("export PATH=/home/RUSSELL/erker/.conda/envs/utc/bin:$PATH")
+
+      segment_size <- c(30,60,105)
+      compactness <- c(15,30,32)
+      o.wd <- getwd()
+
+
+      cl <- makeCluster(cores)
+      registerDoParallel(cl)
+
+      for(img.nm in image.names) {
+
+          tile.names <- list.files(dd.training.dir) %>%
+              str_extract(., pattern = str_c(img.nm,".[0-9]+.tif")) %>%
+              str_extract(., pattern = str_c(img.nm,".[0-9]+")) %>%
+              na.omit()
+
+          pixel_size <- ifelse(img.nm == "madisonNAIP", 1, 1.5)
+          compactness <- if(img.nm == "madisonNAIP") compactness else round(2/3*compactness)
+
+          for(j in 1:length(segment_size)) {
+
+              foreach (i = tile.names) %dopar% {
+                  system(paste0("cd ",dd.training.dir,";", "python ../../code/fia_segment_cmdArgs.py ",pixel_size," ",segment_size[j]," ",compactness[j]," ",i))
+               }
+          }
+      }
+
+      setwd(o.wd)
+#+END_SRC
+
+#+results:
+
+
+
+* Create Segment Feature Dataframe
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-07-01 Fri 11:57
+:ARCHIVE_FILE: /ssh:kang:/home/erker/mydata2/Pjt_UTC/code/utc.org
+:ARCHIVE_OLPATH: Workflow/Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth/Training/Make Feature and model building data frames, for Each Training Tile/Make PixelFeatureDFs and SegmentationFeatureDFs for Training Regions
+:ARCHIVE_CATEGORY: utc
+:END:
+#+BEGIN_SRC R :results none
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+  seg.feature.dfs <- foreach(img.nm = image.names) %do% {
+
+      tile.names <- list.files(dd.training.dir) %>%
+          str_extract(., pattern = str_c(img.nm,"-[0-9]+",segmentation.layer.pattern,".tif$")) %>%
+          na.omit()
+
+      seg.params <- unique(str_extract(tile.names, segmentation.layer.pattern))
+
+      foreach(seg.param.set = seg.params) %do% {
+
+          tile.names.sub <- tile.names[which(complete.cases(str_extract(tile.names,seg.param.set)))] %>%
+              str_sub(start = 1, end = -5)
+
+          out <- foreach (i = tile.names.sub,
+                          .packages = c("raster","stringr","dplyr","broom","tidyr")) %dopar% {
+                              seg.df <- Create.Segment.Feature.df(tile.dir = dd.training.dir,
+                                                                  tile.name = i)
+                              saveRDS(seg.df, file = paste0(dd.training.dir,"/", i,segmentFeatureDF.appendage))
+                          }
+          out
+      }
+  }
+    #+END_SRC
+
+
