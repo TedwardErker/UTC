@@ -243,8 +243,6 @@ The following object is masked from 'package:rgeos':
     symdiff
 
 Loading required package: ggplot2
-Need help? Try the ggplot2 mailing list:
-http://groups.google.com/group/ggplot2.
 Loading required package: ParamHelpers
 Loading required package: stringi
 Loading required package: sp
@@ -277,9 +275,9 @@ The following objects are masked from 'package:raster':
 
     intersect, select, union
 
-The following object is masked from 'package:BBmisc':
+The following objects are masked from 'package:BBmisc':
 
-    collapse
+    coalesce, collapse
 
 The following objects are masked from 'package:rgeos':
 
@@ -577,6 +575,13 @@ cores<-2
   utm16 <- CRS("+init=epsg:32616")
   wtm <- CRS("+init=epsg:3071")
 #+END_SRC
+
+#+results:
+
+**** ASCII
+#+begin_src R
+options(asciiType = "org")
+#+end_src
 
 #+results:
 
@@ -1133,8 +1138,7 @@ way.  I should look at it.
 
 
       saveRDS(error.df, str_c(derived.dir, "/point2pixel.error.df.rds"))
-      readRDS(error.df, str_c(derived.dir, "/point2pixel.error.df.rds"))
-
+      error.df <- readRDS(str_c(derived.dir, "/point2pixel.error.df.rds"))
 
       error.df %>%
           arrange(overall.error) %>%
@@ -1149,45 +1153,529 @@ way.  I should look at it.
           arrange(desc(overall.error)) %>%
           head()
 
-    error.df <- error.df %>%
-          mutate(segment.size = ifelse(!is.na(str_extract(seg.params, ".*105.*")), 105,
-                                ifelse(!is.na(str_extract(seg.params, ".*60.*")), 60,
-                                ifelse(!is.na(str_extract(seg.params, ".*30.*")), 30,
-                                ifelse(!is.na(str_extract(seg.params, ".*70.*")), 105,
-                                ifelse(!is.na(str_extract(seg.params, ".*40.*")), 60,
-                                ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
-
+  error.df <- error.df %>%
+      mutate(segment.size = as.numeric(ifelse(!is.na(str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2]), str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2], 1)),
+             segment.size = ifelse(image == "panshpSPOT", segment.size * 1.5, segment.size),
+             compactness = as.numeric(str_match(seg.params, "N-[0-9]+_C-([0-9]+)")[,2]))
 
 #+END_SRC
 
 
 *** Summarize Accuracy Assessment Results
 
-What do I want the summary plots to look like?
+Comparing classification to other estimates of cover.
 
-Start general, then show details.
+**** Random Points
 
-**** Factors underconsideration
-1) classifier
-2) definition of "truth", what we compare to: Grids, Field Data,
-   random points
-3) Segmentation
-4) which image (naip or spot)
-
-each combination is a point.
-
-segmentation are continuous variables
-
-
-
-
-
-messing around
+***** Table showing performance of classifiers
 #+begin_src R
-  ras <- raster(paste0(dd.accuracy.dir,"/ClassifiedTiles/madisonNAIP.mad.200m.3_Pixel_madisonNAIP_all_rf_prob.tif"))
+
+#+end_src
+***** Plots showing how image, segment size, compactness, and model affect accuracy
+
+**** Field Data
+
+**** Grid of Points
+
+***** Plots of 20 best classified grids with points superimposed
+For each grid, find the best classification.  Plot best 20 grids.
+#+begin_src R
+    best.classified.grids <- error.df %>%
+        ungroup() %>%
+        group_by(grid) %>%
+        top_n(1, desc(overall.error)) %>%
+        ungroup() %>%
+        arrange(overall.error) %>%
+        select(overall.error, grid,image, target.cover, model, seg.params) %>%
+        mutate(path = paste0(dd.accuracy.dir,"/",ClassifiedTilesDirName,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+        head(n = 20)
+
+
+
+  best.classified.grids
+
 #+end_src
 
 #+results:
+#+begin_example
+# A tibble: 20 x 7
+   overall.error        grid       image target.cover    model seg.params
+           <dbl>       <chr>       <chr>        <chr>    <chr>      <chr>
+1     0.02654867   mad.50m.2 madisonNAIP          all  rf_prob      Pixel
+2     0.03284672 mad.100m.23 madisonNAIP          all  rf_prob      Pixel
+3     0.03284672 mad.100m.23 madisonNAIP          all svm_resp      Pixel
+4     0.04014599 mad.100m.12 madisonNAIP          all svm_resp      Pixel
+5     0.06003752  mad.150m.9 madisonNAIP          all svm_resp      Pixel
+6     0.06194690   mad.50m.5 madisonNAIP          all svm_resp      Pixel
+7     0.06204380 mad.100m.13 madisonNAIP          all  rf_prob      Pixel
+8     0.06941839  mad.150m.5 madisonNAIP          all svm_resp      Pixel
+9     0.07664234  mad.100m.4 madisonNAIP          all svm_resp      Pixel
+10    0.08029197  mad.100m.3 madisonNAIP          all svm_resp      Pixel
+11    0.10218978  mad.100m.1 madisonNAIP          all  rf_prob      Pixel
+12    0.10948905 mad.100m.28 madisonNAIP          all svm_resp      Pixel
+13    0.12408759 mad.100m.27 madisonNAIP          all svm_resp      Pixel
+14    0.13707865  mad.200m.4 madisonNAIP          all svm_resp      Pixel
+15    0.15328467 mad.100m.14 madisonNAIP          all svm_resp      Pixel
+16    0.15693431 mad.100m.21 madisonNAIP          all  rf_prob      Pixel
+17    0.16788321  mad.100m.8 madisonNAIP          all  rf_prob      Pixel
+18    0.17518248 mad.100m.11 madisonNAIP          all svm_resp      Pixel
+19    0.19325843  mad.200m.1 madisonNAIP          all svm_resp      Pixel
+20    0.19469027   mad.50m.4 madisonNAIP          all  rf_prob      Pixel
+# ... with 1 more variables: path <chr>
+#+end_example
+
+#+begin_src R :results raw
+options(warn = -1)
+  best.classified.grids %>% ascii
+options(warn = 1)
+#+end_src
+
+#+results:
+|    | overall.error | grid        | image       | target.cover | model    | seg.params | path                                                                                      |
+|----+---------------+-------------+-------------+--------------+----------+------------+-------------------------------------------------------------------------------------------|
+|  1 |          0.03 | mad.50m.2   | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif    |
+|  2 |          0.03 | mad.100m.23 | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_rf_prob.tif  |
+|  3 |          0.03 | mad.100m.23 | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_svm_resp.tif |
+|  4 |          0.04 | mad.100m.12 | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_Pixel_madisonNAIP_all_svm_resp.tif |
+|  5 |          0.06 | mad.150m.9  | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_svm_resp.tif  |
+|  6 |          0.06 | mad.50m.5   | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_Pixel_madisonNAIP_all_svm_resp.tif   |
+|  7 |          0.06 | mad.100m.13 | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.13_Pixel_madisonNAIP_all_rf_prob.tif  |
+|  8 |          0.07 | mad.150m.5  | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.5_Pixel_madisonNAIP_all_svm_resp.tif  |
+|  9 |          0.08 | mad.100m.4  | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.4_Pixel_madisonNAIP_all_svm_resp.tif  |
+| 10 |          0.08 | mad.100m.3  | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_svm_resp.tif  |
+| 11 |          0.10 | mad.100m.1  | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.1_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 12 |          0.11 | mad.100m.28 | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_Pixel_madisonNAIP_all_svm_resp.tif |
+| 13 |          0.12 | mad.100m.27 | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.27_Pixel_madisonNAIP_all_svm_resp.tif |
+| 14 |          0.14 | mad.200m.4  | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.4_Pixel_madisonNAIP_all_svm_resp.tif  |
+| 15 |          0.15 | mad.100m.14 | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.14_Pixel_madisonNAIP_all_svm_resp.tif |
+| 16 |          0.16 | mad.100m.21 | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.21_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 17 |          0.17 | mad.100m.8  | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.8_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 18 |          0.18 | mad.100m.11 | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.11_Pixel_madisonNAIP_all_svm_resp.tif |
+| 19 |          0.19 | mad.200m.1  | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.1_Pixel_madisonNAIP_all_svm_resp.tif  |
+| 20 |          0.19 | mad.50m.4   | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.4_Pixel_madisonNAIP_all_rf_prob.tif    |
+
+
+#+begin_src R
+
+  grid.points <- readOGR(dsn = "../DD/reprojected.Accuracy.Regions",
+                         layer = "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts")
+
+  plts <- lapply(best.classified.grids$path, function(path) {
+    grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+    points <- grid.points[grid.points@data$unq__ID == grid.name,]
+    points@data <- points@data %>%
+        mutate(x = coordinates(points)[,1],
+               y = coordinates(points)[,2])
+    ras <- raster(path)
+    pts.on.classified.tile.plot(fig.dir = "figs/bestgrids",points, ras, target = "a")
+  })
+
+  #+end_src
+
+#+results:
+#+begin_example
+ OGR data source with driver: ESRI Shapefile
+Source: "../DD/reprojected.Accuracy.Regions", layer: "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts"
+with 21305 features
+It has 15 fields
+ Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/bestgrids' already exists
+#+end_example
+
+#+BEGIN_SRC R :results raw
+
+best.grid.paths <- list.files("figs/bestgrids", full.names = T)
+
+a <- sapply(best.grid.paths, function(x) message("[[file:",x,"]]"))
+
+#+END_SRC
+
+#+results:
+[[file:figs/bestgrids/madisonNAIP.mad.100m.1_Pixel_madisonNAIP_all_rf_prob.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.11_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.12_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.13_Pixel_madisonNAIP_all_rf_prob.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.14_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.21_Pixel_madisonNAIP_all_rf_prob.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_rf_prob.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.27_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.28_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.4_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.100m.8_Pixel_madisonNAIP_all_rf_prob.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.150m.5_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.200m.1_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.200m.4_Pixel_madisonNAIP_all_svm_resp.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.50m.4_Pixel_madisonNAIP_all_rf_prob.png]]
+[[file:figs/bestgrids/madisonNAIP.mad.50m.5_Pixel_madisonNAIP_all_svm_resp.png]]
+
+***** Plots of 20 worst classified grids with points superimposed
+For each grid, find the worst classification.  Plot worst 20 grids.
+#+begin_src R
+    worst.classified.grids <- error.df %>%
+        ungroup() %>%
+        group_by(grid) %>%
+        top_n(1, overall.error) %>%
+        ungroup() %>%
+        arrange(desc(overall.error)) %>%
+        select(overall.error, grid,image, target.cover, model, seg.params) %>%
+        mutate(path = paste0(dd.accuracy.dir,"/",ClassifiedTilesDirName,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+        head(n = 20)
+
+
+
+  worst.classified.grids %>% data.frame
+
+#+end_src
+
+#+results:
+#+begin_example
+
+  overall.error        grid       image target.cover    model seg.params
+1      0.9817518  mad.100m.3 madisonNAIP          all  rf_prob N-100_C-50
+2      0.9781022 mad.100m.23 madisonNAIP          all  rf_prob N-100_C-50
+3      0.9734513   mad.50m.5 madisonNAIP          all  rf_prob N-100_C-50
+4      0.9525547  mad.100m.2 madisonNAIP          all svm_resp N-100_C-50
+5      0.9416058  mad.100m.1 madisonNAIP          all svm_resp  N-30_C-15
+6      0.8540146 mad.100m.15 madisonNAIP          all svm_resp N-100_C-50
+7      0.8503650  mad.100m.7 madisonNAIP          all svm_resp N-100_C-50
+8      0.8211679 mad.100m.19 madisonNAIP          all  rf_prob  N-30_C-15
+9      0.8175182 mad.100m.28 madisonNAIP          all svm_resp N-100_C-50
+10     0.7883212 mad.100m.29 madisonNAIP          all  rf_prob N-100_C-50
+11     0.7876106   mad.50m.2 madisonNAIP          all  rf_prob N-100_C-50
+12     0.7846715 mad.100m.21 madisonNAIP          all  rf_prob  N-30_C-15
+13     0.7810219  mad.100m.6 madisonNAIP          all svm_resp  N-30_C-15
+14     0.7591241 mad.100m.10 madisonNAIP          all  rf_prob N-100_C-50
+15     0.7226277 mad.100m.20 madisonNAIP          all  rf_prob N-100_C-50
+16     0.7226277 mad.100m.20 madisonNAIP          all svm_resp N-100_C-50
+17     0.7116788 mad.100m.11 madisonNAIP          all  rf_prob  N-30_C-15
+18     0.7110694  mad.150m.7 madisonNAIP          all  rf_prob N-100_C-50
+19     0.7054409 mad.150m.10 madisonNAIP          all  rf_prob N-100_C-50
+20     0.7011236  mad.200m.3 madisonNAIP          all svm_resp N-100_C-50
+                                                                                             path
+1    ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.3_N-100_C-50_madisonNAIP_all_rf_prob.tif
+2   ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_N-100_C-50_madisonNAIP_all_rf_prob.tif
+3     ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_N-100_C-50_madisonNAIP_all_rf_prob.tif
+4   ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.2_N-100_C-50_madisonNAIP_all_svm_resp.tif
+5    ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.1_N-30_C-15_madisonNAIP_all_svm_resp.tif
+6  ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.15_N-100_C-50_madisonNAIP_all_svm_resp.tif
+7   ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.7_N-100_C-50_madisonNAIP_all_svm_resp.tif
+8    ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.19_N-30_C-15_madisonNAIP_all_rf_prob.tif
+9  ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_N-100_C-50_madisonNAIP_all_svm_resp.tif
+10  ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.29_N-100_C-50_madisonNAIP_all_rf_prob.tif
+11    ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-100_C-50_madisonNAIP_all_rf_prob.tif
+12   ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.21_N-30_C-15_madisonNAIP_all_rf_prob.tif
+13   ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.6_N-30_C-15_madisonNAIP_all_svm_resp.tif
+14  ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.10_N-100_C-50_madisonNAIP_all_rf_prob.tif
+15  ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.20_N-100_C-50_madisonNAIP_all_rf_prob.tif
+16 ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.20_N-100_C-50_madisonNAIP_all_svm_resp.tif
+17   ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.11_N-30_C-15_madisonNAIP_all_rf_prob.tif
+18   ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.7_N-100_C-50_madisonNAIP_all_rf_prob.tif
+19  ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.10_N-100_C-50_madisonNAIP_all_rf_prob.tif
+20  ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_N-100_C-50_madisonNAIP_all_svm_resp.tif
+#+end_example
+
+#+begin_src R :results raw
+options(warn = -1)
+  worst.classified.grids %>% ascii
+options(warn = 1)
+#+end_src
+
+#+results:
+|    | overall.error | grid        | image       | target.cover | model    | seg.params | path                                                                                           |
+|----+---------------+-------------+-------------+--------------+----------+------------+------------------------------------------------------------------------------------------------|
+|  1 |          0.98 | mad.100m.3  | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.3_N-100_C-50_madisonNAIP_all_rf_prob.tif   |
+|  2 |          0.98 | mad.100m.23 | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_N-100_C-50_madisonNAIP_all_rf_prob.tif  |
+|  3 |          0.97 | mad.50m.5   | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_N-100_C-50_madisonNAIP_all_rf_prob.tif    |
+|  4 |          0.95 | mad.100m.2  | madisonNAIP | all          | svm_resp | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.2_N-100_C-50_madisonNAIP_all_svm_resp.tif  |
+|  5 |          0.94 | mad.100m.1  | madisonNAIP | all          | svm_resp | N-30_C-15  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.1_N-30_C-15_madisonNAIP_all_svm_resp.tif   |
+|  6 |          0.85 | mad.100m.15 | madisonNAIP | all          | svm_resp | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.15_N-100_C-50_madisonNAIP_all_svm_resp.tif |
+|  7 |          0.85 | mad.100m.7  | madisonNAIP | all          | svm_resp | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.7_N-100_C-50_madisonNAIP_all_svm_resp.tif  |
+|  8 |          0.82 | mad.100m.19 | madisonNAIP | all          | rf_prob  | N-30_C-15  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.19_N-30_C-15_madisonNAIP_all_rf_prob.tif   |
+|  9 |          0.82 | mad.100m.28 | madisonNAIP | all          | svm_resp | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_N-100_C-50_madisonNAIP_all_svm_resp.tif |
+| 10 |          0.79 | mad.100m.29 | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.29_N-100_C-50_madisonNAIP_all_rf_prob.tif  |
+| 11 |          0.79 | mad.50m.2   | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-100_C-50_madisonNAIP_all_rf_prob.tif    |
+| 12 |          0.78 | mad.100m.21 | madisonNAIP | all          | rf_prob  | N-30_C-15  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.21_N-30_C-15_madisonNAIP_all_rf_prob.tif   |
+| 13 |          0.78 | mad.100m.6  | madisonNAIP | all          | svm_resp | N-30_C-15  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.6_N-30_C-15_madisonNAIP_all_svm_resp.tif   |
+| 14 |          0.76 | mad.100m.10 | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.10_N-100_C-50_madisonNAIP_all_rf_prob.tif  |
+| 15 |          0.72 | mad.100m.20 | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.20_N-100_C-50_madisonNAIP_all_rf_prob.tif  |
+| 16 |          0.72 | mad.100m.20 | madisonNAIP | all          | svm_resp | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.20_N-100_C-50_madisonNAIP_all_svm_resp.tif |
+| 17 |          0.71 | mad.100m.11 | madisonNAIP | all          | rf_prob  | N-30_C-15  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.11_N-30_C-15_madisonNAIP_all_rf_prob.tif   |
+| 18 |          0.71 | mad.150m.7  | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.7_N-100_C-50_madisonNAIP_all_rf_prob.tif   |
+| 19 |          0.71 | mad.150m.10 | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.10_N-100_C-50_madisonNAIP_all_rf_prob.tif  |
+| 20 |          0.70 | mad.200m.3  | madisonNAIP | all          | svm_resp | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_N-100_C-50_madisonNAIP_all_svm_resp.tif  |
+
+
+#+begin_src R
+
+  grid.points <- readOGR(dsn = "../DD/reprojected.Accuracy.Regions",
+                         layer = "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts")
+
+  plts <- lapply(worst.classified.grids$path, function(path) {
+    grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+    points <- grid.points[grid.points@data$unq__ID == grid.name,]
+    points@data <- points@data %>%
+        mutate(x = coordinates(points)[,1],
+               y = coordinates(points)[,2])
+    ras <- raster(path)
+    pts.on.classified.tile.plot(fig.dir = "figs/worstgrids",points, ras, target = "a")
+  })
+
+  #+end_src
+
+#+results:
+:  OGR data source with driver: ESRI Shapefile
+: Source: "../DD/reprojected.Accuracy.Regions", layer: "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts"
+: with 21305 features
+: It has 15 fields
+:  Error: Continuous value supplied to discrete scale
+
+#+BEGIN_SRC R :results raw
+
+worst.grid.paths <- list.files("figs/worstgrids", full.names = T)
+
+a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
+
+#+END_SRC
+
+#+results:
+
+
+***** Table showing performace of classifiers, average over all grids, increasing accuracy
+#+begin_src R :results raw
+    error.df.avg.grids <- error.df %>%
+        select(-grid) %>%
+        group_by(image, target.cover, model, seg.params, segment.size, compactness) %>%
+        summarize_each(funs(mean(.,na.rm = T))) %>%
+        ungroup() %>%
+        arrange(overall.error)
+
+
+  options(warn = -1)
+    error.df.avg.grids %>% ascii
+  options(warn = 1)
+#+end_src
+
+#+results:
+ Error: unknown variable to group by : segment.size
+|   | image       | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+|---+-------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
+| 1 | madisonNAIP | all          | svm_resp | Pixel      | 1.00         |             | 0.26          | 0.39                          | 0.52                               | 0.10                         |
+| 2 | madisonNAIP | all          | rf_prob  | Pixel      | 1.00         |             | 0.27          | 0.53                          | 0.53                               | 0.10                         |
+| 3 | madisonNAIP | all          | svm_resp | N-30_C-15  | 30.00        | 15.00       | 0.83          | 0.80                          | 0.05                               | 1.00                         |
+| 4 | madisonNAIP | all          | rf_prob  | N-30_C-15  | 30.00        | 15.00       | 0.84          | 0.67                          | 0.12                               | 1.00                         |
+| 5 | madisonNAIP | all          | rf_prob  | N-100_C-50 | 100.00       | 50.00       | 0.84          | 0.66                          | 0.43                               | 1.00                         |
+| 6 | madisonNAIP | all          | svm_resp | N-100_C-50 | 100.00       | 50.00       | 0.85          | 0.85                          | 0.01                               | 1.00                         |
+
+***** Table showing performace of classifiers, average over all grids, decreasing accuracy
+#+begin_src R :results raw
+      options(warn = -1)
+        error.df.avg.grids %>%
+            arrange(desc(overall.error)) %>%
+            ascii
+      options(warn = 1)
+#+end_src
+
+#+results:
+ |   | image       | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+ |---+-------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
+ | 1 | madisonNAIP | all          | svm_resp | N-100_C-50 |       100.00 |       50.00 |          0.85 |                          0.85 |                               0.01 |                         1.00 |
+ | 2 | madisonNAIP | all          | rf_prob  | N-100_C-50 |       100.00 |       50.00 |          0.84 |                          0.66 |                               0.43 |                         1.00 |
+ | 3 | madisonNAIP | all          | rf_prob  | N-30_C-15  |        30.00 |       15.00 |          0.84 |                          0.67 |                               0.12 |                         1.00 |
+ | 4 | madisonNAIP | all          | svm_resp | N-30_C-15  |        30.00 |       15.00 |          0.83 |                          0.80 |                               0.05 |                         1.00 |
+ | 5 | madisonNAIP | all          | rf_prob  | Pixel      |         1.00 |             |          0.27 |                          0.53 |                               0.53 |                         0.10 |
+ | 6 | madisonNAIP | all          | svm_resp | Pixel      |         1.00 |             |          0.26 |                          0.39 |                               0.52 |                         0.10 |
+
+***** Plots of 20 *best* classified grids by *best* classifier with points superimposed
+#+begin_src R
+  best.classif.overall <- error.df.avg.grids %>%
+      arrange(overall.error) %>%
+      slice(1) %>%
+      data.frame()
+
+  best.classif.best.grids <- best.classif.overall %>%
+      select(image, target.cover, model, seg.params) %>%
+      left_join(., error.df) %>%
+      arrange(overall.error) %>%
+      select(overall.error, grid,image, target.cover, model, seg.params) %>%
+      mutate(path = paste0(dd.accuracy.dir,"/",ClassifiedTilesDirName,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+      head(n=20)
+
+
+  grid.points <- readOGR(dsn = "../DD/reprojected.Accuracy.Regions",
+                         layer = "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts")
+
+
+  lapply(1:nrow(best.classif.best.grids), function(i){
+      pts.on.classified.tile.plot.ErrorinTitle(error = best.classif.best.grids$overall.error[i],
+                                           grid.points,
+                                           best.classif.best.grids$path[i],
+                                           fig.dir = "figs/bestclassif.bestgrids",
+                                           target = "a")
+  })
+
+
+
+  ## plts <- lapply(best.classif.best.grids$path, function(path) {
+  ##     grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+  ##     points <- grid.points[grid.points@data$unq__ID == grid.name,]
+  ##     points@data <- points@data %>%
+  ##         mutate(x = coordinates(points)[,1],
+  ##                y = coordinates(points)[,2])
+  ##     ras <- raster(path)
+  ##     pts.on.classified.tile.plot(fig.dir = "figs/bestclassif.bestgrids",points, ras, target = "a")
+  ## })
+
+
+#+end_src
+
+#+results:
+#+begin_example
+ Joining, by = c("image", "target.cover", "model", "seg.params")
+ OGR data source with driver: ESRI Shapefile
+Source: "../DD/reprojected.Accuracy.Regions", layer: "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts"
+with 21305 features
+It has 15 fields
+ Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+[[1]]
+quartz_off_screen
+                2
+
+[[2]]
+quartz_off_screen
+                2
+
+[[3]]
+quartz_off_screen
+                2
+
+[[4]]
+quartz_off_screen
+                2
+#+end_example
+
+***** Plots of 20 *worst* classified grids by *best* classifier with points superimposed
+#+begin_src R
+      best.classif.overall <- error.df.avg.grids %>%
+        arrange(overall.error) %>%
+          slice(1) %>%
+        data.frame()
+
+  best.classif.worst.grids <- best.classif.overall %>%
+    select(image, target.cover, model, seg.params) %>%
+      left_join(., error.df) %>%
+      arrange(desc(overall.error)) %>%
+      select(overall.error, grid,image, target.cover, model, seg.params) %>%
+      mutate(path = paste0(dd.accuracy.dir,"/",ClassifiedTilesDirName,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+      head(n=20)
+
+
+  grid.points <- readOGR(dsn = "../DD/reprojected.Accuracy.Regions",
+                         layer = "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts")
+
+  plts <- lapply(best.classif.worst.grids$path, function(path) {
+    grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+    points <- grid.points[grid.points@data$unq__ID == grid.name,]
+    points@data <- points@data %>%
+        mutate(x = coordinates(points)[,1],
+               y = coordinates(points)[,2])
+    ras <- raster(path)
+    pts.on.classified.tile.plot(fig.dir = "figs/bestclassif.worstgrids",points, ras, target = "a")
+  })
+
+
+#+end_src
+
+#+results:
+#+begin_example
+ Joining by: c("image", "target.cover", "model", "seg.params")
+ OGR data source with driver: ESRI Shapefile
+Source: "../DD/reprojected.Accuracy.Regions", layer: "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts"
+with 21305 features
+It has 15 fields
+ Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+#+end_example
+
+***** Plots showing how image, segment size, compactness, and model affect accuracy
+
+****** plot 1
+#+begin_src R :exports results :results graphics :file ./figs/gridAcc.p1.png
+ggplot(error.df, aes(y = overall.error, x = segment.size, color = compactness, group = model)) + geom_point() + facet_grid(model~image)
+#+end_src
+
+#+results:
+[[file:./figs/gridAcc.p1.png]]
+
+****** plot 2
+
+***** Plots showing how grid characteristics (e.g. heterogeneity) affect accuracy
 
 ** Test How Madison Model performs for Wausau
 *** Classify Wausau Accuracy Regions
@@ -3136,6 +3624,7 @@ ascii()
 
 #+END_SRC
 *** Plot points on classifed tile
+
 #+BEGIN_SRC R
       pts.on.classified.tile.plot <- function(pts, classified.tile, target = NULL) {
           if(target == "a") {

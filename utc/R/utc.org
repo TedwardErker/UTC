@@ -1209,27 +1209,68 @@ model building df (feature dataframes with class assignment).
 #+END_SRC
 #+RESULTS:
 
-** Plot points on classifed tile
+** NEXT Plot points on classifed tile ADD OVERALL ACCURACY IN TITLE
 #+BEGIN_SRC R
-      pts.on.classified.tile.plot <- function(pts, classified.tile, target = NULL) {
-          if(target == "a") {
-              pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
-              pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, fill = cvr_typ), shape = 21, color = "black", size =2, stroke = .2)
-          } else {
-              pts@data <- pts@data %>%
-                  mutate(cvr_typ = ifelse(cvr_typ == target, cvr_typ, "o"))
-                  pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
-          }
-          r.df <- as.data.frame(classified.tile, xy = T)
-          names(r.df) <- c("x","y","cvr_typ")
-          r.df <- r.df %>%
-              mutate(cvr_typ = mapvalues(cvr_typ, from = c(1,2,3,4), to = c("g","i","t","o")))
-          pxls.plot <- ggplot() + geom_raster(data = r.df, aes(x = x, y = y, fill = cvr_typ))
-          title <- ggtitle(label = names(classified.tile))
-          UTC_pal <- c(g = "#ffff99", i = "#f0027f", t = "#7fc97f", o = "#666666")
-          pxls.plot + pts.plot + title + scale_fill_manual(values = UTC_pal)+ scale_color_manual(values = UTC_pal) +
-  coord_equal()
+
+  pts.on.classified.tile.plot.ErrorinTitle <- function(error, grd.pts, classified.tile.path, fig.dir, target = NULL) {
+
+        grid.name <- str_match(classified.tile.path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+        pts <- grd.pts[grd.pts@data$unq__ID == grid.name,]
+    pts@data <- pts@data %>%
+          mutate(x = coordinates(pts)[,1],
+                 y = coordinates(pts)[,2])
+
+      if(target == "a") {
+          pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
+          pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, fill = cvr_typ), shape = 21, color = "black", size =2, stroke = .2)
+      } else {
+          pts@data <- pts@data %>%
+              mutate(cvr_typ = ifelse(cvr_typ == target, cvr_typ, "o"))
+          pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
       }
+      r.df <- as.data.frame(raster(classified.tile.path), xy = T)
+      names(r.df) <- c("x","y","cvr_typ")
+                                          #        r.df <- r.df %>%
+                                          #            mutate(cvr_typ = mapvalues(cvr_typ, from = c(1,2,3,4), to = c("g","i","t","o")))
+      pxls.plot <- ggplot() + geom_raster(data = r.df, aes(x = x, y = y, fill = cvr_typ))
+      title <- ggtitle(label = paste0("err:",round(error,2),"_",names(raster(classified.tile.path))))
+      UTC_pal <- c(g = "#ffff99", i = "#f0027f", t = "#7fc97f", o = "#666666")
+      plt <- pxls.plot + pts.plot + title + scale_fill_manual(values = UTC_pal)+ scale_color_manual(values = UTC_pal) + coord_equal()
+
+      dir.create(fig.dir)
+
+      png(filename = paste0(fig.dir,"/","Err.",round(error,2),"_",names(raster(classified.tile.path)),".png"))
+      print(plt)
+      dev.off()
+  #    plt
+  }
+
+  pts.on.classified.tile.plot <- function(pts, classified.tile, fig.dir, target = NULL) {
+
+      if(target == "a") {
+          pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
+          pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, fill = cvr_typ), shape = 21, color = "black", size =2, stroke = .2)
+      } else {
+          pts@data <- pts@data %>%
+              mutate(cvr_typ = ifelse(cvr_typ == target, cvr_typ, "o"))
+          pts.plot <- geom_point(data = pts@data, aes(x = x, y = y, color = cvr_typ))
+      }
+      r.df <- as.data.frame(classified.tile, xy = T)
+      names(r.df) <- c("x","y","cvr_typ")
+                                          #        r.df <- r.df %>%
+                                          #            mutate(cvr_typ = mapvalues(cvr_typ, from = c(1,2,3,4), to = c("g","i","t","o")))
+      pxls.plot <- ggplot() + geom_raster(data = r.df, aes(x = x, y = y, fill = cvr_typ))
+      title <- ggtitle(label = names(classified.tile))
+      UTC_pal <- c(g = "#ffff99", i = "#f0027f", t = "#7fc97f", o = "#666666")
+      plt <- pxls.plot + pts.plot + title + scale_fill_manual(values = UTC_pal)+ scale_color_manual(values = UTC_pal) + coord_equal()
+
+      dir.create(fig.dir)
+
+      png(filename = paste0(fig.dir,"/",names(classified.tile),".png"))
+      print(plt)
+      dev.off()
+      plt
+  }
 #+END_SRC
 #+RESULTS:
 
