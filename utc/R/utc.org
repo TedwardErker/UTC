@@ -275,7 +275,7 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
 #+end_src
 
 #+results:
-*** Image PCA
+*** NEXT Image PCA MAKE NO NA's!
 
 Because the pca transformation comes from a sample (one that favors
 trees and grass, at that) some pixels in the images I transform will
