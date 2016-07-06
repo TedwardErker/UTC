@@ -34,6 +34,15 @@
 #+END_SRC
 
 #+RESULTS:
+*** get polygon ids
+#+begin_src R
+IDs.SpatialPolygonsDataFrame <- function(x,...) {
+  vapply(slot(x, "polygons"), function(x) slot(x, "ID"), "")
+}
+#+end_src
+
+#+results:
+
 ** Crop Image
 
 *** Crop image to each Shapefile polygon
@@ -267,8 +276,14 @@
 
 #+results:
 *** Image PCA
-#+BEGIN_SRC R
 
+Because the pca transformation comes from a sample (one that favors
+trees and grass, at that) some pixels in the images I transform will
+have pixels that are outside the domain of the transformation.  Before
+I do the PCA, I should find the pixels that are outside the domain and
+shrink their values to fit.   They are mostly very bright impervious objects.
+
+#+BEGIN_SRC R
   pca.transformation <- function(image.dir,
                                  image.name,
                                  feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
@@ -577,7 +592,7 @@ wrapper for slic.
 
         mean.and.sd <- r2 %>%
             summarize_each(funs(mean(.,na.rm = T), sd(., na.rm = T))) %>%
-            select(-x_mean, -y_mean)
+            select(-x_mean, -x_sd, -y_mean, -y_sd)
 
         image.name.df = data.frame(image.name = rep(image.name, nrow(mean.and.sd)))
 
@@ -714,20 +729,6 @@ wrapper for slic.
 
 #+RESULTS:
 
-** make.model.building.df
-take output of "make.feature.df" and make
-model building df (feature dataframes with class assignment).
-
-#+begin_src R
-
-  make.model.building.df <- function(){
-
-}
-
-#+end_src
-
-#+results:
-
 ** Create ModelBuilding dataframe
 #+BEGIN_SRC R
   getSegment.class.and.features.Within.Polygon<-function(SegmentFeatureDF,
@@ -739,8 +740,8 @@ model building df (feature dataframes with class assignment).
       n.pixels.per.seg <- foreach(seg.file = seg.files, .combine = "rbind") %do% {
           seg <- stack(seg.file)
           s.df <- as.data.frame(seg) %>%
-              gather(key = tile.name, value = segment.id) %>%
-              group_by(segment.id, tile.name) %>%
+              gather(key = image.name, value = segment.id) %>%
+              group_by(segment.id, image.name) %>%
               summarize(n.pixels.per.seg = n())
       }
                                           # find number of pixels in each segment are in a polygon
@@ -754,9 +755,9 @@ model building df (feature dataframes with class assignment).
               a <- raster::extract(seg, as(training.sp,"SpatialPolygons"), df = T)
 
               a <- a %>%
-                  gather(key = tile.name, value = segment.id, -ID) %>%
+                  gather(key = image.name, value = segment.id, -ID) %>%
                   rename(polygon.id = ID) %>%
-                  group_by(polygon.id, tile.name, segment.id) %>%
+                  group_by(polygon.id, image.name, segment.id) %>%
                   summarize(n.pixels.per.seg.in.polygon = n())
           }
       }
@@ -765,26 +766,33 @@ model building df (feature dataframes with class assignment).
                                           #join Class information from polygons
       if(!is.null(n.pixels.per.seg.in.polygon)) {
 
+          #add 1 because the id from raster's extract is just the order of the polygons
+        training.sp@data$polygon.id <- as.numeric(IDs.SpatialPolygonsDataFrame(training.sp))+1
+
           n.pixels <- left_join(n.pixels.per.seg.in.polygon,n.pixels.per.seg) %>%
               mutate(pct.seg.in.polygon = n.pixels.per.seg.in.polygon/n.pixels.per.seg) %>%
               filter(pct.seg.in.polygon >= .5) %>%
-              left_join(.,training.sp@data, by = c("polygon.id" = "id")) %>%
+              left_join(.,training.sp@data) %>%
               ungroup() %>%
-              mutate(tile.name = str_replace(tile.name, "\\.", "-"),
-                     tile.name =  str_extract(tile.name, ".*-[0-9]+_"),
-                     tile.name = str_sub(tile.name,1,-2)) %>%
               mutate(segment = segment.id)
 
-          left_join(n.pixels, SegmentFeatureDF) %>%
-              dplyr::select(-segment,
+
+      n.pixels$image.name <- str_match(n.pixels$image.name, "(.*?\\.[0-9]+).*")[,2]
+
+          out <- left_join(n.pixels, SegmentFeatureDF) %>%
+              distinct() %>%
+              dplyr::select(-id,
+                            -segment,
                             -segment.id,
-                            -tile.name,
+                            -image.name,
                             -image.name,
                             -polygon.id,
                             -n.pixels.per.seg,
                             -n.pixels.per.seg.in.polygon,
                             -pct.seg.in.polygon)        %>%
               filter(complete.cases(.))
+
+          out
       }
   }
 
@@ -856,81 +864,91 @@ model building df (feature dataframes with class assignment).
 ** Classify Raster
 #+BEGIN_SRC R
 
-  classify.segmented.raster <- function(segment.feature.df.dir,
-                                        segment.dir,
-                                        model.dir,
-                                        model.name.rds = "models",
-                                        segment.feature.appendage = segment.feature.df.name.append,
-                                        segmentation.appendage = segment.tile.name.append,
-                                        segmentation.prms,
-                                        classify.out.dir,
-                                        tile.name = i) {
-      df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
-      models <-readRDS(paste0(model.dir,"/",model.name.rds))
-  #    umod <- unlist(models, recursive = F)
-      seg.path <- paste0(segment.dir,"/",tile.name,segment.tile.name.append)
-      seg <- raster(seg.path)
-                                          #       dfRowsWithNA <- which(is.na(df[,2]))
-      complete.df <- df[complete.cases(df),] # svm can't predict with NAs
-      lapply(models, function(mod) {
-          pred <- predict(mod, newdata = complete.df)
-          response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
-          m <- cbind(zone = complete.df$segment, response)
-          m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
-          r <- reclassify(seg, m)
-                                          #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
-                                          #            filter(LandCover %in% levels(factor(response)))
-                                          #        levels(r) <- x
-          if (ncol(pred$data) > 2) {
-              prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
-              ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
-              m <- cbind(segment = df$segment, ProbOfClass)
-              m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
-              p <- reclassify(seg, m)
-              r <- stack(r,p)
-          }
-          path <- paste0(segment.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
-          writeRaster(r, path, overwrite=TRUE)
-          print(path)
-      })
-  }
+    classify.segmented.raster <- function(segment.feature.df.dir,
+                                          segment.dir,
+                                          model.dir,
+                                          model.name.rds = "models",
+                                          segment.feature.appendage = segment.feature.df.name.append,
+                                          segmentation.appendage = segment.tile.name.append,
+                                          segmentation.prms,
+                                          classify.out.dir,
+                                          tile.name = i) {
+        df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
+        models <-readRDS(paste0(model.dir,"/",model.name.rds))
+    #    umod <- unlist(models, recursive = F)
+        seg.path <- paste0(segment.dir,"/",tile.name,segment.tile.name.append)
+        seg <- raster(seg.path)
+                                            #       dfRowsWithNA <- which(is.na(df[,2]))
+        complete.df <- df[complete.cases(df),] # svm can't predict with NAs
+        lapply(models, function(mod) {
+            pred <- predict(mod, newdata = complete.df)
+            response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
+            m <- cbind(zone = complete.df$segment, response)
+            m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
+            seg.df <- as.data.frame(seg, xy = T)
+            names(seg.df)[3] <- "segment"
+            seg.df <- left_join(seg.df, m)
+            seg.df$response <- factor(seg.df$response)
+            levels(seg.df$response) <- c("g","i","o","t")
+            r <- seg
+            values(r) <- seg.df$response
+
+                                            #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
+                                            #            filter(LandCover %in% levels(factor(response)))
+                                            #        levels(r) <- x
+  # Removing Probability layer because can't have attributes with it.  When I do final classifcaiton I should add back in.
+
+            ## if (ncol(pred$data) > 2) {
+            ##     prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
+            ##     ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
+            ##     m <- cbind(segment = df$segment, ProbOfClass)
+            ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
+            ##     p <- reclassify(seg, m)
+            ##     r <- stack(r,p)
+            ## }
+            path <- paste0(segment.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
+            writeRaster(r, path, overwrite=TRUE)
+            print(path)
+        })
+    }
 
 
-  classify.pixel.raster <- function(tile.dir = dd.accuracy.dir,
-                                    tile.name,
-                                    pixelFeatureDF.appendage = pixel.feature.df.appendage,
-                                    model.dir = Models.dir,
-                                    model.rds,
-                                    seg.prms = "Pixel") {
-      ras <- stack(str_c(tile.dir,"/",tile.name,".tif"))
-      pix.mods <- readRDS(str_c(model.dir,"/",model.rds))
-#      pix.umods <- unlist(pix.mods, recursive = F)
+    classify.pixel.raster <- function(tile.dir = dd.accuracy.dir,
+                                      tile.name,
+                                      pixelFeatureDF.appendage = pixel.feature.df.appendage,
+                                      model.dir = Models.dir,
+                                      model.rds,
+                                      seg.prms = "Pixel") {
+        ras <- stack(str_c(tile.dir,"/",tile.name,".tif"))
+        pix.mods <- readRDS(str_c(model.dir,"/",model.rds))
+  #      pix.umods <- unlist(pix.mods, recursive = F)
 
-      pix.feature.df <- readRDS(str_c(tile.dir,"/",tile.name,pixelFeatureDF.appendage,".rds"))
+        pix.feature.df <- readRDS(str_c(tile.dir,"/",tile.name,pixelFeatureDF.appendage,".rds"))
 
-      if(!is.null(pix.feature.df$y)) {
-          pix.feature.df <- dplyr::select(pix.feature.df, -x, -y)
-      }
+        if(!is.null(pix.feature.df$y)) {
+            pix.feature.df <- dplyr::select(pix.feature.df, -x, -y)
+        }
 
-                                          # I set NA's to 0 here.  Not the best choice.  Not sure why they exist.
-                                          # imputing to mean would probably be better
+                                            # I set NA's to 0 here.  Not the best choice.  Not sure why they exist.
+                                          # Maybe because pca transform
+                                            # imputing to mean would probably be better
 
-      pix.feature.df <- as.matrix(pix.feature.df)
+        pix.feature.df <- as.matrix(pix.feature.df)
 
-      pix.feature.df[which(is.na(pix.feature.df))] <- 0
+        pix.feature.df[which(is.na(pix.feature.df))] <- 0
 
-      pix.feature.df <- as.data.frame(pix.feature.df)
+        pix.feature.df <- as.data.frame(pix.feature.df)
 
 
-      lapply(pix.mods, function(pix.mod) {
-          pred <- predict(pix.mod, newdata = pix.feature.df)
-          a <- ras[[1]]
-          values(a) <- pred$data$response
-          path <- paste0(tile.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",seg.prms,"_",pix.mod$task.desc$id,"_",pix.mod$learner$id,".tif")
-          writeRaster(a, path, overwrite = T)
-          print(path)
-      })
-  }
+        lapply(pix.mods, function(pix.mod) {
+            pred <- predict(pix.mod, newdata = pix.feature.df)
+            a <- ras[[1]]
+            values(a) <- pred$data$response
+            path <- paste0(tile.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",seg.prms,"_",pix.mod$task.desc$id,"_",pix.mod$learner$id,".tif")
+            writeRaster(a, path, overwrite = T)
+            print(path)
+        })
+    }
 
 
 
