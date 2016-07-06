@@ -483,6 +483,9 @@ The following objects are masked from 'package:raster':
 #+begin_example
 Warning message:
 In dir.create(derived.dir) : '../DD' already exists
+Warning message:
+In dir.create(dd.accuracy.classified.dir) :
+  '../DD/Accuracy/ClassifiedTiles' already exists
 [[1]]
 [1] FALSE
 
@@ -800,6 +803,9 @@ Pattern is image.name_Segmentation
 
 #+end_src
 
+#+results:
+[[file:./figs/mod.df.check.png]]
+
 #+begin_src R :exports results :results graphics :file ./figs/mod.df.pixel.check.png
   mod.df <- readRDS(paste0(dd.training.dir, "/",img.nm, "_Pixel", ModelBuilding.appendage))
   ggplot(mod.df, aes(color = factor(Class), y = ndvi, x = ratio.nir_stat.homogeneity_window.3_angle.0)) + geom_point(alpha = .5)
@@ -894,7 +900,9 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
 
 #+begin_src R :eval no
   df <- readRDS(paste0(dd.training.dir, "/madisonNAIP_N-30_C-15.ModelBuilding.rds"))
-  mod <- readRDS(paste0(models.dir, "/madisonNAIP_N-30_C-15.models.rds"))
+  mod <- readRDS(paste0(Models.dir, "/madisonNAIP_N-100_C-50.models.rds"))
+
+
 
   getBMRModels(mod)
   getBMRLearners(mod)
@@ -987,59 +995,59 @@ of the classes.  The raster predict function appears smart in this
 way.  I should look at it.
 
 #+BEGIN_SRC R
-   cl <- makeCluster(cores)
-   registerDoParallel(cl)
+     cl <- makeCluster(cores)
+     registerDoParallel(cl)
 
 
-   classified.grid.tiles <-
-       foreach(img.nm = image.names[1]) %do% {
+     classified.grid.tiles <-
+         foreach(img.nm = image.names[1]) %do% {
 
-           models <- list.files(Models.dir) %>%
-               str_extract(., str_c(".*",img.nm,".*")) %>%
-               na.omit()
+             models <- list.files(Models.dir) %>%
+                 str_extract(., str_c(".*",img.nm,".*")) %>%
+                 na.omit()
 
-           tile.names <- list.files(dd.accuracy.dir) %>%
-               str_match(., pattern = str_c("(",img.nm,".*?)_.*\\.tif$"))
+             tile.names <- list.files(dd.accuracy.dir) %>%
+                 str_match(., pattern = str_c("(",img.nm,".*?)_.*\\.tif$"))
 
-           tile.names <- tile.names[,2] %>% na.omit() %>% unique()
-
-
-           foreach(tile.nm = tile.names,
-                   .packages = c("dplyr","raster","stringr","mlr","foreach","doParallel")) %do% {
-
-               foreach(model = models) %do% {
-
-                   segmentation.params <- str_extract(model, "N-[0-9]+_C-[0-9]+|Pixel")
-
-                   if(grepl("N-[0-9]+_C-[0-9]+",segmentation.params)) {
-                          segment.tile.name.append <- paste0("_",segmentation.params,".tif")
-                          segment.feature.df.name.append <- paste0("_",segmentation.params,segmentFeatureDF.appendage)
+             tile.names <- tile.names[,2] %>% na.omit() %>% unique()
 
 
-                          classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
-                                          model.dir = Models.dir,
-                                          segment.dir = dd.accuracy.dir,
-                                          classify.out.dir = dd.accuracy.dir,
-                                          tile.name = tile.nm,
-                                          segmentation.appendage = segment.tile.name.append,
-                                          model.name.rds = model,
-                                          segment.feature.appendage = segment.feature.df.name.append,
-                                          segmentation.prms = segmentation.params)
+             foreach(tile.nm = tile.names,
+                     .packages = c("dplyr","raster","stringr","mlr","foreach","doParallel")) %do% {
 
-                   } else {
-                       classify.pixel.raster(tile.dir = dd.accuracy.dir,
-                                             tile.name = tile.nm,
-                                             pixelFeatureDF.appendage = pixel.feature.df.appendage,
-                                             model.dir = Models.dir,
-                                             model.rds = model,
-                                             seg.prms = segmentation.params)
-                   }
-               }
-           }
-       }
+                 foreach(model = models) %do% {
+
+                     segmentation.params <- str_extract(model, "N-[0-9]+_C-[0-9]+|Pixel")
+
+                     if(grepl("N-[0-9]+_C-[0-9]+",segmentation.params)) {
+                            segment.tile.name.append <- paste0("_",segmentation.params,".tif")
+                            segment.feature.df.name.append <- paste0("_",segmentation.params,segmentFeatureDF.appendage)
 
 
-  stopCluster(cl)
+                            classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
+                                            model.dir = Models.dir,
+                                            segment.dir = dd.accuracy.dir,
+                                            classify.out.dir = dd.accuracy.dir,
+                                            tile.name = tile.nm,
+                                            segmentation.appendage = segment.tile.name.append,
+                                            model.name.rds = model,
+                                            segment.feature.appendage = segment.feature.df.name.append,
+                                            segmentation.prms = segmentation.params)
+
+                     } else {
+                         classify.pixel.raster(tile.dir = dd.accuracy.dir,
+                                               tile.name = tile.nm,
+                                               pixelFeatureDF.appendage = pixel.feature.df.appendage,
+                                               model.dir = Models.dir,
+                                               model.rds = model,
+                                               seg.prms = segmentation.params)
+                     }
+                 }
+             }
+         }
+
+
+    stopCluster(cl)
 
 
 
@@ -1047,19 +1055,12 @@ way.  I should look at it.
 #+END_SRC
 
 #+results:
-#+begin_example
- Joining by: "segment"
-[1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_N-100_C-50_madisonNAIP_all_rf_prob.tif"
-Joining by: "segment"
-[1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_N-100_C-50_madisonNAIP_all_svm_resp.tif"
-Joining by: "segment"
-[1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_N-30_C-15_madisonNAIP_all_rf_prob.tif"
-Joining by: "segment"
-[1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_N-30_C-15_madisonNAIP_all_svm_resp.tif"
-[1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_Pixel_madisonNAIP_all_rf_prob.tif"
-[1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_Pixel_madisonNAIP_all_svm_resp.tif"
-There were 42 warnings (use warnings() to see them)
-#+end_example
+:  Joining by: "segment"
+: [1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_N-100_C-50_madisonNAIP_all_rf_prob.tif"
+: Joining by: "segment"
+: [1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_N-100_C-50_madisonNAIP_all_svm_resp.tif"
+: [1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_Pixel_madisonNAIP_all_rf_prob.tif"
+: [1] "../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_Pixel_madisonNAIP_all_svm_resp.tif"
 
 
 
@@ -1157,25 +1158,6 @@ There were 42 warnings (use warnings() to see them)
 
 
       saveRDS(error.df, str_c(derived.dir, "/point2pixel.error.df.rds"))
-      error.df <- readRDS(str_c(derived.dir, "/point2pixel.error.df.rds"))
-
-      error.df %>%
-          arrange(overall.error) %>%
-          head()
-
-      error.df %>%
-          arrange(desc(overall.error)) %>%
-          head()
-
-      error.df %>%
-          filter(seg.params != "Pixel") %>%
-          arrange(desc(overall.error)) %>%
-          head()
-
-  error.df <- error.df %>%
-      mutate(segment.size = as.numeric(ifelse(!is.na(str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2]), str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2], 1)),
-             segment.size = ifelse(image == "panshpSPOT", segment.size * 1.5, segment.size),
-             compactness = as.numeric(str_match(seg.params, "N-[0-9]+_C-([0-9]+)")[,2]))
 
 #+END_SRC
 
@@ -1487,6 +1469,28 @@ compactness parameter is 50
 *** Summarize Accuracy Assessment Results
 
 Comparing classification to other estimates of cover.
+#+begin_src R :results none
+      error.df <- readRDS(str_c(derived.dir, "/point2pixel.error.df.rds"))
+
+      error.df %>%
+          arrange(overall.error) %>%
+          head()
+
+      error.df %>%
+          arrange(desc(overall.error)) %>%
+          head()
+
+      error.df %>%
+          filter(seg.params != "Pixel") %>%
+          arrange(desc(overall.error)) %>%
+          head()
+
+  error.df <- error.df %>%
+      mutate(segment.size = as.numeric(ifelse(!is.na(str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2]), str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2], 1)),
+             segment.size = ifelse(image == "panshpSPOT", segment.size * 1.5, segment.size),
+             compactness = as.numeric(str_match(seg.params, "N-[0-9]+_C-([0-9]+)")[,2]))
+
+#+end_src
 
 **** Random Points
 
@@ -1617,7 +1621,16 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
     error.df.avg.grids %>% ascii
   options(warn = 1)
 #+end_src
- Error: unknown variable to group by : segment.size
+
+#+results:
+|   | image       | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+|---+-------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
+| 1 | madisonNAIP | all          | svm_resp | N-100_C-50 |       100.00 |       50.00 |          0.24 |                          0.42 |                               0.22 |                         0.35 |
+| 2 | madisonNAIP | all          | svm_resp | Pixel      |         1.00 |             |          0.25 |                          0.45 |                               0.28 |                         0.22 |
+| 3 | madisonNAIP | all          | rf_prob  | Pixel      |         1.00 |             |          0.27 |                          0.49 |                               0.28 |                         0.20 |
+| 4 | madisonNAIP | all          | rf_prob  | N-100_C-50 |       100.00 |       50.00 |          0.28 |                          0.34 |                               0.32 |                         0.38 |
+
+
 |   | image       | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
 |---+-------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
 | 1 | madisonNAIP | all          | svm_resp | Pixel      | 1.00         |             | 0.26          | 0.39                          | 0.52                               | 0.10                         |
@@ -1636,8 +1649,16 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
       options(warn = 1)
 #+end_src
 
+#+results:
+ |   | image       | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+ |---+-------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
+ | 1 | madisonNAIP | all          | rf_prob  | N-100_C-50 |       100.00 |       50.00 |          0.28 |                          0.34 |                               0.32 |                         0.38 |
+ | 2 | madisonNAIP | all          | rf_prob  | Pixel      |         1.00 |             |          0.27 |                          0.49 |                               0.28 |                         0.20 |
+ | 3 | madisonNAIP | all          | svm_resp | Pixel      |         1.00 |             |          0.25 |                          0.45 |                               0.28 |                         0.22 |
+ | 4 | madisonNAIP | all          | svm_resp | N-100_C-50 |       100.00 |       50.00 |          0.24 |                          0.42 |                               0.22 |                         0.35 |
+
 ***** Plots of 20 *best* classified grids by *best* classifier with points superimposed
-#+begin_src R
+#+begin_src R :results none
   best.classif.overall <- error.df.avg.grids %>%
       arrange(overall.error) %>%
       slice(1) %>%
@@ -1658,8 +1679,8 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
 
   lapply(1:nrow(best.classif.best.grids), function(i){
       pts.on.classified.tile.plot.ErrorinTitle(error = best.classif.best.grids$overall.error[i],
-                                           grid.points,
-                                           best.classif.best.grids$path[i],
+                                           grd.pts = grid.points,
+                                           classified.tile.path = best.classif.best.grids$path[i],
                                            fig.dir = "figs/bestclassif.bestgrids",
                                            target = "a")
   })
@@ -1698,18 +1719,154 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
   grid.points <- readOGR(dsn = "../DD/reprojected.Accuracy.Regions",
                          layer = "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts")
 
-  plts <- lapply(best.classif.worst.grids$path, function(path) {
-    grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
-    points <- grid.points[grid.points@data$unq__ID == grid.name,]
-    points@data <- points@data %>%
-        mutate(x = coordinates(points)[,1],
-               y = coordinates(points)[,2])
-    ras <- raster(path)
-    pts.on.classified.tile.plot(fig.dir = "figs/bestclassif.worstgrids",points, ras, target = "a")
+  lapply(1:nrow(best.classif.worst.grids), function(i){
+      pts.on.classified.tile.plot.ErrorinTitle(error = best.classif.worst.grids$overall.error[i],
+                                           grd.pts = grid.points,
+                                           classified.tile.path = best.classif.worst.grids$path[i],
+                                           fig.dir = "figs/bestclassif.worstgrids",
+                                           target = "a")
   })
+
+  ## plts <- lapply(best.classif.worst.grids$path, function(path) {
+  ##   grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+  ##   points <- grid.points[grid.points@data$unq__ID == grid.name,]
+  ##   points@data <- points@data %>%
+  ##       mutate(x = coordinates(points)[,1],
+  ##              y = coordinates(points)[,2])
+  ##   ras <- raster(path)
+  ##   pts.on.classified.tile.plot(fig.dir = "figs/bestclassif.worstgrids",points, ras, target = "a")
+  ## })
 
 
 #+end_src
+
+#+results:
+#+begin_example
+ Joining by: c("image", "target.cover", "model", "seg.params")
+ OGR data source with driver: ESRI Shapefile
+Source: "../DD/reprojected.Accuracy.Regions", layer: "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts"
+with 21305 features
+It has 15 fields
+ Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.worstgrids' already exists
+[[1]]
+quartz_off_screen
+                2
+
+[[2]]
+quartz_off_screen
+                2
+
+[[3]]
+quartz_off_screen
+                2
+
+[[4]]
+quartz_off_screen
+                2
+
+[[5]]
+quartz_off_screen
+                2
+
+[[6]]
+quartz_off_screen
+                2
+
+[[7]]
+quartz_off_screen
+                2
+
+[[8]]
+quartz_off_screen
+                2
+
+[[9]]
+quartz_off_screen
+                2
+
+[[10]]
+quartz_off_screen
+                2
+
+[[11]]
+quartz_off_screen
+                2
+
+[[12]]
+quartz_off_screen
+                2
+
+[[13]]
+quartz_off_screen
+                2
+
+[[14]]
+quartz_off_screen
+                2
+
+[[15]]
+quartz_off_screen
+                2
+
+[[16]]
+quartz_off_screen
+                2
+
+[[17]]
+quartz_off_screen
+                2
+
+[[18]]
+quartz_off_screen
+                2
+
+[[19]]
+quartz_off_screen
+                2
+
+[[20]]
+quartz_off_screen
+                2
+#+end_example
 
 ***** Plots showing how image, segment size, compactness, and model affect accuracy
 

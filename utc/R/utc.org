@@ -889,7 +889,7 @@ wrapper for slic.
             names(seg.df)[3] <- "segment"
             seg.df <- left_join(seg.df, m)
             seg.df$response <- factor(seg.df$response)
-            levels(seg.df$response) <- c("g","i","o","t")
+            levels(seg.df$response) <- c("g","i","t","o")
             r <- seg
             values(r) <- seg.df$response
 
@@ -1227,7 +1227,7 @@ wrapper for slic.
 #+END_SRC
 #+RESULTS:
 
-** NEXT Plot points on classifed tile ADD OVERALL ACCURACY IN TITLE
+** Plot points on classifed tile
 #+BEGIN_SRC R
 
   pts.on.classified.tile.plot.ErrorinTitle <- function(error, grd.pts, classified.tile.path, fig.dir, target = NULL) {
