@@ -204,7 +204,6 @@ Same structure as DD_NAIP
 
 
 
-
 * Workflow
 ** Libraries
 #+BEGIN_SRC R
@@ -264,8 +263,11 @@ Same structure as DD_NAIP
 **** Variable Names and Paths
 #+BEGIN_SRC R
 
-  location = c("madison","wausau")
-  image.paths <- paste0(image.dirs, "/", image.names, ".tif")
+    locations = c("madison","wausau")
+
+  image.paths <- expand.grid(image.names,locations) %>% data.frame %>%
+        mutate(img.paths = paste0(image.dirs,"/",Var2,Var1,".tif")) %>%
+        .$img.paths
 
   ratio.appendage <- "_ratio"
   pca.appendage <- "_pca"
@@ -285,11 +287,10 @@ Same structure as DD_NAIP
   grid.pattern = "[a-zA-Z]{3}\\.[0-9]+m\\.[0-9]+" #I removed "_" from end. <2016-07-02 Sat>
   texture.pattern = "stat-.*_window-.*_angle[-]+[0-9]+"
   segmentation.pattern = "_N-[0-9]+_C-[0-9]+"
-  segmentation.pattern = "Pixel|_N-[0-9]+_C-[0-9]+"
-
-     target.pattern = "all|grass|impervious|tree"
-
-
+  segmentation.pattern = "Pixel|N-[0-9]+_C-[0-9]+"
+  target.pattern = "all|grass|impervious|tree"
+  image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
+  model.pattern = "rf_prob|rf_resp|svm_resp"
 #+end_src
 
 #+results:
@@ -297,17 +298,17 @@ Same structure as DD_NAIP
 **** Texture Params
 #+begin_src R
 
-    band.for.texture.appendage = "_ratio.nir"
-    window <- list(c(3,3), c(5,5), c(7,7))
-    statistics = list("homogeneity", "contrast", "correlation", "entropy")
-    shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
+  ## band.for.texture.appendage = "_ratio.nir"
+  ## window <- list(c(3,3), c(5,5), c(7,7))
+  ## statistics = list("homogeneity", "contrast", "correlation", "entropy")
+  ## shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
 
-    band.for.texture.appendage = "_ratio.nir"
-    window <- list(c(3,3))
-    statistics = list("homogeneity")
-    shift = list(c(0,1))
+  band.for.texture.appendage = "_ratio.nir"
+  window <- list(c(3,3))
+  statistics = list("homogeneity")
+  shift = list(c(0,1))
 
-    texture.params <- expand.grid(band.appendage = band.for.texture.appendage,window = window, statistics = statistics, shift = shift, stringsAsFactors = F)
+  texture.params <- expand.grid(band.appendage = band.for.texture.appendage,window = window, statistics = statistics, shift = shift, stringsAsFactors = F)
 
 #+end_src
 
@@ -315,7 +316,7 @@ Same structure as DD_NAIP
 
 **** Segmentation Params
 #+begin_src R
-  segment.size <- c(rep(20,3),rep(30,3),rep(45,3),rep(60,3),rep(100,3))
+  segment.size <- c(rep(15,3), rep(20,3),rep(30,3),rep(45,3),rep(60,3),rep(100,3))
   compactness <- round(segment.size * c(.3, .5, .6))
 
   ## segment.size <- c(rep(30,1), rep(100,1))
@@ -355,17 +356,17 @@ compactness <- 12
                                           # make derived data directory
   derived.dir <- "../DD"
 
-  dd.training.dir <- str_c(derived.dir, "/",location,"_Training")
+  dd.training.dirs <- str_c(derived.dir, "/",locations,"_Training")
 
-  dd.pca.dir <- str_c(derived.dir, "/",location,pca.appendage)
+  dd.pca.dirs <- str_c(derived.dir, "/",locations,pca.appendage)
 
-  dd.accuracy.dir <- str_c(derived.dir, "/",location,"_Accuracy")
+  dd.accuracy.dirs <- str_c(derived.dir, "/",locations,"_Accuracy")
 
-  dd.models.dir <- paste0(derived.dir,"/",location,"_Models")
+  dd.models.dirs <- paste0(derived.dir,"/",locations,"_Models")
 
-  dd.accuracy.classified.dir <- str_c(dd.accuracy.dir, "/ClassifiedTiles")
+  dd.accuracy.classified.dirs <- str_c(dd.accuracy.dirs, "/ClassifiedTiles")
 
-derived.dirs <- c(derived.dir, dd.training.dir, dd.pca.dir, dd.accuracy.dir, dd.models.dir, dd.accuracy.classified.dir)
+derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, dd.models.dirs, dd.accuracy.classified.dirs)
 #+END_SRC
 
 #+results:
@@ -381,7 +382,7 @@ derived.dirs <- c(derived.dir, dd.training.dir, dd.pca.dir, dd.accuracy.dir, dd.
 #+begin_example
 
                                 ../DD                 ../DD/madison_Training
-                                 FALSE                                   TRUE
+                                  TRUE                                   TRUE
                  ../DD/wausau_Training                      ../DD/madison_pca
                                   TRUE                                   TRUE
                       ../DD/wausau_pca                 ../DD/madison_Accuracy
@@ -392,8 +393,6 @@ derived.dirs <- c(derived.dir, dd.training.dir, dd.pca.dir, dd.accuracy.dir, dd.
                                   TRUE                                   TRUE
  ../DD/wausau_Accuracy/ClassifiedTiles
                                   TRUE
-Warning message:
-In dir.create(x) : '../DD' already exists
 #+end_example
 
 **** Define Derived Shapefile DSNs and Layers
@@ -411,23 +410,12 @@ In dir.create(x) : '../DD' already exists
 #+END_SRC
 
 #+results:
-#+begin_example
-[[1]]
-[1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
-[[1]]
-[1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
-[[1]]
-[1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
-#+end_example
+: [[1]]
+: [1] TRUE
+: [[1]]
+: [1] TRUE
+: [[1]]
+: [1] TRUE
 
 **** number of cores
 #+BEGIN_SRC R
@@ -458,15 +446,28 @@ options(asciiType = "org")
 #  pixel.feature.df.appendage = "_PixelFeatureDF"
 #  segmentFeatureDF.appendage = "_SegmentFeatureDF.rds"
 #  pca.model.name.appendage = "_pca.rds"
-#     model.pattern = "rf_prob|rf_resp|svm_resp"  I shouldn't need this (I hope)
+
 #     mad.grid.id.pattern = "mad.[0-9]+m.[0-9]+"
-#     image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
+
 
 #+end_src
 ** Functions
 Load functions from utc/R/utc.org
-[[file:utc/R/utc.org]]
+[[file:utc/R/utc.org::*Functions]]
 ** Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth
+*** Set location to Madison
+#+begin_src R
+location <- "madison"
+image.paths <- str_extract(image.paths, paste0(".*",location,".*")) %>% na.omit
+dd.pca.dir <-  str_extract(dd.pca.dirs, paste0(".*",location,".*")) %>% na.omit
+dd.training.dir <- str_extract(dd.training.dirs, paste0(".*",location,".*")) %>% na.omit
+dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.omit
+dd.accuracy.dir <- str_extract(dd.accuracy.dirs, paste0(".*",location,".*")) %>% na.omit
+dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*",location,".*")) %>% na.omit
+#+end_src
+
+#+results:
+
 *** make pca transformation/rotation for slic segmentation algorithm.
 **** read in pca model if it exists.  If I run this, don't run rest of pca code in this subtre
 #+BEGIN_SRC R :eval no
@@ -477,24 +478,17 @@ Load functions from utc/R/utc.org
 
 #+results:
 
-**** Reproject PCA Region Shapefile to Image
-#+BEGIN_SRC R
+**** Reproject and Crop PCA Region Shapefile to Image
+#+BEGIN_SRC R :results none
   foreach(img.pth = image.paths) %do% {
 
          Reproject_Shapefile_to_Image_CRS(pca.region.dsn,
-                                         pca.region.layer,
+                                         str_c(location,pca.region.layer.appendage),
                                          img.pth,
                                          pca.region.imageCRS.dsn)
-#+END_SRC
 
-#+results:
-:  Error in stack(image.path) (from #5) :
-:   error in evaluating the argument 'x' in selecting a method for function 'stack': Error: object 'img.pth' not found
-
-**** Crop image to create a smaller image around each of the polygons
-#+BEGIN_SRC R :results none
        Crop_image_to_each_Shapefile_polygon(pca.region.imageCRS.dsn,
-                                        pca.region.layer,
+                                         str_c(location,pca.region.layer.appendage),
                                         img.pth,
                                         cores = cores,
                                         output.dir = dd.pca.dir)
@@ -513,8 +507,8 @@ Load functions from utc/R/utc.org
 
          ratios <- foreach (j = tile.names,
                   .packages = c("raster","stringr")) %dopar% {
-                      add.features(image.dir = dd.pca.dir,
-                                   image.name = j,
+                      add.features(tile.dir = dd.pca.dir,
+                                   tile.name = j,
                                    band.names = c("blue","green","red","nir"),
                                    ratio.bands = c("blue","green","red","nir"),
                                    texture = F)
@@ -527,10 +521,11 @@ Load functions from utc/R/utc.org
 
 **** Create and Save PCA model/rotation
 #+BEGIN_SRC R :results none
-  pca <- foreach(img.nm = image.names) %do% {
-              make.and.save.pca.transformation(image.dir = dd.pca.dir,
-                                               image.name = img.nm)
-  }
+    pca <- foreach(img.nm = image.names) %do% {
+                make.and.save.pca.transformation(image.dir = dd.pca.dir,
+                                                 image.name = img.nm,
+                                                 location = location)
+    }
  #+END_SRC
 
 *** Training
@@ -538,15 +533,15 @@ Load functions from utc/R/utc.org
 
 #+BEGIN_SRC R :results none
 
-  foreach(img.pth = image.paths[1]) %do% {
+  foreach(img.pth = image.paths) %do% {
 
       Reproject_Shapefile_to_Image_CRS(training.region.dsn,
-                                       training.region.layer,
+                                       str_c(location,training.region.layer.appendage),
                                        img.pth,
                                        training.region.imageCRS.dsn)
 
       Crop_image_to_each_Shapefile_polygon(training.region.imageCRS.dsn,
-                                           training.region.layer,
+                                       str_c(location,training.region.layer.appendage),
                                            img.pth,
                                            cores = cores,
                                            output.dir = dd.training.dir)
@@ -557,68 +552,58 @@ Load functions from utc/R/utc.org
 **** Make Feature data frames, for Each Training Tile
 
  #+begin_src R :results silent
-     cl <- makeCluster(cores)
-     registerDoParallel(cl)
+   cl <- makeCluster(cores)
+   registerDoParallel(cl)
 
-     pixel.added.features.raster.list <- foreach(img.nm = image.names[1]) %do% {
+   pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
 
-                                             #img.nm <- image.names[1]
+       tile.names <- list.files(dd.training.dir) %>%
+           str_extract(., pattern = str_c(location,img.nm,".[0-9]+.tif")) %>%
+           str_extract(., pattern = str_c(location,img.nm,".[0-9]+")) %>%
+           na.omit()
 
-         tile.names <- list.files(dd.training.dir) %>%
-             str_extract(., pattern = str_c(img.nm,".[0-9]+.tif")) %>%
-             str_extract(., pattern = str_c(img.nm,".[0-9]+")) %>%
-             na.omit()
-
-         foreach (i = tile.names,
-                  .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
+       foreach (i = tile.names,
+                .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
 
-         feature.dfs <- make.feature.df(image.dir = dd.training.dir,
-                         image.name = i,
-                         band.names = c("blue","green","red","nir"),
-                         ndvi = T,
-                         ratio.bands = c("blue","green","red","nir"),
-                         texture.params.df = texture.params,
-                         pixel.df = T,
-                         pca.source.image.name = i,
-                         segmentation = T,
-                         segment.params.df = segment.params)
+                    feature.dfs <- make.feature.df(tile.dir = dd.training.dir,
+                                                   tile.name = i,
+                                                   image.name = img.nm,
+                                                   band.names = c("blue","green","red","nir"),
+                                                   ndvi = T,
+                                                   ratio.bands = c("blue","green","red","nir"),
+                                                   texture.params.df = texture.params,
+                                                   pixel.df = T,
+                                                   pca.location = location,
+                                                   segmentation = T,
+                                                   segment.params.df = segment.params)
 
-         }
-         }
+                }
+   }
 #+end_src
 
 **** Combine Feature Dataframes
 Pattern is image.name_Segmentation
 #+BEGIN_SRC R :results none
-  tile.dir <- dd.training.dir
-  segmentation.layer.pattern
-  segmentFeatureDF.appendage
-  pixel.feature.df.appendage
-
     cl <- makeCluster(cores)
     registerDoParallel(cl)
 
-
-  feature.dfs <- list.files(tile.dir, full.names = T) %>%
-      str_extract(.,".*FeatureDF.rds") %>%
+  feature.dfs <- list.files(dd.training.dir, full.names = T) %>%
+      str_extract(paste0(".*(",feature.df.appendage,").*")) %>%
       na.omit()
 
-  foreach(img.nm = image.names[1]) %do% {
+  foreach(img.nm = image.names) %do% {
       img.feature.dfs <- str_extract(feature.dfs, str_c(".*",img.nm,".*")) %>%
           na.omit()
-      SegParams <- unique(str_extract(img.feature.dfs, segmentation.layer.pattern)) %>%
+      SegParams <- unique(str_extract(img.feature.dfs, segmentation.pattern)) %>%
           na.omit()
-      SegParams <- c("_Pixel", SegParams)
-
-
 
       foreach(seg.param.set = SegParams, .packages = c("dplyr","stringr")) %dopar% {
           img.seg.feature.dfs = str_extract(img.feature.dfs, str_c(".*",seg.param.set,".*")) %>%
               na.omit()
           dfs <- lapply(img.seg.feature.dfs, readRDS)
           combined.dfs <- bind_rows(dfs)
-          saveRDS(combined.dfs, file = str_c(tile.dir, "/", img.nm, seg.param.set, FeatureDF.appendage))
+          saveRDS(combined.dfs, file = str_c(dd.training.dir, "/", location,img.nm, "_",seg.param.set, feature.df.appendage,".rds"))
       }
   }
 #+END_SRC
@@ -642,62 +627,65 @@ Pattern is image.name_Segmentation
 
 #+BEGIN_SRC R :results none
 
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
 
 
-    model.building.dfs <-  foreach(img.nm = image.names[1]) %do% {
+  model.building.dfs <-  foreach(img.nm = image.names) %do% {
 
-        featureDF.files <- list.files(dd.training.dir) %>%
-            str_extract(., str_c(img.nm,".*", FeatureDF.appendage,"$")) %>%
-            na.omit()
+      featureDF.files <- list.files(dd.training.dir) %>%
+          str_extract(., str_c(location,img.nm,"_(",segmentation.pattern,")", feature.df.appendage,".rds$")) %>%
+          na.omit()
 
-        training.polygon.layer <- list.files(training.region.dsn) %>%
-            str_extract(.,str_c(".*",img.nm, ".*")) %>%
-            na.omit() %>%
-            extract.name.from.path() %>%
-            unique()
+      training.polygon.layer <- list.files(training.region.dsn) %>%
+          str_extract(.,str_c(".*",location,img.nm, ".*")) %>%
+          na.omit() %>%
+          extract.name.from.path() %>%
+          unique()
 
-        training.polygons <- readOGR(dsn = training.region.dsn, layer = training.polygon.layer)
+      training.polygons <- readOGR(dsn = training.region.dsn, layer = training.polygon.layer)
 
-        foreach(feature.df.rds = featureDF.files, .packages = c("mlr","foreach","doParallel", "stringr", "raster","rgeos","dplyr","sp","tidyr")) %dopar% {
+      foreach(feature.df.rds = featureDF.files, .packages = c("mlr","foreach","doParallel", "stringr", "raster","rgeos","dplyr","sp","tidyr")) %dopar% {
 
-            feature.df <- readRDS(file = str_c(dd.training.dir,"/",feature.df.rds))
+          feature.df <- readRDS(file = str_c(dd.training.dir,"/",feature.df.rds))
 
-            if(complete.cases(str_extract(feature.df.rds, "Pixel"))) {
-                model.building.df <- getPixel.Class.and.Coords.Within.Polygon(PixelFeatureDF = feature.df,
-                                                                              training.sp = training.polygons)
-                model.building.df <- model.building.df %>%
-                    dplyr::select(-x, -y, -id)
-                saveRDS(object = model.building.df, file = paste0(dd.training.dir,"/",img.nm,"_Pixel",ModelBuilding.appendage))
-            }
+          if(complete.cases(str_extract(feature.df.rds, "Pixel"))) {
+              model.building.df <- getPixel.Class.and.Coords.Within.Polygon(PixelFeatureDF = feature.df,
+                                                                            training.sp = training.polygons)
 
-            if(complete.cases(str_extract(feature.df.rds,   segmentation.layer.pattern))) {
-                segment.parameters <- str_extract(feature.df.rds, segmentation.layer.pattern)
-                model.building.df <- getSegment.class.and.features.Within.Polygon(SegmentFeatureDF = feature.df,
-                    training.sp = training.polygons,
-                    seg.tiles.dir = dd.training.dir,
-                    seg.params = segment.parameters)
-                saveRDS(model.building.df, file = str_c(dd.training.dir,"/",img.nm,segment.parameters,ModelBuilding.appendage))
-            }
-        }
-    }
+              model.building.df <- model.building.df %>%
+                  dplyr::select(-x, -y, -id)
+
+              saveRDS(object = model.building.df, file = paste0(dd.training.dir,"/",location,img.nm,"_Pixel",ModelBuilding.appendage,".rds"))
+          } else          {
+              segment.parameters <- str_extract(feature.df.rds, segmentation.pattern)
+              model.building.df <- getSegment.class.and.features.Within.Polygon(SegmentFeatureDF = feature.df,
+                  training.sp = training.polygons,
+                  seg.tiles.dir = dd.training.dir,
+                  seg.params = segment.parameters)
+              saveRDS(model.building.df, file = str_c(dd.training.dir,"/",location,img.nm,"_",segment.parameters,ModelBuilding.appendage,".rds"))
+          }
+      }
+  }
 
  #+END_SRC
 
 **** Plot Model Building Dataframes?? Visualize discriminating features
-#+begin_src R :exports results :results graphics :file ./figs/mod.df.check.png
+#+begin_src R :exports results :results graphics :file ./figs/mod.df.check.png :eval no
 
-    mod.df <- readRDS(paste0(dd.training.dir, "/",img.nm, segment.parameters, ModelBuilding.appendage))
+  seg.p <- "_N-13_C-8"
+  img.nm <- "PanshpSPOT"
+  mod.df <- readRDS(paste0(dd.training.dir, "/",location,img.nm, seg.p, ModelBuilding.appendage, ".rds"))
 
-    ggplot(mod.df, aes(color = factor(Class), y = ndvi_mean, x = red_sd)) + geom_point(alpha = .9)
-#    ggplot(out, aes(color = factor(Class), y = ndvi_mean, x = red_sd)) + geom_point(alpha = .9)
-#  ggplot(model.building.df, aes(color = factor(Class), y = ndvi_mean, x = red_sd)) + geom_point(alpha = .5)
+      ggplot(mod.df, aes(color = factor(Class), y = ndvi_mean, x = red_sd)) + geom_point(alpha = .9)
+  #    ggplot(out, aes(color = factor(Class), y = ndvi_mean, x = red_sd)) + geom_point(alpha = .9)
+  #  ggplot(model.building.df, aes(color = factor(Class), y = ndvi_mean, x = red_sd)) + geom_point(alpha = .5)
 
 #+end_src
 
-#+begin_src R :exports results :results graphics :file ./figs/mod.df.pixel.check.png
-  mod.df <- readRDS(paste0(dd.training.dir, "/",img.nm, "_Pixel", ModelBuilding.appendage))
+
+#+begin_src R :exports results :results graphics :file ./figs/mod.df.pixel.check.png :eval no
+  mod.df <- readRDS(paste0(dd.training.dir, "/",location,img.nm, "_Pixel", ModelBuilding.appendage,".rds"))
   ggplot(mod.df, aes(color = factor(Class), y = ndvi, x = ratio.nir_stat.homogeneity_window.3_angle.0)) + geom_point(alpha = .5)
 #+end_src
 
@@ -708,10 +696,10 @@ Pattern is image.name_Segmentation
   cl <- makeCluster(cores)
   registerDoParallel(cl)
 
-  foreach(img.nm = image.names[1]) %do% {
+  foreach(img.nm = image.names) %do% {
 
               ModelBuildingRDSs <- list.files(dd.training.dir) %>%
-                  str_extract(., str_c(img.nm,".*",ModelBuilding.appendage)) %>%
+                  str_extract(., str_c(location,img.nm,".*",ModelBuilding.appendage, ".rds")) %>%
                   na.omit()
 
               foreach(ModelBuildingRDS = ModelBuildingRDSs,
@@ -719,8 +707,9 @@ Pattern is image.name_Segmentation
 
                   Build.and.Save.models(dir = dd.training.dir,
                                         modelBuildingData = ModelBuildingRDS,
-                                        models.dir = Models.dir,
-                                        image.name = img.nm)
+                                        models.dir = dd.models.dir,
+                                        image.name = img.nm,
+                                        location = location)
               }
           }
 #+end_src
@@ -819,7 +808,7 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
     foreach(i = 1) %do% {
 
-      foreach(img.pth = image.paths[1]) %do% {
+      foreach(img.pth = image.paths) %do% {
 
           Reproject_Shapefile_to_Image_CRS(accuracy.region.dsn[i],
                                            accuracy.region.layer[i],
@@ -845,27 +834,27 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
    cl <- makeCluster(cores)
    registerDoParallel(cl)
 
-   pixel.added.features.raster.list <- foreach(img.nm = image.names[1]) %do% {
+   pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
 
                                            #img.nm <- image.names[1]
 
        tile.names <- list.files(dd.accuracy.dir) %>%
-           str_match(., pattern = str_c("(",img.nm,".",grid.pattern,")(.tif)"))
+           str_match(., pattern = str_c("(",location,img.nm,".",grid.pattern,")(.tif)"))
 
        tile.names <- tile.names[,2] %>% na.omit()
 
        foreach (i = tile.names,
                 .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
-
-                    feature.dfs <- make.feature.df(image.dir = dd.accuracy.dir,
-                                                   image.name = i,
+                    feature.dfs <- make.feature.df(tile.dir = dd.accuracy.dir,
+                                                   tile.name = i,
+                                                   image.name = img.nm,
                                                    band.names = c("blue","green","red","nir"),
                                                    ndvi = T,
                                                    ratio.bands = c("blue","green","red","nir"),
                                                    texture.params.df = texture.params,
                                                    pixel.df = T,
-                                                   pca.source.image.name = i,
+                                                   pca.location = location,
                                                    segmentation = T,
                                                   segment.params.df = segment.params)
 
@@ -876,53 +865,51 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 **** Classify Tiles at accuracy regions
 
-#+BEGIN_SRC R :results non
+#+BEGIN_SRC R :results none
    cl <- makeCluster(cores)
    registerDoParallel(cl)
 
 
-   classified.grid.tiles <-
-       foreach(img.nm = image.names[1]) %do% {
+   classified.grid.tiles <-       foreach(img.nm = image.names) %do% {
 
-           models <- list.files(Models.dir) %>%
-               str_extract(., str_c(".*",img.nm,".*")) %>%
+           models <- list.files(dd.models.dir) %>%
+               str_extract(., str_c(".*",location,img.nm,".*")) %>%
                na.omit()
 
            tile.names <- list.files(dd.accuracy.dir) %>%
-               str_match(., pattern = str_c("(",img.nm,".*?)_.*\\.tif$"))
+               str_match(., pattern = str_c("(",location,img.nm,".*?)_.*\\.tif$"))
 
            tile.names <- tile.names[,2] %>% na.omit() %>% unique()
 
 
            foreach(tile.nm = tile.names,
-                   .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
+                   .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %do% {
 
                foreach(model = models) %do% {
 
-                   segmentation.params <- str_extract(model, "N-[0-9]+_C-[0-9]+|Pixel")
+                   seg.p <- str_extract(model, segmentation.pattern)
 
-                   if(grepl("N-[0-9]+_C-[0-9]+",segmentation.params)) {
-                          segment.tile.name.append <- paste0("_",segmentation.params,".tif")
-                          segment.feature.df.name.append <- paste0("_",segmentation.params,segmentFeatureDF.appendage)
-
+                   if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
+                          segment.tile.name.append <- paste0("_",seg.p,".tif")
+                          segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
 
                           classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
-                                          model.dir = Models.dir,
+                                          model.dir = dd.models.dir,
                                           segment.dir = dd.accuracy.dir,
                                           classify.out.dir = dd.accuracy.dir,
                                           tile.name = tile.nm,
                                           segmentation.appendage = segment.tile.name.append,
                                           model.name.rds = model,
                                           segment.feature.appendage = segment.feature.df.name.append,
-                                          segmentation.prms = segmentation.params)
+                                          segmentation.prms = seg.p)
 
                    } else {
                        classify.pixel.raster(tile.dir = dd.accuracy.dir,
                                              tile.name = tile.nm,
-                                             pixelFeatureDF.appendage = pixel.feature.df.appendage,
-                                             model.dir = Models.dir,
+                                             pixelFeatureDF.appendage = feature.df.appendage,
+                                             model.dir = dd.models.dir,
                                              model.rds = model,
-                                             seg.prms = segmentation.params)
+                                             seg.prms = seg.p)
                    }
                }
            }
@@ -932,13 +919,7 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
   stopCluster(cl)
 
 
-
-
 #+END_SRC
-
-#+results:
-:  Error in { :
-:   task 1 failed - "task 1 failed - "task 1 failed - "cannot open the connection"""
 
 
 
@@ -1012,7 +993,7 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
                                      image =  str_extract(classified.tile.name.at.grid, image.pattern),
                                      target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
                                      model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                                     seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
+                                     seg.params = str_extract(classified.tile.name.at.grid, segmentation.pattern))
                           error
                       } else {
                           target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
@@ -1039,54 +1020,11 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 #+END_SRC
 
 #+results:
-#+begin_example
-OGR data source with driver: ESRI Shapefile
-Source: "../RD_Accuracy/Grids", layer: "All_Grids_Accuracy_Assessment_Added_pts"
-with 20209 features
-It has 15 fields
-Warning: closing unused connection 30 (<-localhost:11963)
-Warning: closing unused connection 29 (<-localhost:11963)
-Warning: closing unused connection 28 (<-localhost:11963)
-Warning: closing unused connection 27 (<-localhost:11963)
-Warning: closing unused connection 26 (<-localhost:11963)
-Warning: closing unused connection 25 (<-localhost:11963)
-Warning: closing unused connection 24 (<-localhost:11963)
-Warning: closing unused connection 23 (<-localhost:11963)
-Warning: closing unused connection 22 (<-localhost:11963)
-Warning: closing unused connection 21 (<-localhost:11963)
-Warning: closing unused connection 20 (<-localhost:11963)
-Warning: closing unused connection 19 (<-localhost:11963)
-Warning: closing unused connection 18 (<-localhost:11963)
-Warning: closing unused connection 17 (<-localhost:11963)
-Warning: closing unused connection 56 (<-localhost:11963)
-Warning: closing unused connection 55 (<-localhost:11963)
-Warning: closing unused connection 54 (<-localhost:11963)
-Warning: closing unused connection 53 (<-localhost:11963)
-Warning: closing unused connection 52 (<-localhost:11963)
-Warning: closing unused connection 51 (<-localhost:11963)
-Warning: closing unused connection 50 (<-localhost:11963)
-Warning: closing unused connection 49 (<-localhost:11963)
-Warning: closing unused connection 48 (<-localhost:11963)
-Warning: closing unused connection 47 (<-localhost:11963)
-Warning: closing unused connection 46 (<-localhost:11963)
-Warning: closing unused connection 45 (<-localhost:11963)
-Warning: closing unused connection 44 (<-localhost:11963)
-Warning: closing unused connection 43 (<-localhost:11963)
-Warning: closing unused connection 16 (<-localhost:11963)
-Warning: closing unused connection 15 (<-localhost:11963)
-Warning: closing unused connection 14 (<-localhost:11963)
-Warning: closing unused connection 13 (<-localhost:11963)
-Warning: closing unused connection 12 (<-localhost:11963)
-Warning: closing unused connection 11 (<-localhost:11963)
-Warning: closing unused connection 10 (<-localhost:11963)
-Warning: closing unused connection 9 (<-localhost:11963)
-Warning: closing unused connection 8 (<-localhost:11963)
-Warning: closing unused connection 7 (<-localhost:11963)
-Warning: closing unused connection 6 (<-localhost:11963)
-Warning: closing unused connection 5 (<-localhost:11963)
-Warning: closing unused connection 4 (<-localhost:11963)
-Warning: closing unused connection 3 (<-localhost:11963)
-#+end_example
+:  Warning messages:
+: 1: closing unused connection 10 (<-localhost:11230)
+: 2: closing unused connection 9 (<-localhost:11230)
+: 3: closing unused connection 8 (<-localhost:11230)
+: 4: closing unused connection 7 (<-localhost:11230)
 
 
 *** Summarize Accuracy Assessment Results
@@ -1129,14 +1067,14 @@ Comparing classification to other estimates of cover.
 
 ***** load grid.points
 #+begin_src R
-  grid.points <- readOGR(dsn = "../DD/reprojected.Accuracy.Regions",
-                         layer = "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts")
+  grid.points <- readOGR(dsn = accuracy.region.imageCRS.dsn,
+                         layer = "madisonNAIP_Grids")
 
 #+end_src
 
 #+results:
 :  OGR data source with driver: ESRI Shapefile
-: Source: "../DD/reprojected.Accuracy.Regions", layer: "madisonNAIP_All_Grids_Accuracy_Assessment_Added_pts"
+: Source: "../DD/reprojected.Accuracy.Regions", layer: "madisonNAIP_Grids"
 : with 20209 features
 : It has 15 fields
 
@@ -1150,7 +1088,7 @@ For each grid, find the best classification.  Plot best 20 grids.
         ungroup() %>%
         arrange(overall.error) %>%
         select(overall.error, grid,image, target.cover, model, seg.params) %>%
-        mutate(path = paste0(dd.accuracy.dir,"/",ClassifiedTilesDirName,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+        mutate(path = paste0(dd.accuracy.classified.dir,"/",location,image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
         head(n = 20)
 
 options(warn = -1)
@@ -1159,28 +1097,31 @@ options(warn = 1)
 #+end_src
 
 #+results:
-|    | overall.error | grid        | image       | target.cover | model    | seg.params | path                                                                                          |
-|----+---------------+-------------+-------------+--------------+----------+------------+-----------------------------------------------------------------------------------------------|
-|  1 |          0.00 | mad.50m.2   | madisonNAIP | all          | rf_prob  | N-60_C-30  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-60_C-30_madisonNAIP_all_rf_prob.tif    |
-|  2 |          0.02 | mad.50m.5   | madisonNAIP | all          | svm_resp | N-60_C-36  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_N-60_C-36_madisonNAIP_all_svm_resp.tif   |
-|  3 |          0.02 | mad.100m.12 | madisonNAIP | all          | rf_prob  | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_N-20_C-12_madisonNAIP_all_rf_prob.tif  |
-|  4 |          0.02 | mad.100m.12 | madisonNAIP | all          | rf_prob  | N-30_C-18  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_N-30_C-18_madisonNAIP_all_rf_prob.tif  |
-|  5 |          0.03 | mad.100m.23 | madisonNAIP | all          | rf_prob  | N-60_C-30  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_N-60_C-30_madisonNAIP_all_rf_prob.tif  |
-|  6 |          0.03 | mad.150m.9  | madisonNAIP | all          | rf_prob  | N-30_C-18  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_N-30_C-18_madisonNAIP_all_rf_prob.tif   |
-|  7 |          0.04 | mad.100m.13 | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.13_Pixel_madisonNAIP_all_rf_prob.tif      |
-|  8 |          0.04 | mad.100m.27 | madisonNAIP | all          | rf_prob  | N-100_C-30 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.27_N-100_C-30_madisonNAIP_all_rf_prob.tif |
-|  9 |          0.06 | mad.150m.5  | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.5_Pixel_madisonNAIP_all_rf_prob.tif       |
-| 10 |          0.07 | mad.200m.2  | madisonNAIP | all          | rf_prob  | N-60_C-36  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.2_N-60_C-36_madisonNAIP_all_rf_prob.tif   |
-| 11 |          0.07 | mad.100m.28 | madisonNAIP | all          | rf_prob  | N-100_C-30 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_N-100_C-30_madisonNAIP_all_rf_prob.tif |
-| 12 |          0.07 | mad.100m.28 | madisonNAIP | all          | rf_prob  | N-45_C-22  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_N-45_C-22_madisonNAIP_all_rf_prob.tif  |
-| 13 |          0.08 | mad.100m.4  | madisonNAIP | all          | rf_prob  | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.4_N-20_C-12_madisonNAIP_all_rf_prob.tif   |
-| 14 |          0.08 | mad.100m.1  | madisonNAIP | all          | rf_prob  | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.1_N-100_C-50_madisonNAIP_all_rf_prob.tif  |
-| 15 |          0.08 | mad.200m.5  | madisonNAIP | all          | rf_prob  | N-60_C-36  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.5_N-60_C-36_madisonNAIP_all_rf_prob.tif   |
-| 16 |          0.08 | mad.100m.3  | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_rf_prob.tif       |
-| 17 |          0.13 | mad.200m.4  | madisonNAIP | all          | rf_prob  | N-60_C-30  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.4_N-60_C-30_madisonNAIP_all_rf_prob.tif   |
-| 18 |          0.14 | mad.100m.21 | madisonNAIP | all          | rf_prob  | N-30_C-9   | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.21_N-30_C-9_madisonNAIP_all_rf_prob.tif   |
-| 19 |          0.16 | mad.200m.1  | madisonNAIP | all          | svm_resp | N-30_C-18  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.1_N-30_C-18_madisonNAIP_all_svm_resp.tif  |
-| 20 |          0.16 | mad.100m.11 | madisonNAIP | all          | rf_prob  | N-20_C-10  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.11_N-20_C-10_madisonNAIP_all_rf_prob.tif  |
+|    | overall.error | grid        | image             | target.cover | model    | seg.params | path                                                                                                                   |
+|----+---------------+-------------+-------------------+--------------+----------+------------+------------------------------------------------------------------------------------------------------------------------|
+|  1 |          0.02 | mad.150m.9  | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_rf_prob.tif                 |
+|  2 |          0.03 | mad.100m.23 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.100m.23_N-13_C-8_madisonPanshpSPOT_all_rf_prob.tif |
+|  3 |          0.04 | mad.50m.2   | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.50m.2_N-20_C-12_madisonNAIP_all_rf_prob.tif              |
+|  4 |          0.04 | mad.50m.2   | madisonNAIP       | all          | svm_resp | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.50m.2_N-20_C-12_madisonNAIP_all_svm_resp.tif             |
+|  5 |          0.04 | mad.50m.2   | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif                  |
+|  6 |          0.04 | mad.50m.2   | madisonNAIP       | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_svm_resp.tif                 |
+|  7 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.2_N-13_C-8_madisonPanshpSPOT_all_rf_prob.tif   |
+|  8 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.2_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
+|  9 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.2_Pixel_madisonPanshpSPOT_all_rf_prob.tif      |
+| 10 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.2_Pixel_madisonPanshpSPOT_all_svm_resp.tif     |
+| 11 |          0.04 | mad.50m.5   | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.5_N-13_C-8_madisonPanshpSPOT_all_rf_prob.tif   |
+| 12 |          0.05 | mad.100m.12 | madisonNAIP       | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.12_Pixel_madisonNAIP_all_svm_resp.tif               |
+| 13 |          0.06 | mad.100m.13 | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.13_N-20_C-12_madisonNAIP_all_rf_prob.tif            |
+| 14 |          0.07 | mad.100m.28 | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.28_Pixel_madisonNAIP_all_rf_prob.tif                |
+| 15 |          0.08 | mad.100m.27 | madisonNAIP       | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.27_Pixel_madisonNAIP_all_svm_resp.tif               |
+| 16 |          0.08 | mad.150m.5  | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.150m.5_N-20_C-12_madisonNAIP_all_rf_prob.tif             |
+| 17 |          0.08 | mad.100m.4  | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.4_N-20_C-12_madisonNAIP_all_rf_prob.tif             |
+| 18 |          0.08 | mad.200m.2  | madisonNAIP       | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.200m.2_Pixel_madisonNAIP_all_svm_resp.tif                |
+| 19 |          0.08 | mad.100m.3  | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_rf_prob.tif                 |
+| 20 |          0.10 | mad.200m.5  | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.200m.5_N-20_C-12_madisonNAIP_all_rf_prob.tif             |
+ Error: object 'ClassifiedTilesDirName' not found
+Error in eval(expr, envir, enclos) :
+  object 'best.classified.grids' not found
 
 
 #+begin_src R :results none
@@ -1223,7 +1164,7 @@ For each grid, find the worst classification.  Plot worst 20 grids.
           ungroup() %>%
           arrange(desc(overall.error)) %>%
           select(overall.error, grid,image, target.cover, model, seg.params) %>%
-          mutate(path = paste0(dd.accuracy.dir,"/",ClassifiedTilesDirName,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+          mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
           head(n = 20)
 
   options(warn = -1)
@@ -1232,30 +1173,41 @@ For each grid, find the worst classification.  Plot worst 20 grids.
 #+end_src
 
 #+results:
-|    | overall.error | grid        | image       | target.cover | model    | seg.params | path                                                                                           |
-|----+---------------+-------------+-------------+--------------+----------+------------+------------------------------------------------------------------------------------------------|
-|  1 |          0.58 | mad.100m.9  | madisonNAIP | all          | svm_resp | N-20_C-10  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.9_N-20_C-10_madisonNAIP_all_svm_resp.tif   |
-|  2 |          0.53 | mad.100m.16 | madisonNAIP | all          | svm_resp | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.16_Pixel_madisonNAIP_all_svm_resp.tif      |
-|  3 |          0.51 | mad.50m.3   | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_N-20_C-6_madisonNAIP_all_svm_resp.tif     |
-|  4 |          0.50 | mad.150m.6  | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.6_N-20_C-6_madisonNAIP_all_svm_resp.tif    |
-|  5 |          0.48 | mad.100m.17 | madisonNAIP | all          | svm_resp | N-20_C-10  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.17_N-20_C-10_madisonNAIP_all_svm_resp.tif  |
-|  6 |          0.47 | mad.50m.1   | madisonNAIP | all          | svm_resp | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.1_N-20_C-12_madisonNAIP_all_svm_resp.tif    |
-|  7 |          0.47 | mad.100m.22 | madisonNAIP | all          | svm_resp | N-100_C-30 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_N-100_C-30_madisonNAIP_all_svm_resp.tif |
-|  8 |          0.42 | mad.150m.4  | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.4_N-20_C-6_madisonNAIP_all_svm_resp.tif    |
-|  9 |          0.42 | mad.100m.30 | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.30_N-20_C-6_madisonNAIP_all_svm_resp.tif   |
-| 10 |          0.41 | mad.100m.5  | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.5_N-20_C-6_madisonNAIP_all_svm_resp.tif    |
-| 11 |          0.39 | mad.100m.20 | madisonNAIP | all          | svm_resp | N-20_C-10  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.20_N-20_C-10_madisonNAIP_all_svm_resp.tif  |
-| 12 |          0.39 | mad.100m.6  | madisonNAIP | all          | svm_resp | N-100_C-50 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.6_N-100_C-50_madisonNAIP_all_svm_resp.tif  |
-| 13 |          0.39 | mad.150m.8  | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_N-20_C-6_madisonNAIP_all_svm_resp.tif    |
-| 14 |          0.38 | mad.150m.2  | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.2_N-20_C-6_madisonNAIP_all_svm_resp.tif    |
-| 15 |          0.38 | mad.100m.29 | madisonNAIP | all          | svm_resp | N-30_C-15  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.29_N-30_C-15_madisonNAIP_all_svm_resp.tif  |
-| 16 |          0.38 | mad.150m.10 | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.10_N-20_C-6_madisonNAIP_all_svm_resp.tif   |
-| 17 |          0.37 | mad.150m.1  | madisonNAIP | all          | svm_resp | N-100_C-60 | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.1_N-100_C-60_madisonNAIP_all_svm_resp.tif  |
-| 18 |          0.37 | mad.150m.1  | madisonNAIP | all          | svm_resp | N-60_C-18  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.1_N-60_C-18_madisonNAIP_all_svm_resp.tif   |
-| 19 |          0.37 | mad.150m.7  | madisonNAIP | all          | rf_prob  | Pixel      | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.7_Pixel_madisonNAIP_all_rf_prob.tif        |
-| 20 |          0.36 | mad.100m.24 | madisonNAIP | all          | svm_resp | N-60_C-18  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.24_N-60_C-18_madisonNAIP_all_svm_resp.tif  |
+|    | overall.error | grid        | image             | target.cover | model    | seg.params | path                                                                                                             |
+|----+---------------+-------------+-------------------+--------------+----------+------------+------------------------------------------------------------------------------------------------------------------|
+|  1 |          0.93 | mad.100m.23 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.23_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
+|  2 |          0.93 | mad.100m.3  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.3_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
+|  3 |          0.91 | mad.50m.5   | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.5_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif   |
+|  4 |          0.84 | mad.100m.1  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.1_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
+|  5 |          0.82 | mad.100m.21 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.21_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
+|  6 |          0.74 | mad.100m.10 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.10_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
+|  7 |          0.73 | mad.150m.7  | madisonPanshpSPOT | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.7_Pixel_madisonPanshpSPOT_all_rf_prob.tif      |
+|  8 |          0.71 | mad.100m.29 | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.29_Pixel_madisonPanshpSPOT_all_svm_resp.tif    |
+|  9 |          0.69 | mad.100m.7  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.7_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
+| 10 |          0.69 | mad.100m.19 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.19_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
+| 11 |          0.65 | mad.100m.22 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.22_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
+| 12 |          0.65 | mad.150m.3  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.3_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
+| 13 |          0.64 | mad.150m.6  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.6_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
+| 14 |          0.64 | mad.200m.3  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.200m.3_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
+| 15 |          0.64 | mad.100m.14 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.14_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
+| 16 |          0.64 | mad.100m.24 | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.24_Pixel_madisonPanshpSPOT_all_svm_resp.tif    |
+| 17 |          0.61 | mad.150m.10 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.10_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
+| 18 |          0.61 | mad.100m.18 | madisonPanshpSPOT | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.18_Pixel_madisonPanshpSPOT_all_rf_prob.tif     |
+| 19 |          0.60 | mad.50m.4   | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.4_Pixel_madisonPanshpSPOT_all_svm_resp.tif      |
+| 20 |          0.58 | mad.150m.8  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.8_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
+ Error: object 'ClassifiedTilesDirName' not found
+Error in eval(expr, envir, enclos) :
+  object 'worst.classified.grids' not found
 
-#+begin_src R
+  ## plts <- lapply(worst.classified.grids$path, function(path) {
+  ##   grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+  ##   points <- grid.points[grid.points@data$unq__ID == grid.name,]
+  ##   points@data <- points@data %>%
+  ##       mutate(x = coordinates(points)[,1],
+  ##              y = coordinates(points)[,2])
+  ##   ras <- raster(path)
+  ##   pts.on.classified.tile.plot(fig.dir = "figs/worstgrids",points, ras, target = "a")
+  ## })
 
   lapply(1:nrow(worst.classified.grids), function(i){
       pts.on.classified.tile.plot.ErrorinTitle(error = worst.classified.grids$overall.error[i],
@@ -1282,119 +1234,103 @@ For each grid, find the worst classification.  Plot worst 20 grids.
 #+results:
 #+begin_example
  Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 878 rows containing missing values (geom_raster).
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 399 rows containing missing values (geom_raster).
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 659 rows containing missing values (geom_raster).
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 642 rows containing missing values (geom_raster).
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 372 rows containing missing values (geom_raster).
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 700 rows containing missing values (geom_raster).
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 594 rows containing missing values (geom_raster).
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 737 rows containing missing values (geom_raster).
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 703 rows containing missing values (geom_raster).
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 516 rows containing missing values (geom_raster).
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 693 rows containing missing values (geom_raster).
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 264 rows containing missing values (geom_raster).
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 669 rows containing missing values (geom_raster).
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 42 rows containing missing values (geom_raster).
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning: Removed 33 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 [[1]]
-png
-  2
+null device
+          1
 
 [[2]]
-png
-  2
+null device
+          1
 
 [[3]]
-png
-  2
+null device
+          1
 
 [[4]]
-png
-  2
+null device
+          1
 
 [[5]]
-png
-  2
+null device
+          1
 
 [[6]]
-png
-  2
+null device
+          1
 
 [[7]]
-png
-  2
+null device
+          1
 
 [[8]]
-png
-  2
+null device
+          1
 
 [[9]]
-png
-  2
+null device
+          1
 
 [[10]]
-png
-  2
+null device
+          1
 
 [[11]]
-png
-  2
+null device
+          1
 
 [[12]]
-png
-  2
+null device
+          1
 
 [[13]]
-png
-  2
+null device
+          1
 
 [[14]]
-png
-  2
+null device
+          1
 
 [[15]]
-png
-  2
+null device
+          1
 
 [[16]]
-png
-  2
+null device
+          1
 
 [[17]]
-png
-  2
+null device
+          1
 
 [[18]]
-png
-  2
+null device
+          1
 
 [[19]]
-png
-  2
+null device
+          1
 
 [[20]]
-png
-  2
+null device
+          1
 #+end_example
 
 #+BEGIN_SRC R :results raw :eval no
@@ -1422,40 +1358,16 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
 #+end_src
 
 #+results:
-|    | image       | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
-|----+-------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
-|  1 | madisonNAIP | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.19 |                          0.45 |                               0.25 |                         0.21 |
-|  2 | madisonNAIP | all          | rf_prob  | N-45_C-22  |        45.00 |       22.00 |          0.19 |                          0.45 |                               0.26 |                         0.20 |
-|  3 | madisonNAIP | all          | rf_prob  | N-60_C-36  |        60.00 |       36.00 |          0.19 |                          0.44 |                               0.26 |                         0.21 |
-|  4 | madisonNAIP | all          | rf_prob  | N-45_C-14  |        45.00 |       14.00 |          0.19 |                          0.44 |                               0.26 |                         0.24 |
-|  5 | madisonNAIP | all          | rf_prob  | N-45_C-27  |        45.00 |       27.00 |          0.19 |                          0.46 |                               0.26 |                         0.20 |
-|  6 | madisonNAIP | all          | rf_prob  | N-20_C-10  |        20.00 |       10.00 |          0.20 |                          0.45 |                               0.26 |                         0.20 |
-|  7 | madisonNAIP | all          | rf_prob  | N-30_C-18  |        30.00 |       18.00 |          0.20 |                          0.42 |                               0.26 |                         0.22 |
-|  8 | madisonNAIP | all          | rf_prob  | N-60_C-30  |        60.00 |       30.00 |          0.20 |                          0.50 |                               0.26 |                         0.18 |
-|  9 | madisonNAIP | all          | rf_prob  | N-30_C-15  |        30.00 |       15.00 |          0.20 |                          0.45 |                               0.26 |                         0.21 |
-| 10 | madisonNAIP | all          | rf_prob  | N-20_C-6   |        20.00 |        6.00 |          0.20 |                          0.47 |                               0.27 |                         0.23 |
-| 11 | madisonNAIP | all          | rf_prob  | N-100_C-60 |       100.00 |       60.00 |          0.20 |                          0.40 |                               0.27 |                         0.26 |
-| 12 | madisonNAIP | all          | rf_prob  | N-30_C-9   |        30.00 |        9.00 |          0.20 |                          0.44 |                               0.26 |                         0.25 |
-| 13 | madisonNAIP | all          | rf_prob  | N-100_C-50 |       100.00 |       50.00 |          0.20 |                          0.40 |                               0.27 |                         0.25 |
-| 14 | madisonNAIP | all          | rf_prob  | N-60_C-18  |        60.00 |       18.00 |          0.20 |                          0.47 |                               0.24 |                         0.24 |
-| 15 | madisonNAIP | all          | rf_prob  | N-100_C-30 |       100.00 |       30.00 |          0.20 |                          0.49 |                               0.27 |                         0.20 |
-| 16 | madisonNAIP | all          | rf_prob  | Pixel      |         1.00 |             |          0.22 |                          0.52 |                               0.22 |                         0.19 |
-| 17 | madisonNAIP | all          | svm_resp | N-45_C-27  |        45.00 |       27.00 |          0.22 |                          0.54 |                               0.24 |                         0.23 |
-| 18 | madisonNAIP | all          | svm_resp | N-60_C-36  |        60.00 |       36.00 |          0.22 |                          0.55 |                               0.26 |                         0.22 |
-| 19 | madisonNAIP | all          | svm_resp | N-60_C-30  |        60.00 |       30.00 |          0.22 |                          0.57 |                               0.25 |                         0.22 |
-| 20 | madisonNAIP | all          | svm_resp | N-45_C-22  |        45.00 |       22.00 |          0.23 |                          0.56 |                               0.25 |                         0.23 |
-| 21 | madisonNAIP | all          | svm_resp | N-45_C-14  |        45.00 |       14.00 |          0.23 |                          0.58 |                               0.17 |                         0.34 |
-| 22 | madisonNAIP | all          | svm_resp | N-30_C-18  |        30.00 |       18.00 |          0.23 |                          0.54 |                               0.26 |                         0.23 |
-| 23 | madisonNAIP | all          | svm_resp | Pixel      |         1.00 |             |          0.23 |                          0.56 |                               0.13 |                         0.31 |
-| 24 | madisonNAIP | all          | svm_resp | N-30_C-15  |        30.00 |       15.00 |          0.23 |                          0.55 |                               0.25 |                         0.24 |
-| 25 | madisonNAIP | all          | svm_resp | N-30_C-9   |        30.00 |        9.00 |          0.23 |                          0.56 |                               0.24 |                         0.27 |
-| 26 | madisonNAIP | all          | svm_resp | N-100_C-30 |       100.00 |       30.00 |          0.23 |                          0.56 |                               0.25 |                         0.26 |
-| 27 | madisonNAIP | all          | svm_resp | N-100_C-60 |       100.00 |       60.00 |          0.23 |                          0.55 |                               0.24 |                         0.28 |
-| 28 | madisonNAIP | all          | svm_resp | N-100_C-50 |       100.00 |       50.00 |          0.23 |                          0.55 |                               0.25 |                         0.27 |
-| 29 | madisonNAIP | all          | svm_resp | N-60_C-18  |        60.00 |       18.00 |          0.24 |                          0.54 |                               0.20 |                         0.38 |
-| 30 | madisonNAIP | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.26 |                          0.55 |                               0.43 |                         0.13 |
-| 31 | madisonNAIP | all          | svm_resp | N-20_C-10  |        20.00 |       10.00 |          0.27 |                          0.57 |                               0.45 |                         0.11 |
-| 32 | madisonNAIP | all          | svm_resp | N-20_C-6   |        20.00 |        6.00 |          0.28 |                          0.57 |                               0.48 |                         0.12 |
+|   | image             | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+|---+-------------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
+| 1 | madisonNAIP       | all          | rf_prob  | Pixel      |         1.00 |             |          0.21 |                          0.34 |                               0.20 |                         0.35 |
+| 2 | madisonNAIP       | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.22 |                          0.51 |                               0.20 |                         0.29 |
+| 3 | madisonNAIP       | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.30 |                          0.58 |                               0.07 |                         0.59 |
+| 4 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   |        13.00 |        8.00 |          0.30 |                          0.54 |                               0.37 |                         0.37 |
+| 5 | madisonPanshpSPOT | all          | rf_prob  | Pixel      |         1.00 |             |          0.32 |                          0.47 |                               0.32 |                         0.48 |
+| 6 | madisonNAIP       | all          | svm_resp | Pixel      |         1.00 |             |          0.36 |                          0.32 |                               0.11 |                         0.83 |
+| 7 | madisonPanshpSPOT | all          | svm_resp | Pixel      |         1.00 |             |          0.45 |                          0.36 |                               0.24 |                         0.92 |
+| 8 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   |        13.00 |        8.00 |          0.45 |                          0.34 |                               0.22 |                         0.98 |
 
 
 
@@ -1514,40 +1426,16 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
 #+end_src
 
 #+results:
- |    | image       | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
- |----+-------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
- |  1 | madisonNAIP | all          | svm_resp | N-20_C-6   |        20.00 |        6.00 |          0.28 |                          0.57 |                               0.48 |                         0.12 |
- |  2 | madisonNAIP | all          | svm_resp | N-20_C-10  |        20.00 |       10.00 |          0.27 |                          0.57 |                               0.45 |                         0.11 |
- |  3 | madisonNAIP | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.26 |                          0.55 |                               0.43 |                         0.13 |
- |  4 | madisonNAIP | all          | svm_resp | N-60_C-18  |        60.00 |       18.00 |          0.24 |                          0.54 |                               0.20 |                         0.38 |
- |  5 | madisonNAIP | all          | svm_resp | N-100_C-50 |       100.00 |       50.00 |          0.23 |                          0.55 |                               0.25 |                         0.27 |
- |  6 | madisonNAIP | all          | svm_resp | N-100_C-60 |       100.00 |       60.00 |          0.23 |                          0.55 |                               0.24 |                         0.28 |
- |  7 | madisonNAIP | all          | svm_resp | N-100_C-30 |       100.00 |       30.00 |          0.23 |                          0.56 |                               0.25 |                         0.26 |
- |  8 | madisonNAIP | all          | svm_resp | N-30_C-9   |        30.00 |        9.00 |          0.23 |                          0.56 |                               0.24 |                         0.27 |
- |  9 | madisonNAIP | all          | svm_resp | N-30_C-15  |        30.00 |       15.00 |          0.23 |                          0.55 |                               0.25 |                         0.24 |
- | 10 | madisonNAIP | all          | svm_resp | Pixel      |         1.00 |             |          0.23 |                          0.56 |                               0.13 |                         0.31 |
- | 11 | madisonNAIP | all          | svm_resp | N-30_C-18  |        30.00 |       18.00 |          0.23 |                          0.54 |                               0.26 |                         0.23 |
- | 12 | madisonNAIP | all          | svm_resp | N-45_C-14  |        45.00 |       14.00 |          0.23 |                          0.58 |                               0.17 |                         0.34 |
- | 13 | madisonNAIP | all          | svm_resp | N-45_C-22  |        45.00 |       22.00 |          0.23 |                          0.56 |                               0.25 |                         0.23 |
- | 14 | madisonNAIP | all          | svm_resp | N-60_C-30  |        60.00 |       30.00 |          0.22 |                          0.57 |                               0.25 |                         0.22 |
- | 15 | madisonNAIP | all          | svm_resp | N-60_C-36  |        60.00 |       36.00 |          0.22 |                          0.55 |                               0.26 |                         0.22 |
- | 16 | madisonNAIP | all          | svm_resp | N-45_C-27  |        45.00 |       27.00 |          0.22 |                          0.54 |                               0.24 |                         0.23 |
- | 17 | madisonNAIP | all          | rf_prob  | Pixel      |         1.00 |             |          0.22 |                          0.52 |                               0.22 |                         0.19 |
- | 18 | madisonNAIP | all          | rf_prob  | N-100_C-30 |       100.00 |       30.00 |          0.20 |                          0.49 |                               0.27 |                         0.20 |
- | 19 | madisonNAIP | all          | rf_prob  | N-60_C-18  |        60.00 |       18.00 |          0.20 |                          0.47 |                               0.24 |                         0.24 |
- | 20 | madisonNAIP | all          | rf_prob  | N-100_C-50 |       100.00 |       50.00 |          0.20 |                          0.40 |                               0.27 |                         0.25 |
- | 21 | madisonNAIP | all          | rf_prob  | N-30_C-9   |        30.00 |        9.00 |          0.20 |                          0.44 |                               0.26 |                         0.25 |
- | 22 | madisonNAIP | all          | rf_prob  | N-100_C-60 |       100.00 |       60.00 |          0.20 |                          0.40 |                               0.27 |                         0.26 |
- | 23 | madisonNAIP | all          | rf_prob  | N-20_C-6   |        20.00 |        6.00 |          0.20 |                          0.47 |                               0.27 |                         0.23 |
- | 24 | madisonNAIP | all          | rf_prob  | N-30_C-15  |        30.00 |       15.00 |          0.20 |                          0.45 |                               0.26 |                         0.21 |
- | 25 | madisonNAIP | all          | rf_prob  | N-60_C-30  |        60.00 |       30.00 |          0.20 |                          0.50 |                               0.26 |                         0.18 |
- | 26 | madisonNAIP | all          | rf_prob  | N-30_C-18  |        30.00 |       18.00 |          0.20 |                          0.42 |                               0.26 |                         0.22 |
- | 27 | madisonNAIP | all          | rf_prob  | N-20_C-10  |        20.00 |       10.00 |          0.20 |                          0.45 |                               0.26 |                         0.20 |
- | 28 | madisonNAIP | all          | rf_prob  | N-45_C-27  |        45.00 |       27.00 |          0.19 |                          0.46 |                               0.26 |                         0.20 |
- | 29 | madisonNAIP | all          | rf_prob  | N-45_C-14  |        45.00 |       14.00 |          0.19 |                          0.44 |                               0.26 |                         0.24 |
- | 30 | madisonNAIP | all          | rf_prob  | N-60_C-36  |        60.00 |       36.00 |          0.19 |                          0.44 |                               0.26 |                         0.21 |
- | 31 | madisonNAIP | all          | rf_prob  | N-45_C-22  |        45.00 |       22.00 |          0.19 |                          0.45 |                               0.26 |                         0.20 |
- | 32 | madisonNAIP | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.19 |                          0.45 |                               0.25 |                         0.21 |
+ |   | image             | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+ |---+-------------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
+ | 1 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   |        13.00 |        8.00 |          0.45 |                          0.34 |                               0.22 |                         0.98 |
+ | 2 | madisonPanshpSPOT | all          | svm_resp | Pixel      |         1.00 |             |          0.45 |                          0.36 |                               0.24 |                         0.92 |
+ | 3 | madisonNAIP       | all          | svm_resp | Pixel      |         1.00 |             |          0.36 |                          0.32 |                               0.11 |                         0.83 |
+ | 4 | madisonPanshpSPOT | all          | rf_prob  | Pixel      |         1.00 |             |          0.32 |                          0.47 |                               0.32 |                         0.48 |
+ | 5 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   |        13.00 |        8.00 |          0.30 |                          0.54 |                               0.37 |                         0.37 |
+ | 6 | madisonNAIP       | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.30 |                          0.58 |                               0.07 |                         0.59 |
+ | 7 | madisonNAIP       | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.22 |                          0.51 |                               0.20 |                         0.29 |
+ | 8 | madisonNAIP       | all          | rf_prob  | Pixel      |         1.00 |             |          0.21 |                          0.34 |                               0.20 |                         0.35 |
 
 
 
@@ -1598,7 +1486,7 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
       left_join(., error.df) %>%
       arrange(overall.error) %>%
       select(overall.error, grid,image, target.cover, model, seg.params) %>%
-      mutate(path = paste0(dd.accuracy.dir,"/",ClassifiedTilesDirName,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif"))
+      mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif"))
 
       options(warn = -1)
 
@@ -1610,6 +1498,108 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
 #+end_src
 
 #+results:
+ Joining by: c("image", "target.cover", "model", "seg.params")
+ |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
+|----+---------------+-------------+-------------+--------------+---------+------------+--------------------------------------------------------------------------------------------------|
+| 1  | 0.02          | mad.150m.9  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 2  | 0.04          | mad.50m.2   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 3  | 0.04          | mad.100m.23 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_rf_prob.tif |
+| 4  | 0.06          | mad.100m.12 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_Pixel_madisonNAIP_all_rf_prob.tif |
+| 5  | 0.06          | mad.50m.5   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 6  | 0.07          | mad.100m.28 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_Pixel_madisonNAIP_all_rf_prob.tif |
+| 7  | 0.08          | mad.100m.13 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.13_Pixel_madisonNAIP_all_rf_prob.tif |
+| 8  | 0.08          | mad.150m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 9  | 0.08          | mad.100m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 10 | 0.09          | mad.100m.27 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.27_Pixel_madisonNAIP_all_rf_prob.tif |
+| 11 | 0.09          | mad.100m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 12 | 0.12          | mad.200m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 13 | 0.15          | mad.200m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 14 | 0.17          | mad.100m.21 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.21_Pixel_madisonNAIP_all_rf_prob.tif |
+| 15 | 0.18          | mad.200m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 16 | 0.19          | mad.100m.11 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.11_Pixel_madisonNAIP_all_rf_prob.tif |
+| 17 | 0.20          | mad.100m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 18 | 0.21          | mad.100m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 19 | 0.22          | mad.100m.30 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.30_Pixel_madisonNAIP_all_rf_prob.tif |
+| 20 | 0.22          | mad.100m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 21 | 0.22          | mad.150m.7  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.7_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 22 | 0.23          | mad.100m.18 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.18_Pixel_madisonNAIP_all_rf_prob.tif |
+| 23 | 0.23          | mad.100m.19 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.19_Pixel_madisonNAIP_all_rf_prob.tif |
+| 24 | 0.23          | mad.150m.2  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.2_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 25 | 0.24          | mad.150m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 26 | 0.24          | mad.50m.1   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.1_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 27 | 0.24          | mad.50m.4   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.4_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 28 | 0.24          | mad.150m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 29 | 0.25          | mad.100m.14 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.14_Pixel_madisonNAIP_all_rf_prob.tif |
+| 30 | 0.25          | mad.100m.20 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.20_Pixel_madisonNAIP_all_rf_prob.tif |
+| 31 | 0.25          | mad.100m.7  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.7_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 32 | 0.26          | mad.200m.2  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.2_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 33 | 0.26          | mad.150m.6  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.6_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 34 | 0.27          | mad.100m.24 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.24_Pixel_madisonNAIP_all_rf_prob.tif |
+| 35 | 0.28          | mad.100m.17 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.17_Pixel_madisonNAIP_all_rf_prob.tif |
+| 36 | 0.28          | mad.100m.16 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.16_Pixel_madisonNAIP_all_rf_prob.tif |
+| 37 | 0.28          | mad.100m.6  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.6_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 38 | 0.29          | mad.100m.29 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.29_Pixel_madisonNAIP_all_rf_prob.tif |
+| 39 | 0.29          | mad.150m.10 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.10_Pixel_madisonNAIP_all_rf_prob.tif |
+| 40 | 0.30          | mad.100m.9  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.9_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 41 | 0.31          | mad.100m.10 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.10_Pixel_madisonNAIP_all_rf_prob.tif |
+| 42 | 0.32          | mad.200m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 43 | 0.33          | mad.150m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 44 | 0.35          | mad.50m.3   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 45 | 0.37          | mad.100m.22 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_Pixel_madisonNAIP_all_rf_prob.tif |
+| 46 | 0.40          | mad.150m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
+ Joining by: c("image", "target.cover", "model", "seg.params")
+ |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
+|----+---------------+-------------+-------------+--------------+---------+------------+--------------------------------------------------------------------------------------------------|
+| 1  | 0.02          | mad.150m.9  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 2  | 0.04          | mad.50m.2   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 3  | 0.04          | mad.100m.23 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_rf_prob.tif |
+| 4  | 0.06          | mad.100m.12 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_Pixel_madisonNAIP_all_rf_prob.tif |
+| 5  | 0.06          | mad.50m.5   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 6  | 0.07          | mad.100m.28 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_Pixel_madisonNAIP_all_rf_prob.tif |
+| 7  | 0.08          | mad.100m.13 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.13_Pixel_madisonNAIP_all_rf_prob.tif |
+| 8  | 0.08          | mad.150m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 9  | 0.08          | mad.100m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 10 | 0.09          | mad.100m.27 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.27_Pixel_madisonNAIP_all_rf_prob.tif |
+| 11 | 0.09          | mad.100m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 12 | 0.12          | mad.200m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 13 | 0.15          | mad.200m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 14 | 0.17          | mad.100m.21 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.21_Pixel_madisonNAIP_all_rf_prob.tif |
+| 15 | 0.18          | mad.200m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 16 | 0.19          | mad.100m.11 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.11_Pixel_madisonNAIP_all_rf_prob.tif |
+| 17 | 0.20          | mad.100m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 18 | 0.21          | mad.100m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 19 | 0.22          | mad.100m.30 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.30_Pixel_madisonNAIP_all_rf_prob.tif |
+| 20 | 0.22          | mad.100m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 21 | 0.22          | mad.150m.7  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.7_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 22 | 0.23          | mad.100m.18 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.18_Pixel_madisonNAIP_all_rf_prob.tif |
+| 23 | 0.23          | mad.100m.19 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.19_Pixel_madisonNAIP_all_rf_prob.tif |
+| 24 | 0.23          | mad.150m.2  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.2_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 25 | 0.24          | mad.150m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 26 | 0.24          | mad.50m.1   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.1_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 27 | 0.24          | mad.50m.4   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.4_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 28 | 0.24          | mad.150m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 29 | 0.25          | mad.100m.14 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.14_Pixel_madisonNAIP_all_rf_prob.tif |
+| 30 | 0.25          | mad.100m.20 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.20_Pixel_madisonNAIP_all_rf_prob.tif |
+| 31 | 0.25          | mad.100m.7  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.7_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 32 | 0.26          | mad.200m.2  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.2_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 33 | 0.26          | mad.150m.6  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.6_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 34 | 0.27          | mad.100m.24 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.24_Pixel_madisonNAIP_all_rf_prob.tif |
+| 35 | 0.28          | mad.100m.17 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.17_Pixel_madisonNAIP_all_rf_prob.tif |
+| 36 | 0.28          | mad.100m.16 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.16_Pixel_madisonNAIP_all_rf_prob.tif |
+| 37 | 0.28          | mad.100m.6  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.6_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 38 | 0.29          | mad.100m.29 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.29_Pixel_madisonNAIP_all_rf_prob.tif |
+| 39 | 0.29          | mad.150m.10 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.10_Pixel_madisonNAIP_all_rf_prob.tif |
+| 40 | 0.30          | mad.100m.9  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.9_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 41 | 0.31          | mad.100m.10 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.10_Pixel_madisonNAIP_all_rf_prob.tif |
+| 42 | 0.32          | mad.200m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 43 | 0.33          | mad.150m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 44 | 0.35          | mad.50m.3   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 45 | 0.37          | mad.100m.22 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_Pixel_madisonNAIP_all_rf_prob.tif |
+| 46 | 0.40          | mad.150m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
+ Joining by: c("image", "target.cover", "model", "seg.params")
+Error: object 'ClassifiedTilesDirName' not found
+ Error in eval(expr, envir, enclos) :
+  object 'best.classif.best.grids' not found
  Joining by: c("image", "target.cover", "model", "seg.params")
  |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                         |
 |----+---------------+-------------+-------------+--------------+---------+------------+----------------------------------------------------------------------------------------------|
@@ -1766,6 +1756,127 @@ best.classif.best.grids <- best.classif.best.grids %>%  head(n=20)
 
 #+end_src
 
+#+results:
+#+begin_example
+ Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
+[[1]]
+null device
+          1
+
+[[2]]
+null device
+          1
+
+[[3]]
+null device
+          1
+
+[[4]]
+null device
+          1
+
+[[5]]
+null device
+          1
+
+[[6]]
+null device
+          1
+
+[[7]]
+null device
+          1
+
+[[8]]
+null device
+          1
+
+[[9]]
+null device
+          1
+
+[[10]]
+null device
+          1
+
+[[11]]
+null device
+          1
+
+[[12]]
+null device
+          1
+
+[[13]]
+null device
+          1
+
+[[14]]
+null device
+          1
+
+[[15]]
+null device
+          1
+
+[[16]]
+null device
+          1
+
+[[17]]
+null device
+          1
+
+[[18]]
+null device
+          1
+
+[[19]]
+null device
+          1
+
+[[20]]
+null device
+          1
+#+end_example
+
 ***** Plots of 20 *worst* classified grids by *best* classifier with points superimposed
 #+begin_src R :results none
       best.classif.overall <- error.df.avg.class %>%
@@ -1831,52 +1942,52 @@ ggplot(error.df, aes(y = overall.error, x = segment.size, color = compactness, g
 #+begin_example
 |    | grid        | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
 |----+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
-| 1  | mad.50m.2   | 0.02          |                               | 0.00                               | 0.62                         |
-| 2  | mad.100m.23 | 0.04          | 0.22                          |                                    | 0.03                         |
-| 3  | mad.100m.13 | 0.05          | 1.00                          | 0.01                               | 0.36                         |
-| 4  | mad.50m.5   | 0.05          | 0.33                          | 0.44                               | 0.01                         |
-| 5  | mad.100m.12 | 0.06          | 0.09                          | 0.01                               |                              |
-| 6  | mad.150m.5  | 0.06          | 0.11                          | 0.01                               | 0.27                         |
-| 7  | mad.150m.9  | 0.08          | 0.08                          | 0.00                               | 0.51                         |
-| 8  | mad.100m.4  | 0.08          | 0.98                          | 0.00                               | 0.44                         |
-| 9  | mad.100m.28 | 0.09          | 0.14                          |                                    | 0.03                         |
-| 10 | mad.100m.3  | 0.09          | 0.95                          | 0.98                               | 0.02                         |
-| 11 | mad.200m.5  | 0.10          | 0.07                          | 0.99                               | 0.16                         |
-| 12 | mad.100m.1  | 0.11          | 0.34                          |                                    | 0.02                         |
-| 13 | mad.200m.2  | 0.12          | 0.09                          | 0.05                               | 0.40                         |
-| 14 | mad.100m.27 | 0.14          | 0.18                          | 0.03                               |                              |
-| 15 | mad.200m.4  | 0.17          | 0.23                          | 0.03                               | 0.33                         |
-| 16 | mad.100m.21 | 0.19          | 0.88                          | 0.32                               | 0.08                         |
-| 17 | mad.100m.14 | 0.19          | 0.36                          | 0.06                               | 0.19                         |
-| 18 | mad.200m.1  | 0.19          | 0.18                          | 0.10                               | 0.36                         |
-| 19 | mad.100m.11 | 0.20          | 0.23                          | 0.29                               | 0.14                         |
-| 20 | mad.100m.30 | 0.21          | 0.88                          | 0.03                               | 0.46                         |
-| 21 | mad.100m.8  | 0.21          | 0.85                          | 0.05                               | 0.28                         |
-| 22 | mad.50m.4   | 0.22          | 0.98                          | 0.29                               | 0.07                         |
-| 23 | mad.50m.1   | 0.22          | 0.94                          | 0.10                               | 0.50                         |
-| 24 | mad.100m.5  | 0.23          | 0.37                          | 0.11                               | 0.26                         |
-| 25 | mad.150m.7  | 0.23          | 0.26                          |                                    | 0.07                         |
-| 26 | mad.100m.18 | 0.24          | 0.28                          | 0.11                               | 0.35                         |
-| 27 | mad.100m.7  | 0.26          | 0.50                          | 0.47                               | 0.06                         |
-| 28 | mad.100m.19 | 0.26          | 0.50                          | 0.47                               | 0.14                         |
-| 29 | mad.100m.17 | 0.27          | 0.53                          | 0.18                               | 0.28                         |
-| 30 | mad.150m.4  | 0.28          | 0.35                          | 0.17                               | 0.36                         |
-| 31 | mad.150m.3  | 0.29          | 0.93                          | 0.37                               | 0.13                         |
-| 32 | mad.150m.1  | 0.29          | 0.38                          | 0.19                               | 0.28                         |
-| 33 | mad.200m.3  | 0.29          | 0.44                          | 0.24                               | 0.27                         |
-| 34 | mad.150m.2  | 0.30          | 0.60                          | 0.22                               | 0.20                         |
-| 35 | mad.150m.10 | 0.30          | 0.50                          | 0.24                               | 0.22                         |
-| 36 | mad.100m.29 | 0.31          | 0.80                          | 0.40                               | 0.16                         |
-| 37 | mad.100m.24 | 0.31          | 0.83                          | 0.24                               | 0.18                         |
-| 38 | mad.100m.10 | 0.31          | 0.87                          | 0.35                               | 0.17                         |
-| 39 | mad.100m.20 | 0.32          | 0.59                          | 0.34                               | 0.11                         |
-| 40 | mad.100m.6  | 0.32          | 0.48                          | 0.41                               | 0.09                         |
-| 41 | mad.150m.6  | 0.35          | 0.80                          | 0.34                               | 0.09                         |
-| 42 | mad.150m.8  | 0.35          | 0.94                          | 0.37                               | 0.24                         |
-| 43 | mad.50m.3   | 0.36          | 0.44                          | 0.43                               | 0.17                         |
-| 44 | mad.100m.9  | 0.36          | 0.43                          | 0.19                               | 0.38                         |
-| 45 | mad.100m.22 | 0.39          | 0.74                          | 0.33                               | 0.27                         |
-| 46 | mad.100m.16 | 0.43          | 0.05                          |                                    | 0.48                         |
+| 1  | mad.50m.2   | 0.04          |                               | 0.00                               | 1.00                         |
+| 2  | mad.150m.9  | 0.05          | 0.10                          | 0.00                               | 0.74                         |
+| 3  | mad.100m.12 | 0.06          | 0.13                          | 0.00                               |                              |
+| 4  | mad.100m.13 | 0.08          | 1.00                          | 0.01                               | 0.86                         |
+| 5  | mad.100m.4  | 0.11          | 0.89                          | 0.01                               | 0.88                         |
+| 6  | mad.100m.27 | 0.11          | 0.14                          | 0.08                               |                              |
+| 7  | mad.150m.5  | 0.15          | 0.22                          | 0.01                               | 0.61                         |
+| 8  | mad.200m.2  | 0.16          | 0.13                          | 0.07                               | 0.72                         |
+| 9  | mad.200m.5  | 0.19          | 0.09                          | 0.97                               | 0.44                         |
+| 10 | mad.50m.1   | 0.23          | 0.75                          | 0.10                               | 0.88                         |
+| 11 | mad.200m.1  | 0.23          | 0.19                          | 0.06                               | 0.67                         |
+| 12 | mad.200m.4  | 0.23          | 0.19                          | 0.06                               | 0.76                         |
+| 13 | mad.100m.30 | 0.25          | 0.90                          | 0.04                               | 0.93                         |
+| 14 | mad.100m.8  | 0.27          | 0.68                          | 0.04                               | 0.86                         |
+| 15 | mad.100m.28 | 0.28          | 0.20                          |                                    | 0.38                         |
+| 16 | mad.100m.16 | 0.28          | 0.02                          |                                    | 0.66                         |
+| 17 | mad.100m.9  | 0.29          | 0.27                          | 0.15                               | 0.71                         |
+| 18 | mad.100m.5  | 0.30          | 0.34                          | 0.13                               | 0.72                         |
+| 19 | mad.100m.18 | 0.31          | 0.34                          | 0.18                               | 0.60                         |
+| 20 | mad.150m.4  | 0.32          | 0.36                          | 0.16                               | 0.74                         |
+| 21 | mad.100m.11 | 0.34          | 0.16                          | 0.40                               | 0.53                         |
+| 22 | mad.150m.2  | 0.35          | 0.42                          | 0.15                               | 0.52                         |
+| 23 | mad.50m.5   | 0.36          | 0.34                          | 0.22                               | 0.37                         |
+| 24 | mad.50m.3   | 0.37          | 0.69                          | 0.25                               | 0.61                         |
+| 25 | mad.150m.7  | 0.37          | 0.36                          |                                    | 0.43                         |
+| 26 | mad.100m.23 | 0.38          | 0.12                          |                                    | 0.40                         |
+| 27 | mad.50m.4   | 0.38          | 0.66                          | 0.23                               | 0.53                         |
+| 28 | mad.100m.17 | 0.40          | 0.51                          | 0.25                               | 0.57                         |
+| 29 | mad.150m.1  | 0.40          | 0.34                          | 0.28                               | 0.66                         |
+| 30 | mad.100m.6  | 0.40          | 0.35                          | 0.35                               | 0.46                         |
+| 31 | mad.100m.14 | 0.40          | 0.46                          | 0.06                               | 0.49                         |
+| 32 | mad.100m.21 | 0.41          | 0.62                          | 0.36                               | 0.41                         |
+| 33 | mad.100m.7  | 0.42          | 0.36                          | 0.45                               | 0.45                         |
+| 34 | mad.100m.24 | 0.42          | 0.58                          | 0.25                               | 0.51                         |
+| 35 | mad.100m.20 | 0.42          | 0.38                          | 0.38                               | 0.48                         |
+| 36 | mad.100m.19 | 0.44          | 0.42                          | 0.40                               | 0.45                         |
+| 37 | mad.100m.3  | 0.44          | 0.81                          | 0.28                               | 0.45                         |
+| 38 | mad.150m.10 | 0.44          | 0.44                          | 0.30                               | 0.52                         |
+| 39 | mad.200m.3  | 0.45          | 0.46                          | 0.24                               | 0.55                         |
+| 40 | mad.150m.6  | 0.46          | 0.51                          | 0.39                               | 0.50                         |
+| 41 | mad.150m.3  | 0.47          | 0.68                          | 0.24                               | 0.60                         |
+| 42 | mad.100m.29 | 0.48          | 0.60                          | 0.47                               | 0.46                         |
+| 43 | mad.150m.8  | 0.48          | 0.76                          | 0.19                               | 0.72                         |
+| 44 | mad.100m.22 | 0.49          | 0.57                          | 0.34                               | 0.56                         |
+| 45 | mad.100m.10 | 0.50          | 0.70                          | 0.33                               | 0.53                         |
+| 46 | mad.100m.1  | 0.52          | 0.24                          |                                    | 0.55                         |
 #+end_example
 
 ***** Table showing the *worst* classified grids, averaged across all classifiers
@@ -1896,557 +2007,61 @@ ggplot(error.df, aes(y = overall.error, x = segment.size, color = compactness, g
 #+results:
 |    | grid        | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
 |----+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
-|  1 | mad.100m.22 |          0.42 |                          0.77 |                               0.30 |                         0.33 |
-|  2 | mad.50m.3   |          0.39 |                          1.00 |                               0.44 |                         0.23 |
-|  3 | mad.150m.6  |          0.36 |                          0.86 |                               0.33 |                         0.09 |
-|  4 | mad.150m.8  |          0.35 |                          0.97 |                               0.38 |                         0.21 |
-|  5 | mad.100m.9  |          0.35 |                          0.44 |                               0.06 |                         0.50 |
-|  6 | mad.100m.6  |          0.35 |                          0.51 |                               0.41 |                         0.10 |
-|  7 | mad.100m.10 |          0.32 |                          0.93 |                               0.34 |                         0.17 |
-|  8 | mad.100m.24 |          0.31 |                          0.91 |                               0.25 |                         0.18 |
-|  9 | mad.100m.20 |          0.31 |                          0.64 |                               0.33 |                         0.06 |
-| 10 | mad.150m.1  |          0.30 |                          0.38 |                               0.23 |                         0.28 |
-| 11 | mad.100m.19 |          0.30 |                          0.52 |                               0.52 |                         0.18 |
-| 12 | mad.150m.2  |          0.30 |                          0.58 |                               0.23 |                         0.20 |
-| 13 | mad.100m.29 |          0.29 |                          0.86 |                               0.36 |                         0.14 |
-| 14 | mad.150m.10 |          0.29 |                          0.49 |                               0.22 |                         0.23 |
-| 15 | mad.150m.3  |          0.28 |                          0.98 |                               0.38 |                         0.09 |
-| 16 | mad.150m.4  |          0.28 |                          0.35 |                               0.19 |                         0.35 |
-| 17 | mad.100m.7  |          0.26 |                          0.51 |                               0.48 |                         0.06 |
-| 18 | mad.100m.17 |          0.25 |                          0.56 |                               0.14 |                         0.28 |
-| 19 | mad.100m.18 |          0.24 |                          0.27 |                               0.13 |                         0.41 |
-| 20 | mad.150m.7  |          0.24 |                          0.26 |                                    |                         0.11 |
-| 21 | mad.100m.5  |          0.23 |                          0.38 |                               0.12 |                         0.27 |
-| 22 | mad.100m.30 |          0.22 |                          0.91 |                               0.03 |                         0.60 |
-| 23 | mad.50m.4   |          0.20 |                          1.00 |                               0.27 |                         0.06 |
-| 24 | mad.100m.8  |          0.20 |                          0.93 |                               0.06 |                         0.23 |
-| 25 | mad.100m.11 |          0.20 |                          0.26 |                               0.25 |                         0.10 |
-| 26 | mad.100m.21 |          0.20 |                          0.94 |                               0.28 |                         0.10 |
-| 27 | mad.200m.1  |          0.19 |                          0.18 |                               0.11 |                         0.39 |
-| 28 | mad.200m.2  |          0.11 |                          0.10 |                               0.05 |                         0.37 |
-| 29 | mad.100m.1  |          0.10 |                          0.40 |                                    |                         0.00 |
-| 30 | mad.200m.5  |          0.09 |                          0.06 |                               1.00 |                         0.16 |
-| 31 | mad.100m.3  |          0.09 |                          0.75 |                               1.00 |                         0.01 |
-| 32 | mad.100m.28 |          0.08 |                          0.13 |                                    |                         0.02 |
-| 33 | mad.50m.5   |          0.05 |                          0.00 |                               0.44 |                         0.02 |
-| 34 | mad.100m.23 |          0.05 |                          0.17 |                                    |                         0.04 |
-| 35 | mad.50m.2   |          0.02 |                               |                               0.00 |                         0.50 |
-| 36 | mad.100m.12 |               |                          0.11 |                                    |                              |
-| 37 | mad.100m.13 |               |                          1.00 |                                    |                         0.39 |
-| 38 | mad.100m.14 |               |                          0.34 |                                    |                         0.21 |
-| 39 | mad.100m.16 |               |                          0.04 |                                    |                         0.53 |
-| 40 | mad.100m.27 |               |                          0.16 |                                    |                              |
-| 41 | mad.100m.4  |               |                          1.00 |                                    |                         0.35 |
-| 42 | mad.150m.5  |               |                          0.12 |                                    |                         0.33 |
-| 43 | mad.150m.9  |               |                          0.14 |                                    |                         0.56 |
-| 44 | mad.200m.3  |               |                          0.41 |                                    |                         0.29 |
-| 45 | mad.200m.4  |               |                          0.24 |                                    |                         0.30 |
-| 46 | mad.50m.1   |               |                          1.00 |                                    |                         0.54 |
+|  1 | mad.100m.1  |          0.52 |                          0.24 |                                    |                         0.55 |
+|  2 | mad.100m.10 |          0.50 |                          0.70 |                               0.33 |                         0.53 |
+|  3 | mad.100m.22 |          0.49 |                          0.57 |                               0.34 |                         0.56 |
+|  4 | mad.150m.8  |          0.48 |                          0.76 |                               0.19 |                         0.72 |
+|  5 | mad.100m.29 |          0.48 |                          0.60 |                               0.47 |                         0.46 |
+|  6 | mad.150m.3  |          0.47 |                          0.68 |                               0.24 |                         0.60 |
+|  7 | mad.150m.6  |          0.46 |                          0.51 |                               0.39 |                         0.50 |
+|  8 | mad.200m.3  |          0.45 |                          0.46 |                               0.24 |                         0.55 |
+|  9 | mad.150m.10 |          0.44 |                          0.44 |                               0.30 |                         0.52 |
+| 10 | mad.100m.3  |          0.44 |                          0.81 |                               0.28 |                         0.45 |
+| 11 | mad.100m.19 |          0.44 |                          0.42 |                               0.40 |                         0.45 |
+| 12 | mad.100m.20 |          0.42 |                          0.38 |                               0.38 |                         0.48 |
+| 13 | mad.100m.24 |          0.42 |                          0.58 |                               0.25 |                         0.51 |
+| 14 | mad.100m.7  |          0.42 |                          0.36 |                               0.45 |                         0.45 |
+| 15 | mad.100m.21 |          0.41 |                          0.62 |                               0.36 |                         0.41 |
+| 16 | mad.100m.14 |          0.40 |                          0.46 |                               0.06 |                         0.49 |
+| 17 | mad.100m.6  |          0.40 |                          0.35 |                               0.35 |                         0.46 |
+| 18 | mad.150m.1  |          0.40 |                          0.34 |                               0.28 |                         0.66 |
+| 19 | mad.100m.17 |          0.40 |                          0.51 |                               0.25 |                         0.57 |
+| 20 | mad.50m.4   |          0.38 |                          0.66 |                               0.23 |                         0.53 |
+| 21 | mad.100m.23 |          0.38 |                          0.12 |                                    |                         0.40 |
+| 22 | mad.150m.7  |          0.37 |                          0.36 |                                    |                         0.43 |
+| 23 | mad.50m.3   |          0.37 |                          0.69 |                               0.25 |                         0.61 |
+| 24 | mad.50m.5   |          0.36 |                          0.34 |                               0.22 |                         0.37 |
+| 25 | mad.150m.2  |          0.35 |                          0.42 |                               0.15 |                         0.52 |
+| 26 | mad.100m.11 |          0.34 |                          0.16 |                               0.40 |                         0.53 |
+| 27 | mad.150m.4  |          0.32 |                          0.36 |                               0.16 |                         0.74 |
+| 28 | mad.100m.18 |          0.31 |                          0.34 |                               0.18 |                         0.60 |
+| 29 | mad.100m.5  |          0.30 |                          0.34 |                               0.13 |                         0.72 |
+| 30 | mad.100m.9  |          0.29 |                          0.27 |                               0.15 |                         0.71 |
+| 31 | mad.100m.16 |          0.28 |                          0.02 |                                    |                         0.66 |
+| 32 | mad.100m.28 |          0.28 |                          0.20 |                                    |                         0.38 |
+| 33 | mad.100m.8  |          0.27 |                          0.68 |                               0.04 |                         0.86 |
+| 34 | mad.100m.30 |          0.25 |                          0.90 |                               0.04 |                         0.93 |
+| 35 | mad.200m.4  |          0.23 |                          0.19 |                               0.06 |                         0.76 |
+| 36 | mad.200m.1  |          0.23 |                          0.19 |                               0.06 |                         0.67 |
+| 37 | mad.50m.1   |          0.23 |                          0.75 |                               0.10 |                         0.88 |
+| 38 | mad.200m.5  |          0.19 |                          0.09 |                               0.97 |                         0.44 |
+| 39 | mad.200m.2  |          0.16 |                          0.13 |                               0.07 |                         0.72 |
+| 40 | mad.150m.5  |          0.15 |                          0.22 |                               0.01 |                         0.61 |
+| 41 | mad.100m.27 |          0.11 |                          0.14 |                               0.08 |                              |
+| 42 | mad.100m.4  |          0.11 |                          0.89 |                               0.01 |                         0.88 |
+| 43 | mad.100m.13 |          0.08 |                          1.00 |                               0.01 |                         0.86 |
+| 44 | mad.100m.12 |          0.06 |                          0.13 |                               0.00 |                              |
+| 45 | mad.150m.9  |          0.05 |                          0.10 |                               0.00 |                         0.74 |
+| 46 | mad.50m.2   |          0.04 |                               |                               0.00 |                         1.00 |
 Error in eval(expr, envir, enclos) :
   object 'error.df.avg.grids' not found
 
 
 ***** Plots showing how grid characteristics (e.g. heterogeneity) affect accuracy
 
-*** Save Best Model
-#+begin_src R
 
-  best.classif.overall <- error.df.avg.class %>%
-      arrange(overall.error) %>%
-      slice(1) %>%
-      left_join(.,error.df) %>%
-    mutate(path = paste0(image,"_",seg.params,".models.rds")
-
-
-  best.model <- readRDS(paste0(Models.dir,"/",best.classif.overall$path))
-
-  ind <- sapply(1:length(best.model), function(i) best.model[[i]]$learner$id == best.classif.overall$model)
-
-  best.model <- best.model[ind][[1]]
-
-  saveRDS(best.model, paste0("../DD/Models/best_mad_model_",best.classif.overall$image,"_",best.classif.overall$seg.params,"_",best.model$learner$id,".rds"))
-
-#+end_src
-** Test How Madison Model performs for Wausau
-*** Classify Wausau Accuracy Regions
-**** Make tiles at accuracy regions
-#+BEGIN_SRC R :results none
-
-
-  image.names <- "wausauNAIP"
-  image.paths <- str_c("../RD_NAIP/",image.names,".tif")
-
-      foreach(i = 1:2) %do% {
-
-        foreach(img.pth = image.paths) %do% {
-
-            Reproject_Shapefile_to_Image_CRS(accuracy.region.dsn[i],
-                                             accuracy.region.layer[i],
-                                             img.pth,
-                                             accuracy.region.imageCRS.dsn)
-
-            Crop_image_to_regions_around_points_nameBygrid(shapefile.dsn = accuracy.region.imageCRS.dsn,
-                                                           shapefile.layer = accuracy.region.layer[i],
-                                                           image.path = img.pth,
-                                                           cores = cores,
-                                                           output.dir = dd.accuracy.dir,
-                                                           column.name = "unq__ID")
-
-        }
-    }
-
-
-#+END_SRC
-**** Make PixelFeatureDFs and SegmentationFeatureDFs for Accuracy Regions
-  1) Input
-     - Testing Region Shapefiles
-     - image
-  2) Operation
-     - Reproject Shapefiles to that of image
-     - Crop image to each polygon in the shapefile
-     - Derive PixelfeatureDFs and SegmentationFeatureDF from each tile of the image in region of each polygon
-  3) Output
-     - SegmentationFeatureDFs for every training polygon
-     - PixelFeatureDFs for every pixel
-
-****** Start R Loop, for every smaller image, do in parallel, :
-#+BEGIN_SRC R
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-  pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
-
-      tile.names <- list.files(dd.accuracy.dir) %>%
-           str_extract(., pattern = str_c(img.nm,".*-[0-9]+.tif$")) %>%
-           str_extract(., pattern = str_c(img.nm,".*-[0-9]+")) %>%
-           na.omit()
-
-       foreach (i = tile.names,
-                .packages = c("raster","stringr")) %dopar% {
-   #+END_SRC
-
-****** Add Ratios
-#+BEGIN_SRC R
-  add.ratios.ndvi(tile.dir = dd.accuracy.dir,
-                  tile.name = i)
-
-
- #+END_SRC
-****** Save Pixel Feature Dataframe
- #+BEGIN_SRC R
-
-   pixel.feature.df <- Create.Pixel.Feature.df(tile.dir = dd.accuracy.dir,
-                                               tile.name = i)
-
-
-
-
-#+END_SRC
-
-****** Perform PCA
-#+BEGIN_SRC R :results none
-
-# note, I copied madisonNAIP_pca to wausauNAIP_pca because we want to test if the madison pca will work for wausau
-
-                image.pca(image.name = img.nm,
-                          tile.dir = dd.accuracy.dir,
-                          tile.name = i,
-                          pca.dir = dd.pca.dir)
-        }
-  }
-   #+END_SRC
-****** Segmentation
-
-#+NAME: accuracy.dir
-#+BEGIN_SRC R
-message(dd.accuracy.dir)
-#+END_SRC
-
-
-#+BEGIN_SRC sh :var dir=accuracy.dir
-   cd $dir
-   # pixel size
-   # desired area for superpixel/segments
-   # compactness value
-   # imagename
-   python ../../code/fia_segment_cmdArgs.py 1 60 30 wausauNAIP
-
-
-#+END_SRC
-
-#+END_SRC
-
-****** Create Segment Feature Dataframe
- #+BEGIN_SRC R :results none
-   cl <- makeCluster(cores)
-   registerDoParallel(cl)
-
-   seg.feature.dfs <- foreach(img.nm = image.names) %do% {
-
-       tile.names <- list.files(dd.accuracy.dir) %>%
-           str_extract(., pattern = str_c(img.nm,".*-[0-9]+",segmentation.layer.pattern,".tif$")) %>%
-               na.omit()
-
-       seg.params <- unique(str_extract(tile.names, segmentation.layer.pattern))
-
-       foreach(seg.param.set = seg.params) %do% {
-
-           tile.names.sub <- tile.names[which(complete.cases(str_extract(tile.names,seg.param.set)))]
-           tile.names.sub <- str_replace(tile.names.sub, ".tif","")
-
-           out <- foreach (i = tile.names.sub,
-                           .packages = c("raster","stringr","dplyr","broom","tidyr")) %dopar% {
-                               seg.df <- Create.Segment.Feature.df(tile.dir = dd.accuracy.dir,
-                                                         tile.name = i)
-                               saveRDS(seg.df, file = paste0(dd.accuracy.dir,"/", i, segmentFeatureDF.appendage))
-                           }
-           out
-       }
-   }
-
-    #+END_SRC
-
-**** Classify Tiles at accuracy regions
-
-#+BEGIN_SRC R
-   cl <- makeCluster(cores)
-   registerDoParallel(cl)
-
-
-# I copied the madisonNAIP model .rds file to a wausauNAIP model.rds since we want to see the performance of
-# Madison models in Wausau
-
-
-   classified.grid.tiles <-
-       foreach(img.nm = image.names) %do% {
-
-           models <- list.files(Models.dir) %>%
-               str_extract(., str_c(".*",img.nm,".*")) %>%
-               na.omit()
-
-           tile.names <- list.files(dd.accuracy.dir) %>%
-               str_extract(., pattern = str_c(img.nm,".*[0-9]+.tif$")) %>%
-               str_replace(., segmentation.layer.pattern, "") %>%
-               str_replace(., ".tif", "") %>%
-                       na.omit() %>%
-                           unique()
-
-           foreach(tile.nm = tile.names,
-                   .packages = c("dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
-
-               foreach(model = models) %do% {
-
-                   segmentation.params <- str_extract(model, "N-[0-9]+_C-[0-9]+|Pixel")
-
-                   if(grepl("N-[0-9]+_C-[0-9]+",segmentation.params)) {
-                          segment.tile.name.append <- paste0("_",segmentation.params,".tif")
-                          segment.feature.df.name.append <- paste0("_",segmentation.params,segmentFeatureDF.appendage)
-
-                          classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
-                                          model.dir = Models.dir,
-                                          segment.dir = dd.accuracy.dir,
-                                          classify.out.dir = dd.accuracy.dir,
-                                          tile.name = tile.nm,
-                                          segmentation.appendage = segment.tile.name.append,
-                                          model.name.rds = model,
-                                          segment.feature.appendage = segment.feature.df.name.append,
-                                          segmentation.prms = segmentation.params)
-
-                   } else {
-                       classify.pixel.raster(tile.dir = dd.accuracy.dir,
-                                             tile.name = tile.nm,
-                                             pixelFeatureDF.appendage = pixel.feature.df.appendage,
-                                             model.dir = Models.dir,
-                                             model.rds = model,
-                                             seg.prms = segmentation.params)
-                   }
-               }
-           }
-       }
-
-
-  stopCluster(cl)
-#+END_SRC
-
-
-
-
-
-
-
-*** Assess Accuracy of Wausau classified tiles
-**** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data
-#+BEGIN_SRC R
-        wau.grid.id.pattern = "wau-[0-9]+m-[0-9]+_"
-        grid.pattern = "[a-zA-Z]{3}-[0-9]+m-[0-9]+_"
-        image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
-        target.pattern = "all|grass|impervious|tree"
-        model.pattern = "rf_prob|rf_resp|svm_resp"
-        seg.prms = "N-[0-9]+_C-[0-9]+|Pixel"
-
-
-    grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
-
-        grd <- spTransform(grd, utm16)
-
-        xy <- coordinates(grd)
-        grd@data$x <- xy[,1]
-        grd@data$y <- xy[,2]
-
-
-        classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-            str_extract(., pattern = ".*.tif$") %>%
-            str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
-            na.omit()
-
-        grid.names <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-            str_extract(., pattern = ".*.tif$") %>%
-            str_extract(., pattern = wau.grid.id.pattern) %>%
-            str_sub(.,1,-2) %>%
-            unique() %>%
-            na.omit()
-
-    grid.name = grid.names[7]
-
-    cl <- makeCluster(cores)
-        registerDoParallel(cl)
-
-
-        error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
-
-            pts <- grd[grd@data$unq__ID== grid.name,]
-
-            classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
-                na.omit()
-
-             classified.tile.paths.at.grid = classified.tile.paths.at.grid %>%
-                  str_extract(., ".*wausauNAIP.*") %>%
-                  na.omit()
-
-             classified.tile.path.at.grid = classified.tile.paths.at.grid[11]
-
-
-            foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
-                    .combine = "rbind",
-                    .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
-
-                        classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
-                        classified.tile <- raster(classified.tile.path.at.grid)
-
-                        tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
-                        tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
-
-                        ## png(str_c(dd.accuracy.dir,"/ClassifiedTiles/ClassifiedVersusGrid","/",names(classified.tile),".png"))
-                        ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
-                        ##dev.off()
-
-                        PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
-
-                        if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
-                            error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
-                            error <- error %>%
-                                t() %>%
-                                data.frame() %>%
-                                mutate(grid = grid.name,
-                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
-                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
-                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                                       seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
-                            error
-                        } else {
-                            target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
-                            target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
-                            error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
-                            error <- error %>%
-                                t() %>%
-                                data.frame() %>%
-                                mutate(grid = grid.name,
-                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
-                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
-                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                                       seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
-
-                            error
-                        }
-                    }
-        }
-
-
-
-        saveRDS(error.df, str_c(derived.dir, /"point2pixel.error.df.Wausau.rds"))
-  error.df <-readRDS(str_c(derived.dir, "/point2pixel.error.df.Wausau.rds"))
-
-  error.df %>%
-            arrange(overall.error) %>%
-            head()
-
-        error.df %>%
-            arrange(desc(overall.error)) %>%
-            head()
-
-  error.df %>%
-      filter(model == "rf_prob", target.cover == "tree") %>%
-            arrange(desc(overall.error)) %>%
-            head()
-
-
-
-      error.df <- error.df %>%
-            mutate(segment.size = ifelse(!is.na(str_extract(seg.params, ".*105.*")), 105,
-                                  ifelse(!is.na(str_extract(seg.params, ".*60.*")), 60,
-                                  ifelse(!is.na(str_extract(seg.params, ".*30.*")), 30,
-                                  ifelse(!is.na(str_extract(seg.params, ".*70.*")), 105,
-                                  ifelse(!is.na(str_extract(seg.params, ".*40.*")), 60,
-                                  ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
-
-
-#+END_SRC
-
-
-#+BEGIN_SRC R :results graphics :file figs/grid.errors2.wausaufix.png :height 800 :width 600
-  ggplot(error.df, aes(y = overall.error, x = grid, color = target.cover)) + geom_point() +
-      facet_grid(image~seg.params)
-#+END_SRC
-
-#+BEGIN_SRC R :results graphics :file figs/grid.errors4.wausau.png :height 800 :width 600
-  ggplot(error.df, aes(y = overall.error, x = grid, color = target.cover)) + geom_point() +
-      facet_grid(image~segment.size)
-#+END_SRC
-
-
-#+BEGIN_SRC R :results graphics :file figs/grid.errors5.wausau.png :height 800 :width 600
-  ggplot(error.df, aes(y = overall.error, x = segment.size)) +
-      geom_point(data = error.df, aes(color = target.cover), position = position_dodge(width = 20)) +
-      facet_grid(model~image)
-#+END_SRC
-
-#+BEGIN_SRC R :results graphics :file figs/grid.errors6.wausau.png :height 800 :width 800
-  error.df.ssfac <- mutate(error.df, segment.size = factor(segment.size)) %>%
-  filter(target.cover == "all")
-
-      ggplot(error.df.ssfac, aes(y = overall.error, x = model)) +
-          geom_boxplot(data = error.df.ssfac, aes(group = model)) +
-          facet_grid(target.cover~image) +
-	  geom_line(data = error.df.ssfac, aes(color = grid, group = grid), size = 1) +
-	  theme_bw()
-#+END_SRC
-
-#+BEGIN_SRC R :results graphics :file figs/grid.errors6.wausau.tree.png :height 800 :width 800
-  error.df.ssfac <- mutate(error.df, segment.size = factor(segment.size)) %>%
-  filter(target.cover == "tree")
-
-      ggplot(error.df.ssfac, aes(y = overall.error, x = model)) +
-          geom_boxplot(data = error.df.ssfac, aes(group = model)) +
-          facet_grid(target.cover~image) +
-	  geom_line(data = error.df.ssfac, aes(color = grid, group = grid), size = 1) +
-	  theme_bw()
-#+END_SRC
-
-
-
-
-
-
-
-#+BEGIN_SRC R :results graphics :file figs/grid.errors.tree.wausau.png :height 800 :width 800
-  error.df.ssfac.tree <- filter(error.df.ssfac, target.cover == "all" | target.cover == "tree")
-
-      ggplot(error.df.ssfac.tree, aes(y = pct.tree.classified.as.other)) +
-          geom_boxplot(data = error.df.ssfac.tree, aes(color = target.cover, group = interaction(target.cover,segment.size))) +
-          facet_grid(image~model)
-#+END_SRC
-
-
-#+BEGIN_SRC R :results graphics :file figs/grid.errors.grass.png :height 800 :width 800
-  error.df.ssfac.grass <- filter(error.df.ssfac, target.cover == "all" | target.cover == "grass")
-
-      ggplot(error.df.ssfac.grass, aes(y = pct.grass.classified.as.other, x = segment.size)) +
-          geom_boxplot(data = error.df.ssfac.grass, aes(color = target.cover, group = interaction(target.cover,segment.size))) +
-          facet_grid(model~image)
-#+END_SRC
-
-#+BEGIN_SRC R :results raw
-  error.mod <- lm(overall.error ~ image * (target.cover + model + segment.size), data = error.df)
-  tidy(error.mod) %>% ascii()
-#+END_SRC
-
-                                    term      estimate    std.error
-1                             (Intercept)  0.2594736239 9.457737e-03
-2                         imagepanshpSPOT  0.1727955729 1.522839e-02
-3                       target.covergrass -0.0818909914 9.689578e-03
-4                  target.coverimpervious -0.1373055644 9.689578e-03
-5                        target.covertree -0.0611569996 9.689578e-03
-6                            modelrf_resp  0.0001428180 8.391421e-03
-7                           modelsvm_resp -0.0122835115 8.391421e-03
-8                            segment.size -0.0001441090 8.903396e-05
-9       imagepanshpSPOT:target.covergrass -0.0950710892 1.612641e-02
-10 imagepanshpSPOT:target.coverimpervious  0.1013795711 1.612641e-02
-11       imagepanshpSPOT:target.covertree -0.1345326137 1.612641e-02
-12           imagepanshpSPOT:modelrf_resp  0.0004778158 1.396589e-02
-13          imagepanshpSPOT:modelsvm_resp  0.1315548935 1.396589e-02
-14           imagepanshpSPOT:segment.size -0.0008378628 1.489573e-04
-      statistic       p.value
-1   27.43506508 3.802666e-151
-2   11.34693391  2.306554e-29
-3   -8.45145037  4.066308e-17
-4  -14.17043735  1.931840e-44
-5   -6.31162645  3.083836e-10
-6    0.01701953  9.864219e-01
-7   -1.46381779  1.433277e-01
-8   -1.61858472  1.056209e-01
-9   -5.89536419  4.069309e-09
-10   6.28655355  3.619056e-10
-11  -8.34237580  1.011573e-16
-12   0.03421307  9.727091e-01
-13   9.41973196  7.679367e-21
-14  -5.62485092  1.992621e-08
-
-#+BEGIN_SRC R :results raw
-options(asciiType = "org")
-options(warn = -1)
-  error.df %>%
-      group_by(image, target.cover, model, seg.params) %>%
-      summarize(overall.error = mean(overall.error)) %>%
-      ungroup() %>%
-      arrange(overall.error) %>%
-      head(n=40) %>%
-      ascii()
-#+END_SRC
-
-
-
-#+BEGIN_SRC R :results raw
-  options(asciiType = "org")
-  options(warn = -1)
-    error.df %>%
-        filter(target.cover == "all") %>%
-        group_by(image, target.cover, model, seg.params) %>%
-        summarize(overall.error = mean(overall.error)) %>%
-        ungroup() %>%
-        arrange(overall.error) %>%
-        head(n=40) %>%
-        ascii()
-#+END_SRC
-
-
-
-#+BEGIN_SRC R :results raw
-  options(asciiType = "org")
-  options(warn = -1)
-    error.df %>%
-        filter(target.cover == "all") %>%
-        group_by(image, target.cover, model, seg.params) %>%
-        summarize(pct.tree.classified.as.other = mean(pct.tree.classified.as.other)) %>%
-        ungroup() %>%
-        arrange(pct.tree.classified.as.other) %>%
-        head(n=40) %>%
-        ascii()
-
-#+END_SRC
-
-
-**** RMSE at grid level
-***** Combine google earth grid estimates of cover with classified tile estimates of cover
+***** RMSE at grid level
+****** Combine google earth grid estimates of cover with classified tile estimates of cover
 
  Create dataframe with structure:
 
@@ -2460,7 +2075,7 @@ options(warn = -1)
 
 
 
-****** Create DF of % cover from grids cropped to different extents
+******* Create DF of % cover from grids cropped to different extents
  #+BEGIN_SRC R
         grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
         grd.df <- grd@data
@@ -2479,7 +2094,7 @@ options(warn = -1)
      saveRDS(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets, str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
  #+END_SRC
 
-****** Create DF of % cover from classified rasters cropped to different extents
+******* Create DF of % cover from classified rasters cropped to different extents
 
 #+BEGIN_SRC R
 
@@ -2538,7 +2153,7 @@ options(warn = -1)
 
 
 
-****** Join Cover from Grids with predicted Cover from images
+******* Join Cover from Grids with predicted Cover from images
 #+BEGIN_SRC R
     Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- readRDS(str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
 
@@ -2575,7 +2190,7 @@ options(warn = -1)
 #+END_SRC
 
 
-***** Make RMSE plots
+****** Make RMSE plots
 
 #+BEGIN_SRC R :results graphics :file figs/wausauNAIP.100m.RMSE_plot.png :height 800 :width 600
 
@@ -2595,7 +2210,7 @@ options(warn = -1)
 
 
 
-***** Calc RMSE table
+****** Calc RMSE table
 
  Create dataframe with structure:
 
@@ -2604,7 +2219,7 @@ options(warn = -1)
  |      |       |              |        |       |                  |            |   |   |   |   |   |   |   |
 
 
-****** Calc Error Column
+******* Calc Error Column
 
 #+BEGIN_SRC R
   error_tree <- grid.master.df %>%
@@ -2641,7 +2256,7 @@ options(warn = -1)
                             ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
 #+END_SRC
 
-***** RMSE analysis
+****** RMSE analysis
 
 Which combination of image, segmentation, target, model and n.pts
 (spatial scale) minimize error for each cover_type?
@@ -2703,6 +2318,410 @@ facet(segmentation~cover_type)
 ascii()
 #+END_SRC
 
+*** Save Best Model
+#+begin_src R
+
+  best.classif.overall <- error.df.avg.class %>%
+      arrange(overall.error) %>%
+      slice(1) %>%
+      left_join(.,error.df) %>%
+    mutate(path = paste0(image,"_",seg.params,"_",model,"_model.rds"))
+
+
+  best.model <- readRDS(paste0(dd.models.dir,"/",best.classif.overall$path))
+
+  saveRDS(best.model, paste0(dd.models.dir,"/best_mad_model_",best.classif.overall$image,"_",best.classif.overall$seg.params,"_",best.model$learner$id,".rds"))
+
+#+end_src
+
+#+results:
+:  Error: unexpected symbol in:
+: "
+: best.model"
+: Error in lapply(X = X, FUN = FUN, ...) : object 'best.model' not found
+: Error: object 'best.model' not found
+: Error in paste0("../DD/Models/best_mad_model_", best.classif.overall$image,  :
+:   object 'best.model' not found
+
+** Test How Madison Model performs for Wausau
+*** Set location to Wausau and image to NAIP, pca location to "madison", models: Madison
+#+begin_src R
+  location <- "wausau"
+  image.names <- "NAIP"
+  image.paths <- str_extract(image.paths, paste0(".*",location,image.name,".*")) %>% na.omit
+
+  dd.accuracy.dir <- str_extract(dd.accuracy.dirs, paste0(".*",location,".*")) %>% na.omit
+  dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*",location,".*")) %>% na.omit
+
+  dd.models.dir <- str_extract(dd.models.dirs, paste0(".*","madison",".*")) %>% na.omit
+
+  dd.pca.dir <-  str_extract(dd.pca.dirs, paste0(".*","madison",".*")) %>% na.omit
+  pca.location <- "madison"
+#+end_src
+
+#+results:
+
+#+results:{{{results(==)}}}
+*** Make tiles at accuracy regions
+
+make this i = 1:2 (or 1:3) to do all the accuracy regions
+
+#+BEGIN_SRC R :results none
+
+      foreach(i = 1) %do% {
+
+        foreach(img.pth = image.paths) %do% {
+
+            Reproject_Shapefile_to_Image_CRS(accuracy.region.dsn[i],
+                                             accuracy.region.layer[i],
+                                             img.pth,
+                                             accuracy.region.imageCRS.dsn)
+
+
+            Crop_image_to_regions_around_points_nameBygrid(shapefile.dsn = accuracy.region.imageCRS.dsn,
+                                                           shapefile.layer = accuracy.region.layer[i],
+                                                           image.path = img.pth,
+                                                           cores = cores,
+                                                           output.dir = dd.accuracy.dir,
+                                                           column.name = tile.id.col.nm.for.grid.and.field.accuracy[i])
+
+        }
+    }
+
+
+#+END_SRC
+
+*** Make Feature data frames, for each Accuracy Region tile; "madison" is pca location
+
+ #+begin_src R :results silent
+   cl <- makeCluster(cores)
+   registerDoParallel(cl)
+
+
+
+   pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
+
+                                           #img.nm <- image.names[1]
+
+       tile.names <- list.files(dd.accuracy.dir) %>%
+           str_match(., pattern = str_c("(",location,img.nm,".",grid.pattern,")(.tif)"))
+
+       tile.names <- tile.names[,2] %>% na.omit()
+
+       foreach (i = tile.names,
+                .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
+
+                    feature.dfs <- make.feature.df(tile.dir = dd.accuracy.dir,
+                                                   tile.name = i,
+                                                   image.name = img.nm,
+                                                   band.names = c("blue","green","red","nir"),
+                                                   ndvi = T,
+                                                   ratio.bands = c("blue","green","red","nir"),
+                                                   texture.params.df = texture.params,
+                                                   pixel.df = T,
+                                                   pca.location = pca.location,
+                                                   segmentation = T,
+                                                   segment.params.df = segment.params)
+
+                }
+   }
+
+#+end_src
+
+*** Classify Tiles at accuracy regions using "best model"
+#+BEGIN_SRC R :results none
+     cl <- makeCluster(cores)
+     registerDoParallel(cl)
+
+
+     classified.grid.tiles <-
+         foreach(img.nm = image.names) %do% {
+
+             best.model <- list.files(dd.models.dir) %>%
+                 str_extract(., "best_mad_model_.*") %>%
+                 na.omit()
+
+             tile.names <- list.files(dd.accuracy.dir) %>%
+                 str_match(., pattern = str_c("(",location,img.nm,".*?)_.*\\.tif$"))
+
+             tile.names <- tile.names[,2] %>% na.omit() %>% unique()
+
+
+             foreach(tile.nm = tile.names,
+                     .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %do% {
+
+                 foreach(model = best.model) %do% {
+
+                     seg.p <- str_extract(model, segmentation.pattern)
+
+                     if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
+                            segment.tile.name.append <- paste0("_",seg.p,".tif")
+                            segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
+
+                            classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
+                                            model.dir = dd.models.dir,
+                                            segment.dir = dd.accuracy.dir,
+                                            classify.out.dir = dd.accuracy.dir,
+                                            tile.name = tile.nm,
+                                            segmentation.appendage = segment.tile.name.append,
+                                            model.name.rds = model,
+                                            segment.feature.appendage = segment.feature.df.name.append,
+                                            segmentation.prms = seg.p)
+
+                     } else {
+                         classify.pixel.raster(tile.dir = dd.accuracy.dir,
+                                               tile.name = tile.nm,
+                                               pixelFeatureDF.appendage = feature.df.appendage,
+                                               model.dir = dd.models.dir,
+                                               model.rds = model,
+                                               seg.prms = seg.p)
+                     }
+                 }
+             }
+         }
+
+         out <- foreach(i = i_areas_less_quant) %do% {
+              urb.poly <- urb.polys[i]
+
+    stopCluster(cl)
+
+         ## out <- foreach(i = 1:length(urb.polys),
+         ##               .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr")) %dopar% {
+
+#+END_SRC
+
+
+
+
+*** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data
+#+BEGIN_SRC R
+      grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
+
+      xy <- coordinates(grd)
+      grd@data$x <- xy[,1]
+      grd@data$y <- xy[,2]
+
+  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+      str_extract(., pattern = ".*.tif$") %>%
+          str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
+          na.omit()
+
+
+  grid.names <- classified.tile.paths %>%
+      str_match(., paste0(".*(",grid.pattern,").*"))
+
+  grid.names <- grid.names[,2] %>%
+      unique() %>%
+      na.omit()
+
+
+      cl <- makeCluster(cores)
+      registerDoParallel(cl)
+
+
+      error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
+
+          pts <- grd[grd@data$unq__ID== grid.name,]
+
+          classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
+              na.omit()
+
+          ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
+          ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
+          ##      na.omit()
+
+  #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
+
+
+
+          foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
+                  .combine = "rbind",
+                  .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+
+                      classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
+                      classified.tile <- raster(classified.tile.path.at.grid)
+
+                      tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
+                      tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+
+                     ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
+                     ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
+                     ## dev.off()
+
+                      PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
+
+                      if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
+                          error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
+                          error <- error %>%
+                              t() %>%
+                              data.frame() %>%
+                              mutate(grid = grid.name,
+                                     image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                     target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                     model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                     seg.params = str_extract(classified.tile.name.at.grid, segmentation.pattern))
+                          error
+                      } else {
+                          target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
+                          target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                          error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
+                          error <- error %>%
+                              t() %>%
+                              data.frame() %>%
+                              mutate(grid = grid.name,
+                                     image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                     target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                     model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                     seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
+
+                          error
+                      }
+                  }
+      }
+
+
+
+      saveRDS(error.df, str_c(derived.dir, "/",location,"_point2pixel.error.df.rds"))
+
+  ##   tile.name.at.urb.poly <- tiles.names.at.urb.poly[[1]]
+#+END_SRC
+
+#+results:
+: OGR data source with driver: ESRI Shapefile
+: Source: "../RD_Accuracy/Grids", layer: "Grids"
+: with 20209 features
+: It has 15 fields
+
+
+
+*** Plot classifications
+#+begin_src R
+  error.df <- error.df %>%
+    mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_","madisonNAIP","_",target.cover,"_",model,".tif"))
+
+    lapply(1:nrow(error.df), function(i){
+        pts.on.classified.tile.plot.ErrorinTitle(error = error.df$overall.error[i],
+                                             grd.pts = grid.points,
+                                             classified.tile.path = error.df$path[i],
+                                             fig.dir = "figs/wausau.classifications",
+                                             target = "a")
+    })
+
+#+end_src
+
+#+results:
+#+begin_example
+ Warning: closing unused connection 6 (<-localhost:11247)
+Warning: closing unused connection 5 (<-localhost:11247)
+Warning: closing unused connection 4 (<-localhost:11247)
+Warning: closing unused connection 3 (<-localhost:11247)
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+Warning in dir.create(fig.dir) :
+  'figs/wausau.classifications' already exists
+[[1]]
+null device
+          1
+
+[[2]]
+null device
+          1
+
+[[3]]
+null device
+          1
+
+[[4]]
+null device
+          1
+
+[[5]]
+null device
+          1
+
+[[6]]
+null device
+          1
+
+[[7]]
+null device
+          1
+
+[[8]]
+null device
+          1
+
+[[9]]
+null device
+          1
+
+[[10]]
+null device
+          1
+#+end_example
+
+*** Summarize Accuracy Assessment Results
+
+Comparing classification to other estimates of cover.
+#+begin_src R :results none
+      error.df <- readRDS(str_c(derived.dir, "/",location,"point2pixel.error.df.rds"))
+
+      error.df %>%
+          arrange(overall.error) %>%
+          head()
+
+      error.df %>%
+          arrange(desc(overall.error)) %>%
+          head()
+
+      error.df %>%
+          filter(seg.params != "Pixel") %>%
+          arrange(desc(overall.error)) %>%
+          head()
+
+  error.df <- error.df %>%
+      mutate(segment.size = as.numeric(ifelse(!is.na(str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2]), str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2], 1)),
+             segment.size = ifelse(image == "panshpSPOT", segment.size * 1.5, segment.size),
+             compactness = as.numeric(str_match(seg.params, "N-[0-9]+_C-([0-9]+)")[,2]))
+
+#+end_src
+
+#+begin_src R :results raw
+options(warn = -1)
+error.df %>% arrange(overall.error) %>% ascii
+options(warn = 1)
+#+end_src
+
+#+results:
+|    | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other | grid        | image      | target.cover | model   | seg.params | path                                                                                           | segment.size | compactness |
+|----+---------------+-------------------------------+------------------------------------+------------------------------+-------------+------------+--------------+---------+------------+------------------------------------------------------------------------------------------------+--------------+-------------|
+|  1 |          0.10 |                               |                                    |                         0.10 | wau.100m.1  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.1_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
+|  2 |          0.20 |                          0.37 |                               0.03 |                         1.00 | wau.100m.4  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.4_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
+|  3 |          0.21 |                          0.43 |                               0.02 |                         1.00 | wau.100m.10 | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.10_Pixel_madisonNAIP_all_rf_prob.tif |         1.00 |             |
+|  4 |          0.28 |                               |                                    |                         0.28 | wau.100m.3  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.3_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
+|  5 |          0.31 |                          0.40 |                               0.00 |                         0.31 | wau.100m.2  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.2_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
+|  6 |          0.32 |                          0.25 |                               0.04 |                         0.66 | wau.100m.5  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.5_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
+|  7 |          0.33 |                          0.58 |                               0.07 |                         0.69 | wau.100m.6  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.6_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
+|  8 |          0.36 |                          0.39 |                               0.06 |                         0.92 | wau.100m.7  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.7_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
+|  9 |          0.42 |                          0.17 |                               0.15 |                         0.76 | wau.100m.8  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.8_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
+| 10 |          0.59 |                          0.53 |                               0.28 |                         0.70 | wau.100m.9  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.9_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
+
 ** How accurate is NAIP?
 
 If I use the grids, I can also show how naip accuracy changes with
@@ -2722,8 +2741,22 @@ grid characteristics like heterogeneity.
 
   pts.urb <- over(pts.robi, madison) %>% na.omit()
 
+***** Generate Feature data frame
+#+begin_src R
+      make.feature.df(image.dir = tile.urb.path,
+                      image.name = "urbanExtent",
+                      band.names = c("blue","green","red","nir"),
+                      ndvi = T,
+                      ratio.bands = c("blue","green","red","nir"),
+                      texture.params.df = texture.params,
+                      pixel.df = F,
+                      pca.source.image.name = "madisonNAIP",
+                      segmentation = T,
+                      segment.params.df = segment.params,
+                      seg.dir.up = " ../../../../")
 
 
+***** Classify
 
 #+END_SRC
 
@@ -2753,27 +2786,22 @@ wtm <- CRS("+init=epsg:3070")
 
 *** cores
 #+BEGIN_SRC R
-cores <- detectCores() - 2
+  message("Done with",tile.urb.path)
+  }
 #+END_SRC
 
 #+results:
 
 *** Urban, Water, and Wetland shapefiles
 #+BEGIN_SRC R
-  urban.areas.dsn <- "../RD_merged_WIurbanAreas_and_incorporatedAreas"
-  urban.areas.layer <- "Dissolve_Merge_WI_census_inc"
-
-  ## urban.areas.dsn <- "../RD_US_UrbanAreasShapefile"
-  ## urban.areas.layer <- "cb_2013_us_ua10_500k"
+    classified.tiles <- list.files(urb.path, recursive = T, full.names = T)  %>%
+      str_extract(pattern = ".*classified_urbanExtent.*tif$") %>%
+  na.omit()
 
 
-  water.dsn <- "../RD_WI-waterbody-24k"
-  water.layer <- "WD-Hydro-Waterbody-WBIC-AR-24K"
 
-  wetlands.dsn <- "../RD_Wetland"
-  wetlands.layer <- "WI_Wetlands"
 
-#+END_SRC
+  rlist <- lapply(classified.tiles, stack)
 
 #+results:
 
@@ -2786,7 +2814,8 @@ cores <- detectCores() - 2
   crop2013.name <- "CDL_2013_clip_20151229123327_86558742"
   crop2014.name <- "CDL_2014_clip_20151229123327_86558742"
 
-  n_croplandLayers <- 5
+  writeRaster(x = out, filename = paste0(urb.path,"/ClassifiedUrbanArea_",i,".tif"), overwrite = T)
+  paste0("Wrote ","ClassifiedUrbanArea_",i,".tif")
 
 #+END_SRC
 
@@ -2808,8 +2837,9 @@ naip.dir <- "../../../../home/erker/NAIP_mount/NAIP13_WTM_TIFs"
 
 *** PCA
 #+BEGIN_SRC R
-madison.naip.pca.path <- "../DD/Madison_pca/madisonNAIP_pca.rds"
-#+END_SRC
+  intermediate.work <- list.files(urb.path, full.names = T)
+  intermediate.work <- intermediate.work[!grepl(intermediate.work,pattern = ".*(tif)$", perl = T)]
+  unlink(intermediate.work, recursive = T)
 
 #+results:
 
@@ -2825,7 +2855,7 @@ dir.create(classified.urban.areas.dir)
 : In dir.create(classified.urban.areas.dir) :
 :   '../DD/ClassifiedUrbanAreas' already exists
 
-*** filename appendages
+**** End Loop for all urban areas
 #+BEGIN_SRC R
   ## ratio.tile.name.append = "_ratio"
   ## pca.tile.name.append = "_pca"
@@ -2859,9 +2889,6 @@ dir.create(classified.urban.areas.dir)
 
 ** Disaggregate Urban Area Polygons
 
-#+BEGIN_SRC R
-  urb.polys <- disaggregate(as(urban, "SpatialPolygons"))
-#+END_SRC
 
 #+results:
 

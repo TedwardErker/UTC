@@ -1,5 +1,3 @@
-
-
 # This should be run from the virtual environment in the project directory
 import sys
 from skimage.segmentation import slic
@@ -46,17 +44,26 @@ PixelSize = sys.argv[1]
 AreaForSegment = sys.argv[2]
 compactnessValue = sys.argv[3]
 image_name = sys.argv[4]
+image_directory = sys.argv[5]
+
+
+# PixelSize = 1
+# AreaForSegment = 20
+# compactnessValue = 12
+# image_name = "madisonNAIP.1"
+# image_directory = "../DD/madison_Training"
+
+
+print image_directory
 
 PixPerSegValue = float(AreaForSegment) / float(PixelSize)
 
 
 print 'average number of pixels per segment is ' + str(PixPerSegValue)
-print 'compactness parameter is ' + compactnessValue
+print 'compactness parameter is ' + str(compactnessValue)
 
 
 bandsToUse = slice(0,3) # Use only principal components 1-3
-
-image_directory = os.getcwd()
 
 files = os.listdir(image_directory)
 files = [x for x in files if x.endswith('_pca.tif')]
@@ -70,11 +77,10 @@ slic_params = np.array([[int(round(PixPerSegValue)), int(compactnessValue)]])
 
 
 for f in files :
-    f_out = f[:-8]
     for pc in slic_params :
-        source_raster_path = os.path.expanduser(f)
-        target_raster_path = os.path.expanduser(f_out + '_N-%s_C-%s.tif') %(pc[0],pc[1])
-        RowsColumnsArray = create_array_forSeg_fromTiff(f, bandsToUse)
+        source_raster_path = os.path.abspath(image_directory + "/" + f)
+        target_raster_path = os.path.abspath(image_directory + "/" + image_name + '_N-%s_C-%s.tif') %(pc[0],pc[1])
+        RowsColumnsArray = create_array_forSeg_fromTiff(source_raster_path, bandsToUse)
         segments = seg_tiff(RowsColumnsArray, PixPerSeg = pc[0], compactness = pc[1])
         build_tiff(source_raster_path, target_raster_path, segments)
 

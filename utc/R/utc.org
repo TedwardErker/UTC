@@ -8,11 +8,11 @@
 ** miscellaneous
 *** Extract Name from path
 #+BEGIN_SRC R
-      # Use basename instead!
-        extract.name.from.path <- function(path) {
-            str_extract(basename(path), "[A-Za-z0-9_]*.") %>%
-                str_sub(.,1,-2)
-        }
+                                          # Use basename instead!
+  extract.name.from.path <- function(path) {
+      str_extract(basename(path), "[A-Za-z0-9_]*.") %>%
+          str_sub(.,1,-2)
+  }
 
 #+END_SRC
 
@@ -36,9 +36,9 @@
 #+RESULTS:
 *** get polygon ids
 #+begin_src R
-IDs.SpatialPolygonsDataFrame <- function(x,...) {
-  vapply(slot(x, "polygons"), function(x) slot(x, "ID"), "")
-}
+  IDs.SpatialPolygonsDataFrame <- function(x,...) {
+      vapply(slot(x, "polygons"), function(x) slot(x, "ID"), "")
+  }
 #+end_src
 
 #+results:
@@ -48,27 +48,27 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
 *** Crop image to each Shapefile polygon
 #+BEGIN_SRC R
   Crop_image_to_each_Shapefile_polygon <- function(shapefile.dsn,
-                                                     shapefile.layer,
-                                                     image.path,
-                                                     cores,
-                                                     output.dir)  {
-        image.name <- extract.name.from.path(image.path)
-        shape <- readOGR(shapefile.dsn, str_c(image.name,"_",shapefile.layer))
-        polygons <- as(shape, "SpatialPolygons")
+                                                   shapefile.layer,
+                                                   image.path,
+                                                   cores,
+                                                   output.dir)  {
+      image.name <- extract.name.from.path(image.path)
+      shape <- readOGR(shapefile.dsn, str_c(image.name,"_",shapefile.layer))
+      polygons <- as(shape, "SpatialPolygons")
 
-        image <- stack(image.path)
+      image <- stack(image.path)
 
-        cl <- makeCluster(cores)
-        registerDoParallel(cl)
+      cl <- makeCluster(cores)
+      registerDoParallel(cl)
 
-        foreach (i = seq_along(polygons),
-                 .packages = c("raster")) %dopar% {
-                     r <- image
-                     r <- crop(r, polygons[i])
-                     writeRaster(r, paste0(output.dir,"/",image.name,".",i,".tif"),
-                                 overwrite = T)
-                 }
-    }
+      foreach (i = seq_along(polygons),
+               .packages = c("raster")) %dopar% {
+                   r <- image
+                   r <- crop(r, polygons[i])
+                   writeRaster(r, paste0(output.dir,"/",image.name,".",i,".tif"),
+                               overwrite = T)
+               }
+  }
 
 #+END_SRC
 
@@ -86,7 +86,7 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
       po <- gIntersects(points, polygons, byid=TRUE)
       out <- foreach(polygon.number = seq_along(polygons), .combine = "rbind") %do% {
           first.point.data <- points[po[polygon.number,],]@data %>%
-              slice(1)
+                                                         slice(1)
           pd <- as(polygons[polygon.number], "SpatialPolygonsDataFrame")
           pd@data <- first.point.data
           pd
@@ -125,7 +125,7 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
       registerDoParallel(cl)
 
       foreach (k = seq_along(polygons),
-               .packages = c("raster","rgeos")) %dopar% {
+               .packages = c("raster","rgeos")) %do% {
                    r <- image
                    poly <- gBuffer(polygons[k,],width = polygon.buffer.size, byid = T)
                    r <- crop(r, poly)
@@ -173,11 +173,11 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
 ** Feature Data Frame Related: texture, pca, segmentation, etc.
 *** Save each band
 #+begin_src R
-    save_each_band <- function(image.path, band.names) {
-      image <- stack(image.path)
-      names(image) <- band.names
-      image.name <- str_sub(basename(image.path),1,-5)
-      writeRaster(image, filename = paste0(dirname(image.path),"/",image.name,"_",names(image), ".tif"), bylayer = T, format = "GTiff", overwrite = T)
+  save_each_band <- function(tile.path, band.names) {
+      tile <- stack(tile.path)
+      names(tile) <- band.names
+      tile.name <- str_sub(basename(tile.path),1,-5)
+      writeRaster(tile, filename = paste0(dirname(tile.path),"/",tile.name,"_",names(tile), ".tif"), bylayer = T, format = "GTiff", overwrite = T)
   }
 
 #+end_src
@@ -185,18 +185,26 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
 #+results:
 *** Add Texture
 #+begin_src R
-    named.glcm <- function(image.dir, image.basename, band.appendage, window, statistics, shift, na_opt, na_val,...) {
+  named.glcm <- function(tile.dir, tile.basename, band.appendage, window, statistics, shift, na_opt, na_val,...) {
 
-        image.path <- paste0(image.dir, "/", image.basename,band.appendage,".tif")
-        x <- raster(image.path)
+      tile.path <- paste0(tile.dir, "/", tile.basename,band.appendage,".tif")
+      x <- raster(tile.path)
 
-  if (statistics == "correlation") {
-       texture <- glcm(x, window = window, statistics = statistics, shift = shift, na_opt = na_opt, na_val = na_val)
-       texture[texture == -Inf] <- -1
-       texture[texture == Inf] <- 1
-   texture[is.na(texture)] <- 1
-  } else {
-        texture <- glcm(x, window = window, statistics = statistics, shift = shift, na_opt = na_opt, na_val = na_val)
+      if (statistics == "correlation") {
+          texture <- glcm(x, window = window, statistics = statistics, shift = shift, na_opt = na_opt, na_val = na_val)
+          texture[texture == -Inf] <- -1
+          texture[texture == Inf] <- 1
+          texture[is.na(texture)] <- 1
+      } else {
+          texture <- glcm(x, window = window, statistics = statistics, shift = shift, na_opt = na_opt, na_val = na_val)
+      }
+      win.size <- paste0("window.",window[1])
+      shift.dir <- paste0("angle.",atan(shift[1]/shift[2])*180/pi) # calc shift angle
+
+      tile.dir <- dirname(tile.path)
+      tile.name <- str_sub(basename(tile.path),1,-5)
+      fn = paste0(tile.dir,"/", tile.basename,band.appendage, "_stat.", statistics, "_", win.size,"_",shift.dir,".tif")
+      writeRaster(texture, fn, overwrite = T)
   }
         win.size <- paste0("window.",window[1])
         shift.dir <- paste0("angle.",atan(shift[1]/shift[2])*180/pi) # calc shift angle
@@ -207,76 +215,75 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
         writeRaster(texture, fn, overwrite = T)
     }
 
+  calc.texture <- function(texture.params.df,
+                           tile.dir,
+                           tile.basename) {
 
-    calc.texture <- function(texture.params.df,
-                             image.dir,
-                             image.basename) {
-
-        texture <- mapply(named.glcm,
-                          image.dir = image.dir,
-                          image.basename = image.basename,
-                          band.appendage = texture.params.df$band.appendage,
-                          window = texture.params.df$window,
-                          statistics = texture.params.df$statistics,
-                          shift = texture.params.df$shift,
-                          na_opt = "ignore",
-                          na_val = NA)
-    }
+      texture <- mapply(named.glcm,
+                        tile.dir = tile.dir,
+                        tile.basename = tile.basename,
+                        band.appendage = texture.params.df$band.appendage,
+                        window = texture.params.df$window,
+                        statistics = texture.params.df$statistics,
+                        shift = texture.params.df$shift,
+                        na_opt = "ignore",
+                        na_val = NA)
+  }
 
 #+end_src
 
 #+results:
 *** Make new ratio bands from image
 #+BEGIN_SRC R
-    calc_ratios <- function(image.path, band.names, ratio.bands, scale200 = T) {
-        image <- stack(image.path)
-        names(image) <- band.names
+  calc_ratios <- function(tile.path, band.names, ratio.bands, scale200 = T) {
+      tile <- stack(tile.path)
+      names(tile) <- band.names
 
-        ratios <- image[[ratio.bands,drop = F]] / sum(image)
+      ratios <- tile[[ratio.bands,drop = F]] / sum(tile)
 
-        if (scale200 == T) {
+      if (scale200 == T) {
           ratios <- ratios * 200
+      }
+
+      tile.name <- str_sub(basename(tile.path),1,-5)
+      names(ratios) <- paste0(tile.name,"_ratio.",ratio.bands)
+      writeRaster(ratios, filename= paste0(dirname(tile.path),"/",names(ratios),".tif"),
+                  bylayer = T, format= "GTiff", overwrite = T,
+                  datatype = 'INT1U')
   }
 
-        image.name <- str_sub(basename(image.path),1,-5)
-        names(ratios) <- paste0(image.name,"_ratio.",ratio.bands)
-        writeRaster(ratios, filename= paste0(dirname(image.path),"/",names(ratios),".tif"),
-                    bylayer = T, format= "GTiff", overwrite = T,
-                    datatype = 'INT1U')
+  calc_ndvi <- function(tile.path, band.names, ndvi_appendage = "_ndvi", scale200 = T) {
+
+      tile <- stack(tile.path)
+      names(tile) <- band.names
+
+      ndvi <- (tile[["nir"]] - tile[["red"]]) /  (tile[["nir"]] + tile[["red"]])
+
+      ndvi [ndvi < 0] <- 0
+
+      if (scale200 == T) {
+          ndvi <- ndvi * 200
       }
 
-      calc_ndvi <- function(image.path, band.names, ndvi_appendage = "_ndvi", scale200 = T) {
-
-          image <- stack(image.path)
-          names(image) <- band.names
-
-          ndvi <- (image[["nir"]] - image[["red"]]) /  (image[["nir"]] + image[["red"]])
-
-        ndvi [ndvi < 0] <- 0
-
-          if (scale200 == T) {
-              ndvi <- ndvi * 200
-          }
-
-          image.dir <- dirname(image.path)
-          image.name <- str_sub(basename(image.path),1,-5)
-          writeRaster(ndvi, filename=paste0(image.dir,"/",image.name,ndvi_appendage,".tif"), bylayer=TRUE,format="GTiff", overwrite = T,datatype = 'INT1U')
-          return(ndvi)
-      }
+      tile.dir <- dirname(tile.path)
+      tile.name <- str_sub(basename(tile.path),1,-5)
+      writeRaster(ndvi, filename=paste0(tile.dir,"/",tile.name,ndvi_appendage,".tif"), bylayer=TRUE,format="GTiff", overwrite = T,datatype = 'INT1U')
+      return(ndvi)
+  }
 #+end_src
 
 #+results:
 
 *** Make Pixel Feature DF
 #+begin_src R
-      save.pixel.feature.df <- function(image.dir,
-                                      image.name,
+  save.pixel.feature.df <- function(tile.dir,
+                                    tile.name,
                                     feature.pattern,
-                                    pixel.feature.df.append = pixel.feature.df.appendage ) {
-    s <- stack(list.files(image.dir, pattern = paste0(image.name,feature.pattern), full.names = T))
-    names(s) <- sub(x = names(s), pattern = "(madisonNAIP|panshpSPOT).*?_", replacement = "")
-    s.df <- as.data.frame(s, xy = T)
-    saveRDS(s.df, file = paste0(image.dir, "/", image.name, pixel.feature.df.append, ".rds"))
+                                    feature.df.append = feature.df.appendage ) {
+      s <- stack(list.files(tile.dir, pattern = paste0(tile.name,feature.pattern), full.names = T))
+      names(s) <- sub(x = names(s), pattern = paste0("(",tile.name,"_)"), replacement = "")
+      s.df <- as.data.frame(s, xy = T)
+      saveRDS(s.df, file = paste0(tile.dir, "/", tile.name, "_Pixel",feature.df.append, ".rds"))
   }
 #+end_src
 
@@ -284,19 +291,20 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
 *** Image PCA
 
 #+BEGIN_SRC R
-  pca.transformation <- function(image.dir,
+  pca.transformation <- function(tile.dir,
                                  image.name,
                                  tile.name,
+                                 loc,
                                  feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
-                                 pca.model.name.append = pca.model.name.appendage,
-                                 out.image.appendage = pca.tile.name.append,
+                                 pca.append = pca.appendage,
+                                 out.image.appendage = pca.appendage,
                                  comps.to.use = c(1,2,3),
                                  pca.dir = dd.pca.dir) {
 
-      s <- stack(list.files(image.dir, pattern = paste0(tile.name,feature.pattern), full.names = T))
+      s <- stack(list.files(tile.dir, pattern = paste0(tile.name,feature.pattern), full.names = T))
       names(s) <- sub(x = names(s), pattern = ".*_", replacement = "")
 
-        pca.model <- readRDS(str_c(pca.dir,"/",str_extract(image.name, "[a-zA-Z]+"),pca.model.name.append))
+      pca.model <- readRDS(str_c(pca.dir,"/",loc,image.name,pca.append,".rds"))
 
       r <- predict(s, pca.model, index = comps.to.use)
 
@@ -304,7 +312,7 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
       max.r <- getRasterMax(r)
       rescaled.r <- rescale.0.254(r, min.r, max.r)
 
-      out.path <- str_c(image.dir, "/", tile.name, out.image.appendage, ".tif")
+      out.path <- str_c(tile.dir, "/", tile.name, out.image.appendage, ".tif")
       writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U', bylayer = F)
   }
 
@@ -352,7 +360,8 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
 
   make.and.save.pca.transformation <- function(image.dir,
                                                image.name,
-                                               pca.model.name.append = "_pca.rds",
+                                               location,
+                                               pca.append = pca.appendage,
                                                max.sample.size = 10000,
                                                core.num = cores,
                                                feature.pattern = ".*_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
@@ -377,7 +386,7 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
       stopImplicitCluster()
                                           # Perform PCA on sample
       pca <- prcomp(sr, scale = T)
-      saveRDS(pca,paste0(image.dir,"/",image.name,pca.model.name.append))
+      saveRDS(pca,paste0(image.dir,"/",location,image.name,pca.append,".rds"))
       return(pca)
   }
 
@@ -468,14 +477,14 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
 
 
                                           # Function takes raster stack, samples data, performs pca and returns stack of first n_pcomp bands
-  ## predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
-  ##     sr <- sampleRandom(stack,sampleNumber)
-  ##     pca <- prcomp(sr, scale=T)
-  ##     beginCluster()
-  ##     r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
-  ##     endCluster()
-  ##     return(r)
-  ## }
+                                          ## predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
+                                          ##     sr <- sampleRandom(stack,sampleNumber)
+                                          ##     pca <- prcomp(sr, scale=T)
+                                          ##     beginCluster()
+                                          ##     r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
+                                          ##     endCluster()
+                                          ##     return(r)
+                                          ## }
 #+END_SRC
 
 #+RESULTS:
@@ -484,32 +493,35 @@ This simply is a wrapper for the python script which is basically a
 wrapper for slic.
 
 #+begin_src R
-        segment.multiple <- function(image.dir,
-                                     image.name,
-                                     segment.params.df,
-                                     directories.up = "../../") {
-            segments <- mapply(segment,
-                               image.dir = image.dir,
-                               image.name = image.name,
-                               compactness = segment.params.df$compactness,
-                               segment.size = segment.params.df$segment.size,
-                               directories.up = directories.up)
+  segment.multiple <- function(tile.dir,
+                               tile.name,
+                               image.name,
+                               segment.params.df,
+                               directories.up = "../../") {
+      segments <- mapply(segment,
+                         tile.dir = tile.dir,
+                         image.name = image.name,
+                         tile.name = tile.name,
+                         compactness = segment.params.df$compactness,
+                         segment.size = segment.params.df$segment.size,
+                         directories.up = directories.up)
 
         }
 
-        segment  <- function(image.dir,
-                             image.name,
-                             compactness,
-                             segment.size,
-                             directories.up = " ../../") {
+  segment  <- function(tile.dir,
+                       image.name,
+                       tile.name,
+                       compactness,
+                       segment.size,
+                       directories.up = " ../../") {
 
-            pixel_size <- ifelse(!is.na(str_extract(image.name,"madisonNAIP|urbanExtent")), 1, 1.5)
-            compactness <- if(!is.na(str_extract(image.name,"madisonNAIP|urbanExtent"))) compactness else round(2/3*compactness)
+      pixel_size <- ifelse(image.name == "NAIP", 1, 1.5)
+      compactness <- if(image.name == "NAIP") compactness else round(2/3*compactness)
 
-            system(paste0("cd ",image.dir,";", "python", directories.up,"code/fia_segment_cmdArgs.py ",pixel_size," ",segment.size," ",compactness," ",image.name))
-        }
+      system(paste("python","fia_segment_cmdArgs.py",pixel_size,segment.size,compactness,tile.name,tile.dir))
+  }
 
-      #  segment(dd.training.dir, "madisonNAIP.3", 15, 30)
+                                          #  segment(dd.training.dir, "madisonNAIP.3", 15, 30)
 
 #+end_src
 
@@ -517,36 +529,36 @@ wrapper for slic.
 *** add.features
 
 #+begin_src R
-  add.features <- function(image.dir,
-                              image.name,
-                              band.names,
-                              ndvi = T,
-                              ratio.bands,
-                              texture = T,
-                              texture.params.df) {
+  add.features <- function(tile.dir,
+                           tile.name,
+                           band.names,
+                           ndvi = T,
+                           ratio.bands,
+                           texture = T,
+                           texture.params.df) {
 
-      img.path <- paste0(image.dir,"/",image.name,".tif")
-      img <- stack(img.path)
-      names(img) <- band.names
+      til.path <- paste0(tile.dir,"/",tile.name,".tif")
+      til <- stack(til.path)
+      names(til) <- band.names
 
-      save_each_band(image.path = img.path,
+      save_each_band(tile.path = til.path,
                      band.names = band.names)
 
       if (ndvi == T) {
-          calc_ndvi(image.path = img.path,
+          calc_ndvi(tile.path = til.path,
                     band.names = band.names)
       }
 
       if (length(ratio.bands > 0)) {
-          calc_ratios(image.path = img.path,
+          calc_ratios(tile.path = til.path,
                       band.names = band.names,
                       ratio.bands = ratio.bands)
       }
 
       if (texture == T) {
           calc.texture(texture.params.df = texture.params.df,
-                       image.dir = image.dir,
-                       image.basename = image.name)
+                       tile.dir = tile.dir,
+                       tile.basename = tile.name)
       }
   }
 
@@ -555,66 +567,66 @@ wrapper for slic.
 #+results:
 *** segment Feature DF
 #+begin_src R
-    make.segment.feature.df.foreach.segmentation <- function(image.dir,
-                                                             image.name,
-                                                             feature.pattern,
-                                                             segmentation.pattern = "_N-[0-9]+_C-[0-9]+.*") {
+  make.segment.feature.df.foreach.segmentation <- function(tile.dir,
+                                                           tile.name,
+                                                           feature.pattern,
+                                                           segmentation.pattern = "_N-[0-9]+_C-[0-9]+.*") {
 
-        segmentation.files <-  list.files(image.dir, pattern = paste0(image.name,segmentation.pattern))
-        segmentation.param.appendages <- str_match(segmentation.files,paste0(image.name,"(_.*).tif"))[,2] %>% na.omit()
+      segmentation.files <-  list.files(tile.dir, pattern = paste0(tile.name,segmentation.pattern))
+      segmentation.param.appendages <- str_match(segmentation.files,paste0(tile.name,"(_.*).tif"))[,2] %>% na.omit()
 
 
       out <- lapply(X = segmentation.param.appendages, FUN = function(segmentation.param.appendage) {
-            make.segment.feature.df(image.dir = image.dir,
-                                    image.name = image.name,
-                                    segmentation.param.appendage = segmentation.param.appendage,
-                                    fea.pattern = feature.pattern)
-        })
+          make.segment.feature.df(tile.dir = tile.dir,
+                                  tile.name = tile.name,
+                                  segmentation.param.appendage = segmentation.param.appendage,
+                                  fea.pattern = feature.pattern)
+      })
 
-    }
-
-
-    make.segment.feature.df <- function(image.dir,
-                                        image.name,
-                                        segmentation.param.appendage,
-                                        fea.pattern,
-                                        segment.feature.appendage = "_SegmentFeatureDF.rds") {
-
-        fea <- stack(list.files(image.dir, pattern = paste0(image.name,fea.pattern), full.names = T))
-        names(fea) <- sub(x = names(fea), pattern = "(madisonNAIP|panshpSPOT).*?_", replacement = "")
-
-        seg.path <- paste0(image.dir,"/",image.name,segmentation.param.appendage, ".tif")
-        seg <- raster(seg.path)
-
-                                            # Create a data_frame where mean and variances are calculated by zone
-        x <- as.data.frame(fea, xy = T)
-        s <- as.data.frame(seg)
-        colnames(s) <- "segment"
-        r <- bind_cols(x,s)
-        r2 <- r %>%
-            group_by(segment)
-
-        mean.and.sd <- r2 %>%
-            summarize_each(funs(mean(.,na.rm = T), sd(., na.rm = T))) %>%
-            select(-x_mean, -x_sd, -y_mean, -y_sd)
-
-        image.name.df = data.frame(image.name = rep(image.name, nrow(mean.and.sd)))
-
-        out <- bind_cols(mean.and.sd, image.name.df)
+  }
 
 
-        names <- colnames(out)
-        names <- str_replace(names, "\\(",".")
-        names <- str_replace(names, "\\)",".")
-        names <- str_replace(names, "\\:",".")
-        colnames(out) <- names
-        saveRDS(out, file = paste0(image.dir,"/",image.name,segmentation.param.appendage,segment.feature.appendage))
-        out
-    }
+  make.segment.feature.df <- function(tile.dir,
+                                      tile.name,
+                                      segmentation.param.appendage,
+                                      fea.pattern,
+                                      feature.df.append = feature.df.appendage) {
+
+      fea <- stack(list.files(tile.dir, pattern = paste0(tile.name,fea.pattern), full.names = T))
+      names(fea) <- sub(x = names(fea), pattern = "(madisonNAIP|madisonPanshpSPOT).*?_", replacement = "")
+
+      seg.path <- paste0(tile.dir,"/",tile.name,segmentation.param.appendage, ".tif")
+      seg <- raster(seg.path)
+
+                                          # Create a data_frame where mean and variances are calculated by zone
+      x <- as.data.frame(fea, xy = T)
+      s <- as.data.frame(seg)
+      colnames(s) <- "segment"
+      r <- bind_cols(x,s)
+      r2 <- r %>%
+          group_by(segment)
+
+      mean.and.sd <- r2 %>%
+          summarize_each(funs(mean(.,na.rm = T), sd(., na.rm = T))) %>%
+          select(-x_mean, -x_sd, -y_mean, -y_sd)
+
+      tile.name.df = data.frame(tile.name = rep(tile.name, nrow(mean.and.sd)))
+
+      out <- bind_cols(mean.and.sd, tile.name.df)
+
+
+      names <- colnames(out)
+      names <- str_replace(names, "\\(",".")
+      names <- str_replace(names, "\\)",".")
+      names <- str_replace(names, "\\:",".")
+      colnames(out) <- names
+      saveRDS(out, file = paste0(tile.dir,"/",tile.name,segmentation.param.appendage,feature.df.append,".rds"))
+      out
+  }
 
 
 
-  #  make.segment.feature.df(dd.training.dir, "madisonNAIP.1", segmentation.param.appendage = "_N-100_C-10", feature.pattern = feature.pattern)
+                                          #  make.segment.feature.df(dd.training.dir, "madisonNAIP.1", segmentation.param.appendage = "_N-100_C-10", feature.pattern = feature.pattern)
 
 #+end_src
 
@@ -622,62 +634,65 @@ wrapper for slic.
 
 *** make.feature.df
 #+begin_src R
-        make.feature.df <- function(image.dir,
-                                    image.name,
-                                    band.names,
-                                    ndvi = T,
-                                    ratio.bands,
-                                    texture = T,
-                                    texture.params.df,
-                                    feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
-                                    pixel.df,
-                                                #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
-                                    pca.features = c("blue","green","red","nir"),
-                                    pca.source.image.name,
-                                    segmentation = T,
-                                    segment.params.df,
-                                    segment.feature.df = T,
-                                    seg.dir.up = " ../../") {
+  make.feature.df <- function(tile.dir,
+                              image.name,
+                              tile.name,
+                              band.names,
+                              ndvi = T,
+                              ratio.bands,
+                              texture = T,
+                              texture.params.df,
+                              feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
+                              pixel.df,
+                                          #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
+                              pca.features = c("blue","green","red","nir"),
+                              pca.location,
+                              segmentation = T,
+                              segment.params.df,
+                              segment.feature.df = T,
+                              seg.dir.up = " ../../") {
 
-            add.features(image.dir,
-                         image.name,
-                         band.names,
-                         ndvi = T,
-                         ratio.bands,
-                         texture = T,
-                         texture.params.df)
+      add.features(tile.dir,
+                   tile.name,
+                   band.names,
+                   ndvi = T,
+                   ratio.bands,
+                   texture = T,
+                   texture.params.df)
 
-message ("features added")
+      message ( tile.name,"features added")
 
-            if (pixel.df ==T) {
+      if (pixel.df ==T) {
 
-                save.pixel.feature.df(image.dir = image.dir,
-                                      image.name = image.name,
-                                      feature.pattern)}
+          save.pixel.feature.df(tile.dir = tile.dir,
+                                tile.name = tile.name,
+                                feature.pattern)}
 
-message("pixel feature df saved")
+      message("pixel feature df saved")
 
-            pca.transformation(image.dir = image.dir,
-                               image.name = pca.source.image.name,
-                               tile.name = image.name)
+      pca.transformation(tile.dir = tile.dir,
+                         tile.name = tile.name,
+                         image.name = image.name,
+                         loc = pca.location)
 
-message("pca done")
+      message("pca done")
 
-            if (segmentation == T) {
+      if (segmentation == T) {
 
-                segment.multiple(image.dir = image.dir,
-                                 image.name = image.name,
-                                 segment.params.df = segment.params.df,
-                                 directories.up = seg.dir.up)}
-message("segmentation done")
-            if (segment.feature.df == T) {
+          segment.multiple(tile.dir = tile.dir,
+                           tile.name = tile.name,
+                           image.name = image.name,
+                           segment.params.df = segment.params.df,
+                           directories.up = seg.dir.up)}
+      message("segmentation done")
+      if (segment.feature.df == T) {
 
-                make.segment.feature.df.foreach.segmentation(image.dir = image.dir,
-                                                             image.name = image.name,
-                                                             feature.pattern = feature.pattern)}
+          make.segment.feature.df.foreach.segmentation(tile.dir = tile.dir,
+                                                       tile.name = tile.name,
+                                                       feature.pattern = feature.pattern)}
 
 
-        }
+  }
 #+end_src
 
 #+results:
@@ -780,8 +795,8 @@ message("segmentation done")
                                           #join Class information from polygons
       if(!is.null(n.pixels.per.seg.in.polygon)) {
 
-          #add 1 because the id from raster's extract is just the order of the polygons
-        training.sp@data$polygon.id <- as.numeric(IDs.SpatialPolygonsDataFrame(training.sp))+1
+                                          #add 1 because the id from raster's extract is just the order of the polygons
+          training.sp@data$polygon.id <- as.numeric(IDs.SpatialPolygonsDataFrame(training.sp))+1
 
           n.pixels <- left_join(n.pixels.per.seg.in.polygon,n.pixels.per.seg) %>%
               mutate(pct.seg.in.polygon = n.pixels.per.seg.in.polygon/n.pixels.per.seg) %>%
@@ -791,7 +806,7 @@ message("segmentation done")
               mutate(segment = segment.id)
 
 
-      n.pixels$image.name <- str_match(n.pixels$image.name, "(.*?\\.[0-9]+).*")[,2]
+          n.pixels$image.name <- str_match(n.pixels$image.name, "(.*?\\.[0-9]+).*")[,2]
 
           out <- left_join(n.pixels, SegmentFeatureDF) %>%
               distinct() %>%
@@ -800,6 +815,7 @@ message("segmentation done")
                             -segment.id,
                             -image.name,
                             -image.name,
+                            -tile.name,
                             -polygon.id,
                             -n.pixels.per.seg,
                             -n.pixels.per.seg.in.polygon,
@@ -833,14 +849,18 @@ message("segmentation done")
 #+BEGIN_SRC R
   Build.and.Save.models <- function(dir = dd.training.dir,
                                     modelBuildingData = ModelBuildingRDS,
-                                    models.dir = Models.dir,
-                                    image.name){
+                                    models.dir = dd.models.dir,
+                                    image.name,
+                                    location,
+                                    model.append = model.appendage){
 
       dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
           as.data.frame() %>%
           filter(complete.cases(.))
 
-      image.and.segmentation.stem = str_replace(modelBuildingData, ModelBuilding.appendage,"")
+      dat <- dat[sample(nrow(dat),100),]
+
+      seg.p <- str_extract(modelBuildingData, segmentation.pattern)
 
       names <- colnames(dat)
       names <- str_replace(names, "\\(",".")
@@ -849,14 +869,14 @@ message("segmentation done")
       colnames(dat) <- names
 
                                           # Create Tasks
-      tsk <- makeClassifTask(id = paste0(image.name,"_all"), data = dat, target = "Class")
+      tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = "Class")
 
                                           # Make Learners
       RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
-#      RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
+                                          #      RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
       SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
 
-#      learner.list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
+                                          #      learner.list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
       learner.list <- list(RF_prob = RF_prob, SVM_response = SVM_response)
 
                                           # Train Learners on Tasks, Make models
@@ -864,11 +884,10 @@ message("segmentation done")
                                           #         registerDoParallel(cl)
 
       models <- foreach(lnr = learner.list) %do% {
-              mod <- train(lnr, tsk)
-              mod
-          }
-
-      saveRDS(models, file = paste0(models.dir,"/",image.and.segmentation.stem, models.appendage))
+          mod <- train(lnr, tsk)
+          mod
+          saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,model.append, ".rds"))
+      }
   }
 
 #+END_SRC
@@ -878,122 +897,138 @@ message("segmentation done")
 ** Classify Raster
 #+BEGIN_SRC R
 
-    classify.segmented.raster <- function(segment.feature.df.dir,
-                                          segment.dir,
-                                          model.dir,
-                                          model.name.rds = "models",
-                                          segment.feature.appendage = segment.feature.df.name.append,
-                                          segmentation.appendage = segment.tile.name.append,
-                                          segmentation.prms,
-                                          classify.out.dir,
-                                          tile.name = i) {
-        df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
-        models <-readRDS(paste0(model.dir,"/",model.name.rds))
-    #    umod <- unlist(models, recursive = F)
-        seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage)
-        seg <- raster(seg.path)
-                                            #       dfRowsWithNA <- which(is.na(df[,2]))
-        complete.df <- df[complete.cases(df),] # svm can't predict with NAs
-        lapply(models, function(mod) {
-            pred <- predict(mod, newdata = complete.df)
-            response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
-            m <- cbind(zone = complete.df$segment, response)
-            m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
-            seg.df <- as.data.frame(seg, xy = T)
-            names(seg.df)[3] <- "segment"
-            seg.df <- left_join(seg.df, m)
-            seg.df$response <- mapvalues(seg.df$response, from = c(1,2,3,4), to = c("g","i","t","o"))
-            seg.df$response <- factor(seg.df$response)
-            r <- seg
-            values(r) <- seg.df$response
+  classify.segmented.raster <- function(segment.feature.df.dir,
+                                        segment.dir,
+                                        model.dir,
+                                        model.name.rds = "models",
+                                        segment.feature.appendage = segment.feature.df.name.append,
+                                        segmentation.appendage = segment.tile.name.append,
+                                        segmentation.prms,
+                                        classify.out.dir,
+                                        tile.name = i) {
+      df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
+      mod <-readRDS(paste0(model.dir,"/",model.name.rds))
+                                          #    umod <- unlist(models, recursive = F)
+      seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage)
+      seg <- raster(seg.path)
+                                          #       dfRowsWithNA <- which(is.na(df[,2]))
+      complete.df <- df[complete.cases(df),] # svm can't predict with NAs
 
-                                            #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
-                                            #            filter(LandCover %in% levels(factor(response)))
-                                            #        levels(r) <- x
-  # Removing Probability layer because can't have attributes with it.  When I do final classifcaiton I should add back in.
+      pred <- predict(mod, newdata = complete.df)
+      response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
+      m <- cbind(zone = complete.df$segment, response)
+      m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
+      seg.df <- as.data.frame(seg, xy = T)
+      names(seg.df)[3] <- "segment"
+      seg.df <- left_join(seg.df, m)
+      seg.df$response <- mapvalues(seg.df$response, from = c(1,2,3,4), to = c("g","i","t","o"))
+      seg.df$response <- factor(seg.df$response)
+      r <- seg
+      values(r) <- seg.df$response
 
-            ## if (ncol(pred$data) > 2) {
-            ##     prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
-            ##     ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
-            ##     m <- cbind(segment = df$segment, ProbOfClass)
-            ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
-            ##     p <- reclassify(seg, m)
-            ##     r <- stack(r,p)
-            ## }
-            path <- paste0(segment.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
-            writeRaster(r, path, overwrite=TRUE)
-            print(path)
-        })
-    }
+                                          #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
+                                          #            filter(LandCover %in% levels(factor(response)))
+                                          #        levels(r) <- x
+                                          # Removing Probability layer because can't have attributes with it.  When I do final classifcaiton I should add back in.
 
+      ## if (ncol(pred$data) > 2) {
+      ##     prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
+      ##     ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
+      ##     m <- cbind(segment = df$segment, ProbOfClass)
+      ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
+      ##     p <- reclassify(seg, m)
+      ##     r <- stack(r,p)
+      ## }
+      path <- paste0(dd.accuracy.classified.dir,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
+      writeRaster(r, path, overwrite=TRUE)
+      print(path)
 
+  }
 
 
-    classify.pixel.raster <- function(tile.dir = dd.accuracy.dir,
-                                      tile.name,
-                                      pixelFeatureDF.appendage = pixel.feature.df.appendage,
-                                      model.dir = Models.dir,
-                                      model.rds,
-                                      seg.prms = "Pixel") {
-        ras <- stack(str_c(tile.dir,"/",tile.name,".tif"))
-        pix.mods <- readRDS(str_c(model.dir,"/",model.rds))
-  #      pix.umods <- unlist(pix.mods, recursive = F)
 
-        pix.feature.df <- readRDS(str_c(tile.dir,"/",tile.name,pixelFeatureDF.appendage,".rds"))
 
-        if(!is.null(pix.feature.df$y)) {
-            pix.feature.df <- dplyr::select(pix.feature.df, -x, -y)
-        }
+  classify.pixel.raster <- function(tile.dir = dd.accuracy.dir,
+                                    tile.name,
+                                    pixelFeatureDF.appendage = pixel.feature.df.appendage,
+                                    model.dir = Models.dir,
+                                    model.rds,
+                                    seg.prms = "Pixel") {
+      ras <- stack(str_c(tile.dir,"/",tile.name,".tif"))
+      pix.mod <- readRDS(str_c(model.dir,"/",model.rds))
+                                          #      pix.umods <- unlist(pix.mods, recursive = F)
 
-                                            # I set NA's to 0 here.  Not the best choice.  Not sure why they exist.
+      pix.feature.df <- readRDS(str_c(tile.dir,"/",tile.name,"_",seg.prms,pixelFeatureDF.appendage,".rds"))
+
+      if(!is.null(pix.feature.df$y)) {
+          pix.feature.df <- dplyr::select(pix.feature.df, -x, -y)
+      }
+
+                                          # I set NA's to 0 here.  Not the best choice.  Not sure why they exist.
                                           # Maybe because pca transform
-                                            # imputing to mean would probably be better
+                                          # imputing to mean would probably be better
 
-        pix.feature.df <- as.matrix(pix.feature.df)
+      pix.feature.df <- as.matrix(pix.feature.df)
 
-        pix.feature.df[which(is.na(pix.feature.df))] <- 0
+      pix.feature.df[which(is.na(pix.feature.df))] <- 0
 
-        pix.feature.df <- as.data.frame(pix.feature.df)
+      pix.feature.df <- as.data.frame(pix.feature.df)
 
-
-        lapply(pix.mods, function(pix.mod) {
-            pred <- predict(pix.mod, newdata = pix.feature.df)
-            a <- ras[[1]]
-            values(a) <- pred$data$response
-            path <- paste0(tile.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",seg.prms,"_",pix.mod$task.desc$id,"_",pix.mod$learner$id,".tif")
-            writeRaster(a, path, overwrite = T)
-            print(path)
-        })
-    }
+      pred <- predict(pix.mod, newdata = pix.feature.df)
+      a <- ras[[1]]
+      values(a) <- pred$data$response
+      path <- paste0(dd.accuracy.classified.dir,"/",tile.name,"_",seg.prms,"_",pix.mod$task.desc$id,"_",pix.mod$learner$id,".tif")
+      writeRaster(a, path, overwrite = T)
+      print(path)
+  }
 
 
-    classify.segmented.raster.unnestedModel <- function(segment.feature.df.dir,
-                                          segment.dir,
-                                          model.dir,
-                                          model.name.rds = "models",
-                                          segment.feature.appendage = segment.feature.df.name.append,
-                                          segmentation.appendage = segment.tile.name.append,
-                                          segmentation.prms,
-                                          classify.out.dir,
-                                          tile.name = i) {
-        df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
-        mod <-readRDS(paste0(model.dir,"/",model.name.rds))
-    #    umod <- unlist(models, recursive = F)
-        seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage)
-        seg <- raster(seg.path)
-                                            #       dfRowsWithNA <- which(is.na(df[,2]))
-        complete.df <- df[complete.cases(df),] # svm can't predict with NAs
-            pred <- predict(mod, newdata = complete.df)
-            response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
-            m <- cbind(zone = complete.df$segment, response)
-            m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
-            seg.df <- as.data.frame(seg, xy = T)
-            names(seg.df)[3] <- "segment"
-            seg.df <- left_join(seg.df, m)
-            seg.df$response <- mapvalues(seg.df$response, from = c(1,2,3,4), to = c("g","i","t","o"))
-            seg.df$response <- factor(seg.df$response)
-            r <- seg
-            values(r) <- seg.df$response
+  classify.segmented.raster.unnestedModel <- function(segment.feature.df.dir,
+                                                      segment.dir,
+                                                      model.dir,
+                                                      model.name.rds = "models",
+                                                      segment.feature.appendage = segment.feature.df.name.append,
+                                                      segmentation.appendage = segment.tile.name.append,
+                                                      segmentation.prms,
+                                                      classify.out.dir,
+                                                      tile.name = i) {
+      df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
+      mod <-readRDS(paste0(model.dir,"/",model.name.rds))
+                                          #    umod <- unlist(models, recursive = F)
+      seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage)
+      seg <- raster(seg.path)
+                                          #       dfRowsWithNA <- which(is.na(df[,2]))
+      complete.df <- df[complete.cases(df),] # svm can't predict with NAs
+      pred <- predict(mod, newdata = complete.df)
+      response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
+      m <- cbind(zone = complete.df$segment, response)
+      m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
+      seg.df <- as.data.frame(seg, xy = T)
+      names(seg.df)[3] <- "segment"
+      seg.df <- left_join(seg.df, m)
+      seg.df$response <- mapvalues(seg.df$response, from = c(1,2,3,4), to = c("g","i","t","o"))
+      seg.df$response <- factor(seg.df$response)
+      r <- seg
+      values(r) <- seg.df$response
+
+                                          #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
+                                          #            filter(LandCover %in% levels(factor(response)))
+                                          #        levels(r) <- x
+                                          # Removing Probability layer because can't have attributes with it.  When I do final classifcaiton I should add back in.
+
+      ## if (ncol(pred$data) > 2) {
+      ##     prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
+      ##     ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
+      ##     m <- cbind(segment = df$segment, ProbOfClass)
+      ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
+      ##     p <- reclassify(seg, m)
+      ##     r <- stack(r,p)
+      ## }
+      path <- paste0(segment.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
+      writeRaster(r, path, overwrite=TRUE)
+      print(path)
+
+  }
 
                                             #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
                                             #            filter(LandCover %in% levels(factor(response)))
@@ -1013,9 +1048,6 @@ message("segmentation done")
             print(path)
 
     }
-
-
-
 
   ## classify.segmented.raster.forWholeState <- function(segment.feature.df.dir,
   ##                                                     segment.dir,
@@ -1296,10 +1328,10 @@ message("segmentation done")
           classification <- mapvalues(classification, from = m$ID, to = levels(m$category))
       }
       google = pts@data$cvr_typ
-      overall.error <- 1 - mean(classification == google)
-      pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
-      pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
-      pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
+      overall.error <- 1 - mean(classification == google, na.rm = T)
+      pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")], na.rm = T)
+      pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")], na.rm = T)
+      pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")], na.rm = T)
       error <- c(overall.error = overall.error,
                  pct.grass.classified.as.other = pct.grass.classified.as.other,
                  pct.impervious.classified.as.other = pct.impervious.classified.as.other,
