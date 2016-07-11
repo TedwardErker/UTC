@@ -185,37 +185,43 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
 #+results:
 *** Add Texture
 #+begin_src R
-  named.glcm <- function(image.dir, image.basename, band.appendage, window, statistics, shift, na_opt, na_val,...) {
+    named.glcm <- function(image.dir, image.basename, band.appendage, window, statistics, shift, na_opt, na_val,...) {
 
-      image.path <- paste0(image.dir, "/", image.basename,band.appendage,".tif")
-      x <- raster(image.path)
+        image.path <- paste0(image.dir, "/", image.basename,band.appendage,".tif")
+        x <- raster(image.path)
 
-      texture <- glcm(x, window = window, statistics = statistics, shift = shift, na_opt = na_opt, na_val = na_val)
-
-      win.size <- paste0("window.",window[1])
-      shift.dir <- paste0("angle.",atan(shift[1]/shift[2])*180/pi) # calc shift angle
-
-      image.dir <- dirname(image.path)
-      image.name <- str_sub(basename(image.path),1,-5)
-      fn = paste0(image.dir,"/", image.basename,band.appendage, "_stat.", statistics, "_", win.size,"_",shift.dir,".tif")
-      writeRaster(texture, fn, overwrite = T)
+  if (statistics == "correlation") {
+       texture <- glcm(x, window = window, statistics = statistics, shift = shift, na_opt = na_opt, na_val = na_val)
+       texture[texture == -Inf] <- -1
+       texture[texture == Inf] <- 1
+   texture[is.na(texture)] <- 1
+  } else {
+        texture <- glcm(x, window = window, statistics = statistics, shift = shift, na_opt = na_opt, na_val = na_val)
   }
+        win.size <- paste0("window.",window[1])
+        shift.dir <- paste0("angle.",atan(shift[1]/shift[2])*180/pi) # calc shift angle
+
+        image.dir <- dirname(image.path)
+        image.name <- str_sub(basename(image.path),1,-5)
+        fn = paste0(image.dir,"/", image.basename,band.appendage, "_stat.", statistics, "_", win.size,"_",shift.dir,".tif")
+        writeRaster(texture, fn, overwrite = T)
+    }
 
 
-  calc.texture <- function(texture.params.df,
-                           image.dir,
-                           image.basename) {
+    calc.texture <- function(texture.params.df,
+                             image.dir,
+                             image.basename) {
 
-      texture <- mapply(named.glcm,
-                        image.dir = image.dir,
-                        image.basename = image.basename,
-                        band.appendage = texture.params.df$band.appendage,
-                        window = texture.params.df$window,
-                        statistics = texture.params.df$statistics,
-                        shift = texture.params.df$shift,
-                        na_opt = "ignore",
-                        na_val = NA)
-  }
+        texture <- mapply(named.glcm,
+                          image.dir = image.dir,
+                          image.basename = image.basename,
+                          band.appendage = texture.params.df$band.appendage,
+                          window = texture.params.df$window,
+                          statistics = texture.params.df$statistics,
+                          shift = texture.params.df$shift,
+                          na_opt = "ignore",
+                          na_val = NA)
+    }
 
 #+end_src
 
@@ -275,35 +281,30 @@ IDs.SpatialPolygonsDataFrame <- function(x,...) {
 #+end_src
 
 #+results:
-*** NEXT Image PCA MAKE NO NA's!
-
-Because the pca transformation comes from a sample (one that favors
-trees and grass, at that) some pixels in the images I transform will
-have pixels that are outside the domain of the transformation.  Before
-I do the PCA, I should find the pixels that are outside the domain and
-shrink their values to fit.   They are mostly very bright impervious objects.
+*** Image PCA
 
 #+BEGIN_SRC R
   pca.transformation <- function(image.dir,
                                  image.name,
+                                 tile.name,
                                  feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
                                  pca.model.name.append = pca.model.name.appendage,
                                  out.image.appendage = pca.tile.name.append,
                                  comps.to.use = c(1,2,3),
                                  pca.dir = dd.pca.dir) {
 
-      s <- stack(list.files(image.dir, pattern = paste0(image.name,feature.pattern), full.names = T))
+      s <- stack(list.files(image.dir, pattern = paste0(tile.name,feature.pattern), full.names = T))
       names(s) <- sub(x = names(s), pattern = ".*_", replacement = "")
 
-      pca.model <- readRDS(str_c(pca.dir,"/",str_extract(image.name, "[a-zA-Z]+"),pca.model.name.append))
+        pca.model <- readRDS(str_c(pca.dir,"/",str_extract(image.name, "[a-zA-Z]+"),pca.model.name.append))
 
       r <- predict(s, pca.model, index = comps.to.use)
 
       min.r <- getRasterMin(r)
       max.r <- getRasterMax(r)
-      rescaled.r <- rescale.0.255(r, min.r, max.r)
+      rescaled.r <- rescale.0.254(r, min.r, max.r)
 
-      out.path <- str_c(image.dir, "/", image.name, out.image.appendage, ".tif")
+      out.path <- str_c(image.dir, "/", tile.name, out.image.appendage, ".tif")
       writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U', bylayer = F)
   }
 
@@ -316,10 +317,10 @@ shrink their values to fit.   They are mostly very bright impervious objects.
       return(max(cellStats(t, stat = "max")))
   }
 
-  rescale.0.255 <- function(raster,
+  rescale.0.254 <- function(raster,
                             min,
                             max) {
-                                (raster - min)/(max-min) * 255
+                                (raster - min)/(max-min) * 254
   }
 
   ## image.pca <- function(image.name,
@@ -429,7 +430,7 @@ shrink their values to fit.   They are mostly very bright impervious objects.
 
       min.r <- getRasterMin(r)
       max.r <- getRasterMax(r)
-      rescaled.r <- rescale.0.255(r, min.r, max.r)
+      rescaled.r <- rescale.0.254(r, min.r, max.r)
       writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U')
   }
 
@@ -483,29 +484,32 @@ This simply is a wrapper for the python script which is basically a
 wrapper for slic.
 
 #+begin_src R
-  segment.multiple <- function(image.dir,
-                               image.name,
-                               segment.params.df) {
-      segments <- mapply(segment,
-                         image.dir = image.dir,
-                         image.name = image.name,
-                         compactness = segment.params.df$compactness,
-                         segment.size = segment.params.df$segment.size)
+        segment.multiple <- function(image.dir,
+                                     image.name,
+                                     segment.params.df,
+                                     directories.up = "../../") {
+            segments <- mapply(segment,
+                               image.dir = image.dir,
+                               image.name = image.name,
+                               compactness = segment.params.df$compactness,
+                               segment.size = segment.params.df$segment.size,
+                               directories.up = directories.up)
 
-  }
+        }
 
-  segment  <- function(image.dir,
-                       image.name,
-                       compactness,
-                       segment.size) {
+        segment  <- function(image.dir,
+                             image.name,
+                             compactness,
+                             segment.size,
+                             directories.up = " ../../") {
 
-      pixel_size <- ifelse(!is.na(str_extract(image.name,"madisonNAIP")), 1, 1.5)
-      compactness <- if(!is.na(str_extract(image.name,"madisonNAIP"))) compactness else round(2/3*compactness)
+            pixel_size <- ifelse(!is.na(str_extract(image.name,"madisonNAIP|urbanExtent")), 1, 1.5)
+            compactness <- if(!is.na(str_extract(image.name,"madisonNAIP|urbanExtent"))) compactness else round(2/3*compactness)
 
-      system(paste0("cd ",image.dir,";", "python ../../code/fia_segment_cmdArgs.py ",pixel_size," ",segment.size," ",compactness," ",image.name))
-  }
+            system(paste0("cd ",image.dir,";", "python", directories.up,"code/fia_segment_cmdArgs.py ",pixel_size," ",segment.size," ",compactness," ",image.name))
+        }
 
-#  segment(dd.training.dir, "madisonNAIP.3", 15, 30)
+      #  segment(dd.training.dir, "madisonNAIP.3", 15, 30)
 
 #+end_src
 
@@ -618,52 +622,62 @@ wrapper for slic.
 
 *** make.feature.df
 #+begin_src R
-  make.feature.df <- function(image.dir,
-                              image.name,
-                              band.names,
-                              ndvi = T,
-                              ratio.bands,
-                              texture = T,
-                              texture.params.df,
-                              feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
-                              pixel.df,
-                                          #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
-                              pca.features = c("blue","green","red","nir"),
-                              segmentation = T,
-                              segment.params.df,
-                              segment.feature.df = T) {
+        make.feature.df <- function(image.dir,
+                                    image.name,
+                                    band.names,
+                                    ndvi = T,
+                                    ratio.bands,
+                                    texture = T,
+                                    texture.params.df,
+                                    feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
+                                    pixel.df,
+                                                #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
+                                    pca.features = c("blue","green","red","nir"),
+                                    pca.source.image.name,
+                                    segmentation = T,
+                                    segment.params.df,
+                                    segment.feature.df = T,
+                                    seg.dir.up = " ../../") {
 
-      add.features(image.dir,
-                   image.name,
-                   band.names,
-                   ndvi = T,
-                   ratio.bands,
-                   texture = T,
-                   texture.params.df)
+            add.features(image.dir,
+                         image.name,
+                         band.names,
+                         ndvi = T,
+                         ratio.bands,
+                         texture = T,
+                         texture.params.df)
 
-      if (pixel.df ==T) {
+message ("features added")
 
-          save.pixel.feature.df(image.dir = image.dir,
-                                image.name = image.name,
-                                feature.pattern)}
+            if (pixel.df ==T) {
 
-      pca.transformation(image.dir = image.dir,
-                         image.name = image.name)
+                save.pixel.feature.df(image.dir = image.dir,
+                                      image.name = image.name,
+                                      feature.pattern)}
 
-      if (segmentation == T) {
+message("pixel feature df saved")
 
-          segment.multiple(image.dir = image.dir,
-                           image.name = image.name,
-                           segment.params.df = segment.params.df)}
+            pca.transformation(image.dir = image.dir,
+                               image.name = pca.source.image.name,
+                               tile.name = image.name)
 
-      if (segment.feature.df == T) {
+message("pca done")
 
-          make.segment.feature.df.foreach.segmentation(image.dir = image.dir,
-                                                       image.name = image.name,
-                                                       feature.pattern = feature.pattern)}
+            if (segmentation == T) {
+
+                segment.multiple(image.dir = image.dir,
+                                 image.name = image.name,
+                                 segment.params.df = segment.params.df,
+                                 directories.up = seg.dir.up)}
+message("segmentation done")
+            if (segment.feature.df == T) {
+
+                make.segment.feature.df.foreach.segmentation(image.dir = image.dir,
+                                                             image.name = image.name,
+                                                             feature.pattern = feature.pattern)}
 
 
-  }
+        }
 #+end_src
 
 #+results:
@@ -738,7 +752,7 @@ wrapper for slic.
       seg.files <- list.files(seg.tiles.dir, pattern = str_c(seg.params,".tif$"), full.names = T)
                                           # find number of pixels in each segment
       n.pixels.per.seg <- foreach(seg.file = seg.files, .combine = "rbind") %do% {
-          seg <- stack(seg.file)
+          seg <- raster::stack(seg.file)
           s.df <- as.data.frame(seg) %>%
               gather(key = image.name, value = segment.id) %>%
               group_by(segment.id, image.name) %>%
@@ -747,7 +761,7 @@ wrapper for slic.
                                           # find number of pixels in each segment are in a polygon
       n.pixels.per.seg.in.polygon <- foreach(seg.file = seg.files, .combine = "rbind") %do% {
 
-          seg <- stack(seg.file)
+          seg <- raster::stack(seg.file)
           ei <- as(extent(seg), "SpatialPolygons")
 
           if(gIntersects(ei, as(training.sp,"SpatialPolygons"))) {
@@ -799,14 +813,14 @@ wrapper for slic.
                                           # returns dataframe of values of pixels within polygon
   getPixel.Class.and.Coords.Within.Polygon <- function(PixelFeatureDF,
                                                        training.sp) {
-      xy <- select(PixelFeatureDF,x,y) %>% data.frame
+      xy <- dplyr::select(PixelFeatureDF,x,y) %>% data.frame
       PixelFeatureDF <- data.frame(PixelFeatureDF)
       coordinates(PixelFeatureDF) <- xy
       proj4string(PixelFeatureDF) <- utm16
 
       training.sp <- spTransform(training.sp,utm16)
 
-      pts.in.poly <- over(PixelFeatureDF,training.sp)
+      pts.in.poly <- sp::over(PixelFeatureDF,training.sp)
       PixelFeatureDF@data <- cbind(PixelFeatureDF@data, pts.in.poly)
       PixelFeatureDF <- PixelFeatureDF[which(complete.cases(pts.in.poly)),]
       PixelFeatureDF@data
@@ -876,7 +890,7 @@ wrapper for slic.
         df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
         models <-readRDS(paste0(model.dir,"/",model.name.rds))
     #    umod <- unlist(models, recursive = F)
-        seg.path <- paste0(segment.dir,"/",tile.name,segment.tile.name.append)
+        seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage)
         seg <- raster(seg.path)
                                             #       dfRowsWithNA <- which(is.na(df[,2]))
         complete.df <- df[complete.cases(df),] # svm can't predict with NAs
@@ -888,8 +902,8 @@ wrapper for slic.
             seg.df <- as.data.frame(seg, xy = T)
             names(seg.df)[3] <- "segment"
             seg.df <- left_join(seg.df, m)
+            seg.df$response <- mapvalues(seg.df$response, from = c(1,2,3,4), to = c("g","i","t","o"))
             seg.df$response <- factor(seg.df$response)
-            levels(seg.df$response) <- c("g","i","t","o")
             r <- seg
             values(r) <- seg.df$response
 
@@ -911,6 +925,8 @@ wrapper for slic.
             print(path)
         })
     }
+
+
 
 
     classify.pixel.raster <- function(tile.dir = dd.accuracy.dir,
@@ -951,22 +967,118 @@ wrapper for slic.
     }
 
 
+    classify.segmented.raster.unnestedModel <- function(segment.feature.df.dir,
+                                          segment.dir,
+                                          model.dir,
+                                          model.name.rds = "models",
+                                          segment.feature.appendage = segment.feature.df.name.append,
+                                          segmentation.appendage = segment.tile.name.append,
+                                          segmentation.prms,
+                                          classify.out.dir,
+                                          tile.name = i) {
+        df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
+        mod <-readRDS(paste0(model.dir,"/",model.name.rds))
+    #    umod <- unlist(models, recursive = F)
+        seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage)
+        seg <- raster(seg.path)
+                                            #       dfRowsWithNA <- which(is.na(df[,2]))
+        complete.df <- df[complete.cases(df),] # svm can't predict with NAs
+            pred <- predict(mod, newdata = complete.df)
+            response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
+            m <- cbind(zone = complete.df$segment, response)
+            m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
+            seg.df <- as.data.frame(seg, xy = T)
+            names(seg.df)[3] <- "segment"
+            seg.df <- left_join(seg.df, m)
+            seg.df$response <- mapvalues(seg.df$response, from = c(1,2,3,4), to = c("g","i","t","o"))
+            seg.df$response <- factor(seg.df$response)
+            r <- seg
+            values(r) <- seg.df$response
+
+                                            #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
+                                            #            filter(LandCover %in% levels(factor(response)))
+                                            #        levels(r) <- x
+  # Removing Probability layer because can't have attributes with it.  When I do final classifcaiton I should add back in.
+
+            ## if (ncol(pred$data) > 2) {
+            ##     prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
+            ##     ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
+            ##     m <- cbind(segment = df$segment, ProbOfClass)
+            ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
+            ##     p <- reclassify(seg, m)
+            ##     r <- stack(r,p)
+            ## }
+            path <- paste0(segment.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
+            writeRaster(r, path, overwrite=TRUE)
+            print(path)
+
+    }
 
 
 
+
+  ## classify.segmented.raster.forWholeState <- function(segment.feature.df.dir,
+  ##                                                     segment.dir,
+  ##                                                     model = model,
+  ##                                                     segment.feature.appendage = segment.feature.df.name.append,
+  ##                                                     segmentation.appendage = segment.tile.name.append,
+  ##                                                     segmentation.prms,
+  ##                                                     classify.out.dir,
+  ##                                                     tile.name) {
+
+  ##     df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage,".rds"))
+  ##     seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage,".tif")
+  ##     seg <- raster(seg.path)
+  ##                                         #       dfRowsWithNA <- which(is.na(df[,2]))
+  ##     complete.df <- df[complete.cases(df),] # svm can't predict with NAs
+
+  ##     mod <- model
+  ##     pred <- predict(mod, newdata = complete.df)
+  ##     response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
+  ##     m <- cbind(zone = complete.df$segment, response)
+  ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
+
+  ##     seg.df <- as.data.frame(seg, xy = T)
+
+  ##     colnames(seg.df) <- c("x","y","segID")
+  ##     seg.df1 <- mutate(seg.df, class = plyr::mapvalues(segID, from = m$segment, to = m$response))
+
+  ##     r <- setValues(seg, values = seg.df1$class)
+  ##     names(r) <- "class"
+
+  ##     if (ncol(pred$data) > 2) {
+  ##         prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
+  ##         ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
+  ##         m <- cbind(segment = complete.df$segment, ProbOfClass)
+  ##         m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
+
+  ##         seg.df2 <- mutate(seg.df, ProbOfClass = plyr::mapvalues(segID, from = m$segment, to = m$ProbOfClass))
+  ##         p <- setValues(seg, values = seg.df2$ProbOfClass)
+  ##         r <- stack(r,p)
+  ##         names(r) <- c("class","prob")
+  ##     }
+
+  ##         path <- paste0(segment.dir,"/classified_",tile.name,"_",seg.tile.name.append,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
+  ##         writeRaster(r, path, overwrite=TRUE)
+  ##         print(path)
+
+  ## }
+
+  ## classify.segmented.raster.forWholeState(segment.feature.df.dir = tile.urb.path,
+  ##                                         segment.dir = tile.urb.path,
+  ##                                         classify.out.dir = tile.urb.path,
+  ##                                         tile.name = "urbanExtent",
+  ##                                         segmentation.appendage = seg.tile.name.append,
+  ##                                         model = model,
+  ##                                         segment.feature.appendage = segmentFeatureDF.append)
 
 
 
 #+END_SRC
 
-#+RESULTS:
+#+results:
 
-#+BEGIN_SRC R :results graphics :file figs/pixClss.png
-                                          #plot(a)
-#+END_SRC
 
-#+RESULTS:
-[[file:figs/pixClss.png]]
 
 ** Calculate Percent Cover in Classified Tiles
 #+BEGIN_SRC R
@@ -1174,56 +1286,57 @@ wrapper for slic.
 ** Point-wise error functions
 #+BEGIN_SRC R
 
-      calcErrorAllMultinomial <-  function(pts, tile, Pixel = F) {
-          classification <- raster::extract(classified.tile, pts)
-          if(Pixel == T) {
-              lvls <- levels(classified.tile)[[1]]
-              classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
-          } else {
-              classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
-          }
-          google = pts@data$cvr_typ
-          overall.error <- 1 - mean(classification == google)
-          pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
-          pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
-          pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
-          error <- c(overall.error = overall.error,
-                     pct.grass.classified.as.other = pct.grass.classified.as.other,
-                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
-                     pct.tree.classified.as.other = pct.tree.classified.as.other)
-          return(error)
+  calcErrorAllMultinomial <-  function(pts, tile, Pixel = F) {
+      classification <- raster::extract(classified.tile, pts)
+      if(Pixel == T) {
+          lvls <- levels(classified.tile)[[1]]
+          classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
+      } else {
+          m <- tile@data@attributes[[1]]
+          classification <- mapvalues(classification, from = m$ID, to = levels(m$category))
       }
+      google = pts@data$cvr_typ
+      overall.error <- 1 - mean(classification == google)
+      pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
+      pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
+      pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
+      error <- c(overall.error = overall.error,
+                 pct.grass.classified.as.other = pct.grass.classified.as.other,
+                 pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                 pct.tree.classified.as.other = pct.tree.classified.as.other)
+      return(error)
+  }
 
-      calcErrorBinomial <-  function(pts, tile, target, Pixel = F) {
-          classification <- raster::extract(classified.tile, pts)
-          if(Pixel == T) {
-              lvls <- levels(classified.tile)[[1]]
-              classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
-          } else {
-              classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
-          }
-          classification <- ifelse(classification == target, classification, "o")
-          google <- pts@data$cvr_typ
-          google <- ifelse(google == target, google, "o")
-          overall.error <- 1 - mean(classification == google)
-          pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
-          pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
-          pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
-          error <- c(overall.error = overall.error,
-                     pct.grass.classified.as.other = pct.grass.classified.as.other,
-                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
-                     pct.tree.classified.as.other = pct.tree.classified.as.other)
-          return(error)
-      }
-
-
-
-
-      calcConfusionMat <- function(pts, tile) {
-          classification <- raster::extract(classified.tile, pts)
+  calcErrorBinomial <-  function(pts, tile, target, Pixel = F) {
+      classification <- raster::extract(classified.tile, pts)
+      if(Pixel == T) {
+          lvls <- levels(classified.tile)[[1]]
+          classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
+      } else {
           classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
-          table(classification, google = pts@data$cvr_typ)
       }
+      classification <- ifelse(classification == target, classification, "o")
+      google <- pts@data$cvr_typ
+      google <- ifelse(google == target, google, "o")
+      overall.error <- 1 - mean(classification == google)
+      pct.grass.classified.as.other <- 1 - mean(classification[which(google == "g")] == google[which(google == "g")])
+      pct.impervious.classified.as.other <- 1 - mean(classification[which(google == "i")] == google[which(google == "i")])
+      pct.tree.classified.as.other <- 1 - mean(classification[which(google == "t")] == google[which(google == "t")])
+      error <- c(overall.error = overall.error,
+                 pct.grass.classified.as.other = pct.grass.classified.as.other,
+                 pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                 pct.tree.classified.as.other = pct.tree.classified.as.other)
+      return(error)
+  }
+
+
+
+
+  calcConfusionMat <- function(pts, tile) {
+      classification <- raster::extract(classified.tile, pts)
+      classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
+      table(classification, google = pts@data$cvr_typ)
+  }
 #+END_SRC
 #+RESULTS:
 
