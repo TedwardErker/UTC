@@ -229,6 +229,104 @@ Same structure as DD_NAIP
 #+END_SRC
 
 #+results:
+#+begin_example
+rgeos version: 0.3-19, (SVN revision 524)
+ GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
+ Linking to sp version: 1.2-1
+ Polygon checking: TRUE
+Loading required package: BBmisc
+
+Attaching package: 'BBmisc'
+
+The following object is masked from 'package:rgeos':
+
+    symdiff
+
+Loading required package: ggplot2
+Loading required package: ParamHelpers
+Loading required package: sp
+rgdal: version: 1.1-3, (SVN revision 594)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.11.1, released 2014/09/24
+ Path to GDAL shared files: /usr/local/Cellar/gdal/1.11.1_3/share/gdal
+ Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
+ Path to PROJ.4 shared files: (autodetected)
+ Linking to sp version: 1.2-1
+
+Attaching package: 'raster'
+
+The following object is masked from 'package:mlr':
+
+    resample
+
+The following object is masked from 'package:ParamHelpers':
+
+    getValues
+
+Attaching package: 'dplyr'
+
+The following objects are masked from 'package:plyr':
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from 'package:raster':
+
+    intersect, select, union
+
+The following object is masked from 'package:BBmisc':
+
+    collapse
+
+The following objects are masked from 'package:rgeos':
+
+    intersect, setdiff, union
+
+The following objects are masked from 'package:stats':
+
+    filter, lag
+
+The following objects are masked from 'package:base':
+
+    intersect, setdiff, setequal, union
+
+Attaching package: 'tidyr'
+
+The following object is masked from 'package:raster':
+
+    extract
+
+The following object is masked from 'package:ascii':
+
+    expand
+foreach: simple, scalable parallel programming from Revolution Analytics
+Use Revolution R for scalability, fault tolerance and more.
+http://www.revolutionanalytics.com
+Loading required package: iterators
+Loading required package: parallel
+randomForest 4.6-12
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: 'randomForest'
+
+The following object is masked from 'package:dplyr':
+
+    combine
+
+The following object is masked from 'package:ggplot2':
+
+    margin
+
+Attaching package: 'kernlab'
+
+The following objects are masked from 'package:raster':
+
+    buffer, rotated
+
+The following object is masked from 'package:ggplot2':
+
+    alpha
+#+end_example
 
 
 ** set figure Cairo
@@ -382,17 +480,18 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
 #+begin_example
 
                                 ../DD                 ../DD/madison_Training
-                                  TRUE                                   TRUE
+                                 FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
-                                  TRUE                                   TRUE
+                                 FALSE                                  FALSE
                       ../DD/wausau_pca                 ../DD/madison_Accuracy
-                                  TRUE                                   TRUE
+                                 FALSE                                  FALSE
                  ../DD/wausau_Accuracy                   ../DD/madison_Models
-                                  TRUE                                   TRUE
+                                 FALSE                                  FALSE
                    ../DD/wausau_Models ../DD/madison_Accuracy/ClassifiedTiles
-                                  TRUE                                   TRUE
+                                 FALSE                                  FALSE
  ../DD/wausau_Accuracy/ClassifiedTiles
-                                  TRUE
+                                 FALSE
+There were 11 warnings (use warnings() to see them)
 #+end_example
 
 **** Define Derived Shapefile DSNs and Layers
@@ -410,12 +509,23 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
 #+END_SRC
 
 #+results:
-: [[1]]
-: [1] TRUE
-: [[1]]
-: [1] TRUE
-: [[1]]
-: [1] TRUE
+#+begin_example
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
+#+end_example
 
 **** number of cores
 #+BEGIN_SRC R
@@ -562,7 +672,7 @@ dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*
            str_extract(., pattern = str_c(location,img.nm,".[0-9]+")) %>%
            na.omit()
 
-       foreach (i = tile.names,
+       foreach (i = tile.names[13],
                 .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
 
@@ -713,64 +823,135 @@ Pattern is image.name_Segmentation
               }
           }
 #+end_src
-***** NEXT tuned models
+***** NEXT feature selecting and tuning models
+****** feature selection
+******* Show importance of features
+#+begin_src R
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+  fv <- foreach(img.nm = image.names, .combine = "rbind") %do% {
+
+      ModelBuildingRDSs <- list.files(dd.training.dir) %>%
+          str_extract(., str_c(location,img.nm,".*",ModelBuilding.appendage, ".rds")) %>%
+          na.omit()
+
+       foreach(ModelBuildingRDS = ModelBuildingRDSs,
+              .packages = c("parallelMap","randomForest","kernlab","irace","mlr","stringr","dplyr","foreach","doParallel"),
+              .combine = "rbind") %do% {
+
+                  fv <- print.feature.importance(dir = dd.training.dir,
+                                           modelBuildingData = ModelBuildingRDS,
+                                           image.name = img.nm,
+                                           location = location,
+                                           feature.importance.methods = c("information.gain","chi.squared"))
+
+                fv$modelBuildingDF <- ModelBuildingRDS
+                fv
+              }
+  }
+
+
+#+end_src
+
+#+results:
+
+#+begin_src R
+  options(warn = -1)
+  ## fv.u <- unlist(fv, recursive = F)
+  ## fv.u <- unlist(fv.u, recursive = F)
+  ## sapply(fv.u, ascii)
+  fv %>% ascii
+  options(warn = 1)
+#+end_src
+
+#+results:
+: Error in 1:ncol(xx) : argument of length 0
+
+******* build models
+#+begin_src R
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+  foreach(img.nm = image.names) %do% {
+
+      ModelBuildingRDSs <- list.files(dd.training.dir) %>%
+          str_extract(., str_c(location,img.nm,".*",ModelBuilding.appendage, ".rds")) %>%
+          na.omit()
+
+      foreach(ModelBuildingRDS = ModelBuildingRDSs,
+              .packages = c("parallelMap","randomForest","kernlab","irace","mlr","stringr","dplyr","foreach","doParallel")) %dopar% {
+
+                  Build.and.Save.FeatureSelected.models(dir = dd.training.dir,
+                                                        modelBuildingData = ModelBuildingRDS,
+                                                        models.dir = dd.models.dir,
+                                                        image.name = img.nm,
+                                                        location = location)
+              }
+  }
+
+#+end_src
+
+****** tuned
+
+
 
 for tuning see:
 https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
 
-Check if this is on new branch
+
 #+begin_src R :eval no
- Build.and.Save.Tuned.models <- function( dir = dd.training.dir,
-                                    modelBuildingData = ModelBuildingRDS,
-                                    models.dir = Models.dir,
-                                    image.name){
+  Build.and.Save.Tuned.models <- function( dir = dd.training.dir,
+                                     modelBuildingData = ModelBuildingRDS,
+                                     models.dir = Models.dir,
+                                     image.name){
 
-      dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
-          as.data.frame()
+       dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
+           as.data.frame()
 
-      image.and.segmentation.stem = str_replace(modelBuildingData, ModelBuilding.appendage,"")
+       image.and.segmentation.stem = str_replace(modelBuildingData, ModelBuilding.appendage,"")
 
-      names <- colnames(dat)
-      names <- str_replace(names, "\\(",".")
-      names <- str_replace(names, "\\)",".")
-      names <- str_replace(names, "\\:",".")
-      colnames(dat) <- names
+       names <- colnames(dat)
+       names <- str_replace(names, "\\(",".")
+       names <- str_replace(names, "\\)",".")
+       names <- str_replace(names, "\\:",".")
+       colnames(dat) <- names
 
-                                          # Create Task
-      utc.task <- makeClassifTask(id = image.name, data = dat, target = "Class")
+                                           # Create Task
+       utc.task <- makeClassifTask(id = image.name, data = dat, target = "Class")
 
-                                          # make parameter set for tuning
+                                           # make parameter set for tuning
 
-      rf.ps <- makeParamSet(makeIntegerParam("ntree", lower = 1L, upper = 500L),
-                            makeIntegerParam("mtry", lower = 1L, upper = 50L))
+       rf.ps <- makeParamSet(makeIntegerParam("ntree", lower = 1L, upper = 500L),
+                             makeIntegerParam("mtry", lower = 1L, upper = 50L))
 
-      svm.ps <- makeParamSet(makeNumericParam("C", lower = -12, upper = 12, trafo = function(x) 2^x),
-                             makeDiscreteParam("kernel", values = c("vanilladot", "polydot", "rbfdot")),
-                             makeNumericParam("sigma", lower = -12, upper = 12, trafo = function(x) 2^x,
-                                              requires = quote(kernel == "rbfdot")),
-                             makeIntegerParam("degree", lower = 2L, upper = 5L,
-                                              requires = quote(kernel == "polydot")))
+       svm.ps <- makeParamSet(makeNumericParam("C", lower = -12, upper = 12, trafo = function(x) 2^x),
+                              makeDiscreteParam("kernel", values = c("vanilladot", "polydot", "rbfdot")),
+                              makeNumericParam("sigma", lower = -12, upper = 12, trafo = function(x) 2^x,
+                                               requires = quote(kernel == "rbfdot")),
+                              makeIntegerParam("degree", lower = 2L, upper = 5L,
+                                               requires = quote(kernel == "polydot")))
 
-                                          # tune
-                                          # inner
+                                           # tune
+                                           # inner
 
-      ctrl = makeTuneControlIrace(maxExperiments = 200L)
-      inner = makeResampleDesc("CV", iters = 2L)
-      svm.lrn = makeTuneWrapper("classif.ksvm", resampling = inner, par.set = svm.ps, control = ctrl, show.info = T)
-      rf.lrn = makeTuneWrapper("classif.randomForest", resampling = inner, par.set = rf.ps, control = ctrl, show.info = T)
+       ctrl = makeTuneControlIrace(maxExperiments = 200L)
+       inner = makeResampleDesc("CV", iters = 2L)
+       svm.lrn = makeTuneWrapper("classif.ksvm", resampling = inner, par.set = svm.ps, control = ctrl, show.info = T)
+       rf.lrn = makeTuneWrapper("classif.randomForest", resampling = inner, par.set = rf.ps, control = ctrl, show.info = T)
 
-                                          #outer
-      lrnrs = list(svm.lrn, rf.lrn)
-      outer = makeResampleDesc("CV", iters = 3L)
+                                           #outer
+       lrnrs = list(svm.lrn, rf.lrn)
+       outer = makeResampleDesc("CV", iters = 3L)
 
-  #    parallelStartMulticore(cores)
+   #    parallelStartMulticore(cores)
 
-      res = benchmark(lrnrs, utc.task, outer, measures = acc, show.info = FALSE)
+       res = benchmark(lrnrs, utc.task, outer, measures = acc, show.info = FALSE)
 
-  #   parallelStop()
+   #   parallelStop()
 
-      saveRDS(res, file = paste0(models.dir,"/",image.and.segmentation.stem, models.appendage))
-  }
+       saveRDS(res, file = paste0(models.dir,"/",image.and.segmentation.stem, models.appendage))
+   }
 
 
 

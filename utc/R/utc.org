@@ -206,14 +206,6 @@
       fn = paste0(tile.dir,"/", tile.basename,band.appendage, "_stat.", statistics, "_", win.size,"_",shift.dir,".tif")
       writeRaster(texture, fn, overwrite = T)
   }
-        win.size <- paste0("window.",window[1])
-        shift.dir <- paste0("angle.",atan(shift[1]/shift[2])*180/pi) # calc shift angle
-
-        image.dir <- dirname(image.path)
-        image.name <- str_sub(basename(image.path),1,-5)
-        fn = paste0(image.dir,"/", image.basename,band.appendage, "_stat.", statistics, "_", win.size,"_",shift.dir,".tif")
-        writeRaster(texture, fn, overwrite = T)
-    }
 
   calc.texture <- function(texture.params.df,
                            tile.dir,
@@ -846,6 +838,8 @@ wrapper for slic.
 #+RESULTS:
 
 ** Build and Save Models
+
+*** untuned
 #+BEGIN_SRC R
   Build.and.Save.models <- function(dir = dd.training.dir,
                                     modelBuildingData = ModelBuildingRDS,
@@ -857,8 +851,6 @@ wrapper for slic.
       dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
           as.data.frame() %>%
           filter(complete.cases(.))
-
-      dat <- dat[sample(nrow(dat),100),]
 
       seg.p <- str_extract(modelBuildingData, segmentation.pattern)
 
@@ -886,11 +878,121 @@ wrapper for slic.
       models <- foreach(lnr = learner.list) %do% {
           mod <- train(lnr, tsk)
           mod
-          saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,model.append, ".rds"))
+          saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_Untuned",model.append, ".rds"))
       }
   }
 
 #+END_SRC
+
+#+results:
+
+*** features selected
+
+Using the Chi-squared statistic of independence between feature and
+target from the FSelector Package
+
+#+begin_src R
+  print.feature.importance <- function(dir = dd.training.dir,
+                                    modelBuildingData = ModelBuildingRDS,
+                                    image.name,
+                                    location,
+                                    feature.importance.methods = c("information.gain","chi.squared")) {
+
+
+      dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
+          as.data.frame() %>%
+          filter(complete.cases(.))
+
+      seg.p <- str_extract(modelBuildingData, segmentation.pattern)
+
+      names <- colnames(dat)
+      names <- str_replace(names, "\\(",".")
+      names <- str_replace(names, "\\)",".")
+      names <- str_replace(names, "\\:",".")
+      colnames(dat) <- names
+
+                                          # Create Tasks
+      tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = "Class")
+
+      fv = generateFilterValuesData(tsk, method = feature.importance.methods)
+
+      fv$data %>% arrange_(feature.importance.methods[1])
+  }
+
+
+#+end_src
+
+#+results:
+
+#+begin_src R
+  Build.and.Save.FeatureSelected.models <- function(dir = dd.training.dir,
+                                    modelBuildingData = ModelBuildingRDS,
+                                    models.dir = dd.models.dir,
+                                    image.name,
+                                    location,
+                                    model.append = model.appendage){
+
+      dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
+          as.data.frame() %>%
+          filter(complete.cases(.))
+
+      seg.p <- str_extract(modelBuildingData, segmentation.pattern)
+
+      names <- colnames(dat)
+      names <- str_replace(names, "\\(",".")
+      names <- str_replace(names, "\\)",".")
+      names <- str_replace(names, "\\:",".")
+      colnames(dat) <- names
+
+
+                                          # Create Tasks
+      tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = "Class")
+
+
+                                          # Make Learners
+      RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
+      SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
+
+
+                                          # make filter wrappers
+      RF_prob_fil <- makeFilterWrapper(RF_prob, fw.method = "chi.squared")
+      SVM_response_fil <- makeFilterWrapper(SVM_response, fw.method = "chi.squared")
+
+
+                                          # make tune wrapper for feature selection
+      # inner
+      ps = makeParamSet(makeDiscreteParam("fw.abs", values = seq_len(getTaskNFeats(tsk))))
+      ctrl = makeTuneControlGrid()
+      inner = makeResampleDesc("CV", iter = 2)
+
+      RF_prob_tunfil = makeTuneWrapper(RF_prob_fil, resampling = inner, par.set = ps, control = ctrl, show.info = FALSE)
+
+      SVM_response_tunfil = makeTuneWrapper(SVM_response_fil, resampling = inner, par.set = ps, control = ctrl, show.info = FALSE)
+
+      learner.list <- list(RF_prob_tunfil = RF_prob_tunfil, SVM_response_tunfil = SVM_response_tunfil)
+
+      # outer
+      outer = makeResampleDesc("Subsample", iter = 3)
+      res = benchmark(tasks = tsk, learners = learner.list, resampling = outer, show.info = FALSE)
+
+  res
+
+
+      models <- foreach(lnr = learner.list) %do% {
+          mod <- train(lnr, tsk)
+          mod
+          saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_FeatureSelected",model.append, ".rds"))
+      }
+  }
+
+#+end_src
+
+#+results:
+
+*** tuned
+#+begin_src R
+
+#+end_src
 
 #+results:
 
@@ -981,128 +1083,6 @@ wrapper for slic.
       writeRaster(a, path, overwrite = T)
       print(path)
   }
-
-
-  classify.segmented.raster.unnestedModel <- function(segment.feature.df.dir,
-                                                      segment.dir,
-                                                      model.dir,
-                                                      model.name.rds = "models",
-                                                      segment.feature.appendage = segment.feature.df.name.append,
-                                                      segmentation.appendage = segment.tile.name.append,
-                                                      segmentation.prms,
-                                                      classify.out.dir,
-                                                      tile.name = i) {
-      df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
-      mod <-readRDS(paste0(model.dir,"/",model.name.rds))
-                                          #    umod <- unlist(models, recursive = F)
-      seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage)
-      seg <- raster(seg.path)
-                                          #       dfRowsWithNA <- which(is.na(df[,2]))
-      complete.df <- df[complete.cases(df),] # svm can't predict with NAs
-      pred <- predict(mod, newdata = complete.df)
-      response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
-      m <- cbind(zone = complete.df$segment, response)
-      m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
-      seg.df <- as.data.frame(seg, xy = T)
-      names(seg.df)[3] <- "segment"
-      seg.df <- left_join(seg.df, m)
-      seg.df$response <- mapvalues(seg.df$response, from = c(1,2,3,4), to = c("g","i","t","o"))
-      seg.df$response <- factor(seg.df$response)
-      r <- seg
-      values(r) <- seg.df$response
-
-                                          #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
-                                          #            filter(LandCover %in% levels(factor(response)))
-                                          #        levels(r) <- x
-                                          # Removing Probability layer because can't have attributes with it.  When I do final classifcaiton I should add back in.
-
-      ## if (ncol(pred$data) > 2) {
-      ##     prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
-      ##     ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
-      ##     m <- cbind(segment = df$segment, ProbOfClass)
-      ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
-      ##     p <- reclassify(seg, m)
-      ##     r <- stack(r,p)
-      ## }
-      path <- paste0(segment.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
-      writeRaster(r, path, overwrite=TRUE)
-      print(path)
-
-  }
-
-                                            #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
-                                            #            filter(LandCover %in% levels(factor(response)))
-                                            #        levels(r) <- x
-  # Removing Probability layer because can't have attributes with it.  When I do final classifcaiton I should add back in.
-
-            ## if (ncol(pred$data) > 2) {
-            ##     prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
-            ##     ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
-            ##     m <- cbind(segment = df$segment, ProbOfClass)
-            ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
-            ##     p <- reclassify(seg, m)
-            ##     r <- stack(r,p)
-            ## }
-            path <- paste0(segment.dir,"/",ClassifiedTilesDirName,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
-            writeRaster(r, path, overwrite=TRUE)
-            print(path)
-
-    }
-
-  ## classify.segmented.raster.forWholeState <- function(segment.feature.df.dir,
-  ##                                                     segment.dir,
-  ##                                                     model = model,
-  ##                                                     segment.feature.appendage = segment.feature.df.name.append,
-  ##                                                     segmentation.appendage = segment.tile.name.append,
-  ##                                                     segmentation.prms,
-  ##                                                     classify.out.dir,
-  ##                                                     tile.name) {
-
-  ##     df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage,".rds"))
-  ##     seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage,".tif")
-  ##     seg <- raster(seg.path)
-  ##                                         #       dfRowsWithNA <- which(is.na(df[,2]))
-  ##     complete.df <- df[complete.cases(df),] # svm can't predict with NAs
-
-  ##     mod <- model
-  ##     pred <- predict(mod, newdata = complete.df)
-  ##     response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
-  ##     m <- cbind(zone = complete.df$segment, response)
-  ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
-
-  ##     seg.df <- as.data.frame(seg, xy = T)
-
-  ##     colnames(seg.df) <- c("x","y","segID")
-  ##     seg.df1 <- mutate(seg.df, class = plyr::mapvalues(segID, from = m$segment, to = m$response))
-
-  ##     r <- setValues(seg, values = seg.df1$class)
-  ##     names(r) <- "class"
-
-  ##     if (ncol(pred$data) > 2) {
-  ##         prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
-  ##         ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
-  ##         m <- cbind(segment = complete.df$segment, ProbOfClass)
-  ##         m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
-
-  ##         seg.df2 <- mutate(seg.df, ProbOfClass = plyr::mapvalues(segID, from = m$segment, to = m$ProbOfClass))
-  ##         p <- setValues(seg, values = seg.df2$ProbOfClass)
-  ##         r <- stack(r,p)
-  ##         names(r) <- c("class","prob")
-  ##     }
-
-  ##         path <- paste0(segment.dir,"/classified_",tile.name,"_",seg.tile.name.append,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
-  ##         writeRaster(r, path, overwrite=TRUE)
-  ##         print(path)
-
-  ## }
-
-  ## classify.segmented.raster.forWholeState(segment.feature.df.dir = tile.urb.path,
-  ##                                         segment.dir = tile.urb.path,
-  ##                                         classify.out.dir = tile.urb.path,
-  ##                                         tile.name = "urbanExtent",
-  ##                                         segmentation.appendage = seg.tile.name.append,
-  ##                                         model = model,
-  ##                                         segment.feature.appendage = segmentFeatureDF.append)
 
 
 
