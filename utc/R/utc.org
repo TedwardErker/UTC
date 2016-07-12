@@ -17,6 +17,9 @@
 #+END_SRC
 
 #+RESULTS:
+: Error in { : task 1 failed - "could not find function "add.features""
+: Error in summary.connection(connection) : invalid connection
+: [1] "org_babel_R_eoe"
 *** Reproject Shapefile to Image Coordinate Reference System
 #+BEGIN_SRC R
 
@@ -767,7 +770,6 @@ wrapper for slic.
               group_by(segment.id, image.name) %>%
               summarize(n.pixels.per.seg = n())
       }
-  closeAllConnections()
                                           # find number of pixels in each segment are in a polygon
       n.pixels.per.seg.in.polygon <- foreach(seg.file = seg.files, .combine = "rbind") %do% {
 
@@ -863,6 +865,8 @@ wrapper for slic.
       names <- str_replace(names, "\\:",".")
       colnames(dat) <- names
 
+dat <- dat[sample(nrow(dat),1000),]
+
                                           # Create Tasks
       tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = "Class")
 
@@ -883,7 +887,6 @@ wrapper for slic.
           mod
           saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_Untuned",model.append, ".rds"))
       }
-  closeAllConnections()
   }
 
 #+END_SRC
