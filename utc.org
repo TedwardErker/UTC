@@ -245,8 +245,6 @@ The following object is masked from ‘package:rgeos’:
     symdiff
 
 Loading required package: ggplot2
-Want to understand how all the pieces fit together? Buy the ggplot2
-book: http://ggplot2.org/book/
 Loading required package: ParamHelpers
 Loading required package: sp
 rgdal: version: 1.1-10, (SVN revision 622)
@@ -813,7 +811,6 @@ closeAllConnections()
 #+BEGIN_SRC R :results none
   cl <- makeCluster(cores)
   registerDoParallel(cl)
-
                                           # parallel across images and modelbuilding dfs
 
   ModelBuildingRDSs <- list.files(dd.training.dir) %>%
@@ -836,7 +833,10 @@ closeAllConnections()
 
   closeAllConnections()
 #+end_src
+
+***** Bagging the svm?
 ***** NEXT feature selecting and tuning models
+
 ****** feature selection
 ******* Show importance of features
 #+begin_src R
@@ -1112,96 +1112,96 @@ closeAllConnections()
 #+END_SRC
 **** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data
 #+BEGIN_SRC R
-      grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
+        grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
 
-      xy <- coordinates(grd)
-      grd@data$x <- xy[,1]
-      grd@data$y <- xy[,2]
+        xy <- coordinates(grd)
+        grd@data$x <- xy[,1]
+        grd@data$y <- xy[,2]
 
-  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-      str_extract(., pattern = ".*.tif$") %>%
-          str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
-          na.omit()
-
-
-  grid.names <- classified.tile.paths %>%
-      str_match(., paste0(".*(",grid.pattern,").*"))
-
-  grid.names <- grid.names[,2] %>%
-      unique() %>%
-      na.omit()
-
-  ## grid.name = str_extract(grid.names, ".*150m-[56].*") %>% na.omit()
+    classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+        str_extract(., pattern = ".*.tif$") %>%
+            str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
+            na.omit()
 
 
+    grid.names <- classified.tile.paths %>%
+        str_match(., paste0(".*(",grid.pattern,").*"))
 
-      cl <- makeCluster(cores)
-      registerDoParallel(cl)
+    grid.names <- grid.names[,2] %>%
+        unique() %>%
+        na.omit()
 
-
-      error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
-
-          pts <- grd[grd@data$unq__ID== grid.name,]
-
-          classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
-              na.omit()
-
-          ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
-          ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
-          ##      na.omit()
-
-  #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
+    ## grid.name = str_extract(grid.names, ".*150m-[56].*") %>% na.omit()
 
 
 
-          foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
-                  .combine = "rbind",
-                  .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+        cl <- makeCluster(cores)
+        registerDoParallel(cl)
 
-                      classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
-                      classified.tile <- raster(classified.tile.path.at.grid)
 
-                      tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
-                      tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+        error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
 
-                     ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
-                     ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
-                     ## dev.off()
+            pts <- grd[grd@data$unq__ID== grid.name,]
 
-                      PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
+            classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
+                na.omit()
 
-                      if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
-                          error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
-                          error <- error %>%
-                              t() %>%
-                              data.frame() %>%
-                              mutate(grid = grid.name,
-                                     image =  str_extract(classified.tile.name.at.grid, image.pattern),
-                                     target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
-                                     model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                                     seg.params = str_extract(classified.tile.name.at.grid, segmentation.pattern))
-                          error
-                      } else {
-                          target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
-                          target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
-                          error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
-                          error <- error %>%
-                              t() %>%
-                              data.frame() %>%
-                              mutate(grid = grid.name,
-                                     image =  str_extract(classified.tile.name.at.grid, image.pattern),
-                                     target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
-                                     model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                                     seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
+            ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
+            ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
+            ##      na.omit()
 
-                          error
-                      }
-                  }
-      }
+    #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
 
 
 
-      saveRDS(error.df, str_c(derived.dir, "/point2pixel.error.df.rds"))
+            foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
+                    .combine = "rbind",
+                    .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+
+                        classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
+                        classified.tile <- raster(classified.tile.path.at.grid)
+
+                        tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
+                        tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+
+                       ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
+                       ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
+                       ## dev.off()
+
+                        PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
+
+                        if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
+                            error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
+                            error <- error %>%
+                                t() %>%
+                                data.frame() %>%
+                                mutate(grid = grid.name,
+                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                       seg.params = str_extract(classified.tile.name.at.grid, segmentation.pattern))
+                            error
+                        } else {
+                            target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
+                            target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                            error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
+                            error <- error %>%
+                                t() %>%
+                                data.frame() %>%
+                                mutate(grid = grid.name,
+                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                       seg.params = str_extract(classified.tile.name.at.grid, seg.prms))
+
+                            error
+                        }
+                    }
+        }
+  closeAllConnections()
+
+
+        saveRDS(error.df, str_c(derived.dir, "/Grids.point2pixel.error.df.rds"))
 
 #+END_SRC
 
@@ -1217,7 +1217,7 @@ closeAllConnections()
 
 Comparing classification to other estimates of cover.
 #+begin_src R :results none
-      error.df <- readRDS(str_c(derived.dir, "/point2pixel.error.df.rds"))
+      error.df <- readRDS(str_c(derived.dir, "/Grids.point2pixel.error.df.rds"))
 
       error.df %>%
           arrange(overall.error) %>%
@@ -1274,7 +1274,7 @@ For each grid, find the best classification.  Plot best 20 grids.
         ungroup() %>%
         arrange(overall.error) %>%
         select(overall.error, grid,image, target.cover, model, seg.params) %>%
-        mutate(path = paste0(dd.accuracy.classified.dir,"/",location,image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+        mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
         head(n = 20)
 
 options(warn = -1)
@@ -1283,28 +1283,28 @@ options(warn = 1)
 #+end_src
 
 #+results:
-|    | overall.error | grid        | image             | target.cover | model    | seg.params | path                                                                                                                   |
-|----+---------------+-------------+-------------------+--------------+----------+------------+------------------------------------------------------------------------------------------------------------------------|
-|  1 |          0.02 | mad.150m.9  | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_rf_prob.tif                 |
-|  2 |          0.03 | mad.100m.23 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.100m.23_N-13_C-8_madisonPanshpSPOT_all_rf_prob.tif |
-|  3 |          0.04 | mad.50m.2   | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.50m.2_N-20_C-12_madisonNAIP_all_rf_prob.tif              |
-|  4 |          0.04 | mad.50m.2   | madisonNAIP       | all          | svm_resp | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.50m.2_N-20_C-12_madisonNAIP_all_svm_resp.tif             |
-|  5 |          0.04 | mad.50m.2   | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif                  |
-|  6 |          0.04 | mad.50m.2   | madisonNAIP       | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_svm_resp.tif                 |
-|  7 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.2_N-13_C-8_madisonPanshpSPOT_all_rf_prob.tif   |
-|  8 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.2_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
-|  9 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.2_Pixel_madisonPanshpSPOT_all_rf_prob.tif      |
-| 10 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.2_Pixel_madisonPanshpSPOT_all_svm_resp.tif     |
-| 11 |          0.04 | mad.50m.5   | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonPanshpSPOT.mad.50m.5_N-13_C-8_madisonPanshpSPOT_all_rf_prob.tif   |
-| 12 |          0.05 | mad.100m.12 | madisonNAIP       | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.12_Pixel_madisonNAIP_all_svm_resp.tif               |
-| 13 |          0.06 | mad.100m.13 | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.13_N-20_C-12_madisonNAIP_all_rf_prob.tif            |
-| 14 |          0.07 | mad.100m.28 | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.28_Pixel_madisonNAIP_all_rf_prob.tif                |
-| 15 |          0.08 | mad.100m.27 | madisonNAIP       | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.27_Pixel_madisonNAIP_all_svm_resp.tif               |
-| 16 |          0.08 | mad.150m.5  | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.150m.5_N-20_C-12_madisonNAIP_all_rf_prob.tif             |
-| 17 |          0.08 | mad.100m.4  | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.4_N-20_C-12_madisonNAIP_all_rf_prob.tif             |
-| 18 |          0.08 | mad.200m.2  | madisonNAIP       | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.200m.2_Pixel_madisonNAIP_all_svm_resp.tif                |
-| 19 |          0.08 | mad.100m.3  | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_rf_prob.tif                 |
-| 20 |          0.10 | mad.200m.5  | madisonNAIP       | all          | rf_prob  | N-20_C-12  | ../DD/madison_Accuracy/ClassifiedTiles/madisonmadisonNAIP.mad.200m.5_N-20_C-12_madisonNAIP_all_rf_prob.tif             |
+|    | overall.error | grid        | image             | target.cover | model    | seg.params | path                                                                                                            |
+|----+---------------+-------------+-------------------+--------------+----------+------------+-----------------------------------------------------------------------------------------------------------------|
+|  1 |          0.04 | mad.50m.2   | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif                  |
+|  2 |          0.04 | mad.50m.2   | madisonNAIP       | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_svm_resp.tif                 |
+|  3 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | svm_resp | N-67_C-20  | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.2_N-67_C-20_madisonPanshpSPOT_all_svm_resp.tif |
+|  4 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.2_Pixel_madisonPanshpSPOT_all_rf_prob.tif      |
+|  5 |          0.04 | mad.50m.2   | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.2_Pixel_madisonPanshpSPOT_all_svm_resp.tif     |
+|  6 |          0.04 | mad.100m.23 | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_rf_prob.tif                |
+|  7 |          0.04 | mad.100m.12 | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_Pixel_madisonNAIP_all_rf_prob.tif                |
+|  8 |          0.05 | mad.150m.9  | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_rf_prob.tif                 |
+|  9 |          0.05 | mad.50m.5   | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_Pixel_madisonNAIP_all_rf_prob.tif                  |
+| 10 |          0.06 | mad.100m.13 | madisonPanshpSPOT | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.13_Pixel_madisonPanshpSPOT_all_rf_prob.tif    |
+| 11 |          0.06 | mad.100m.3  | madisonPanshpSPOT | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.3_Pixel_madisonPanshpSPOT_all_rf_prob.tif     |
+| 12 |          0.08 | mad.150m.5  | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.5_Pixel_madisonNAIP_all_rf_prob.tif                 |
+| 13 |          0.08 | mad.100m.4  | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.4_Pixel_madisonNAIP_all_rf_prob.tif                 |
+| 14 |          0.12 | mad.100m.1  | madisonNAIP       | all          | svm_resp | N-15_C-9   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.1_N-15_C-9_madisonNAIP_all_svm_resp.tif             |
+| 15 |          0.12 | mad.100m.27 | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.27_Pixel_madisonNAIP_all_rf_prob.tif                |
+| 16 |          0.13 | mad.100m.28 | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_Pixel_madisonNAIP_all_rf_prob.tif                |
+| 17 |          0.15 | mad.200m.4  | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.4_Pixel_madisonNAIP_all_rf_prob.tif                 |
+| 18 |          0.16 | mad.100m.21 | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.21_Pixel_madisonNAIP_all_rf_prob.tif                |
+| 19 |          0.16 | mad.50m.1   | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.1_Pixel_madisonPanshpSPOT_all_svm_resp.tif     |
+| 20 |          0.16 | mad.200m.1  | madisonNAIP       | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.1_Pixel_madisonNAIP_all_rf_prob.tif                 |
  Error: object 'ClassifiedTilesDirName' not found
 Error in eval(expr, envir, enclos) :
   object 'best.classified.grids' not found
@@ -1359,28 +1359,28 @@ For each grid, find the worst classification.  Plot worst 20 grids.
 #+end_src
 
 #+results:
-|    | overall.error | grid        | image             | target.cover | model    | seg.params | path                                                                                                             |
-|----+---------------+-------------+-------------------+--------------+----------+------------+------------------------------------------------------------------------------------------------------------------|
-|  1 |          0.93 | mad.100m.23 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.23_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
-|  2 |          0.93 | mad.100m.3  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.3_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
-|  3 |          0.91 | mad.50m.5   | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.5_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif   |
-|  4 |          0.84 | mad.100m.1  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.1_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
-|  5 |          0.82 | mad.100m.21 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.21_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
-|  6 |          0.74 | mad.100m.10 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.10_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
-|  7 |          0.73 | mad.150m.7  | madisonPanshpSPOT | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.7_Pixel_madisonPanshpSPOT_all_rf_prob.tif      |
-|  8 |          0.71 | mad.100m.29 | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.29_Pixel_madisonPanshpSPOT_all_svm_resp.tif    |
-|  9 |          0.69 | mad.100m.7  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.7_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
-| 10 |          0.69 | mad.100m.19 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.19_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
-| 11 |          0.65 | mad.100m.22 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.22_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
-| 12 |          0.65 | mad.150m.3  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.3_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
-| 13 |          0.64 | mad.150m.6  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.6_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
-| 14 |          0.64 | mad.200m.3  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.200m.3_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
-| 15 |          0.64 | mad.100m.14 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.14_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
-| 16 |          0.64 | mad.100m.24 | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.24_Pixel_madisonPanshpSPOT_all_svm_resp.tif    |
-| 17 |          0.61 | mad.150m.10 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.10_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif |
-| 18 |          0.61 | mad.100m.18 | madisonPanshpSPOT | all          | rf_prob  | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.18_Pixel_madisonPanshpSPOT_all_rf_prob.tif     |
-| 19 |          0.60 | mad.50m.4   | madisonPanshpSPOT | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.4_Pixel_madisonPanshpSPOT_all_svm_resp.tif      |
-| 20 |          0.58 | mad.150m.8  | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.150m.8_N-13_C-8_madisonPanshpSPOT_all_svm_resp.tif  |
+|    | overall.error | grid        | image             | target.cover | model    | seg.params | path                                                                                                              |
+|----+---------------+-------------+-------------------+--------------+----------+------------+-------------------------------------------------------------------------------------------------------------------|
+|  1 |          1.00 | mad.100m.12 | madisonNAIP       | all          | svm_resp | N-60_C-30  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_N-60_C-30_madisonNAIP_all_svm_resp.tif             |
+|  2 |          1.00 | mad.100m.27 | madisonNAIP       | all          | svm_resp | N-45_C-27  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.27_N-45_C-27_madisonNAIP_all_svm_resp.tif             |
+|  3 |          1.00 | mad.50m.2   | madisonNAIP       | all          | rf_prob  | N-30_C-18  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-30_C-18_madisonNAIP_all_rf_prob.tif                |
+|  4 |          1.00 | mad.50m.2   | madisonPanshpSPOT | all          | svm_resp | N-20_C-10  | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.2_N-20_C-10_madisonPanshpSPOT_all_svm_resp.tif   |
+|  5 |          1.00 | mad.50m.5   | madisonPanshpSPOT | all          | svm_resp | N-10_C-6   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.50m.5_N-10_C-6_madisonPanshpSPOT_all_svm_resp.tif    |
+|  6 |          0.99 | mad.100m.1  | madisonPanshpSPOT | all          | svm_resp | N-30_C-15  | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.1_N-30_C-15_madisonPanshpSPOT_all_svm_resp.tif  |
+|  7 |          0.98 | mad.100m.16 | madisonPanshpSPOT | all          | svm_resp | N-13_C-4   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.16_N-13_C-4_madisonPanshpSPOT_all_svm_resp.tif  |
+|  8 |          0.98 | mad.100m.28 | madisonPanshpSPOT | all          | svm_resp | N-30_C-15  | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.28_N-30_C-15_madisonPanshpSPOT_all_svm_resp.tif |
+|  9 |          0.97 | mad.100m.13 | madisonNAIP       | all          | svm_resp | N-15_C-4   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.13_N-15_C-4_madisonNAIP_all_svm_resp.tif              |
+| 10 |          0.97 | mad.100m.13 | madisonPanshpSPOT | all          | svm_resp | N-20_C-10  | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.13_N-20_C-10_madisonPanshpSPOT_all_svm_resp.tif |
+| 11 |          0.97 | mad.100m.23 | madisonPanshpSPOT | all          | svm_resp | N-20_C-6   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.23_N-20_C-6_madisonPanshpSPOT_all_svm_resp.tif  |
+| 12 |          0.97 | mad.100m.3  | madisonPanshpSPOT | all          | svm_resp | N-20_C-6   | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.100m.3_N-20_C-6_madisonPanshpSPOT_all_svm_resp.tif   |
+| 13 |          0.97 | mad.200m.5  | madisonPanshpSPOT | all          | svm_resp | N-30_C-15  | ../DD/madison_Accuracy/ClassifiedTiles/madisonPanshpSPOT.mad.200m.5_N-30_C-15_madisonPanshpSPOT_all_svm_resp.tif  |
+| 14 |          0.96 | mad.50m.1   | madisonNAIP       | all          | rf_prob  | N-30_C-9   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.1_N-30_C-9_madisonNAIP_all_rf_prob.tif                 |
+| 15 |          0.96 | mad.150m.9  | madisonNAIP       | all          | svm_resp | N-30_C-15  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_N-30_C-15_madisonNAIP_all_svm_resp.tif              |
+| 16 |          0.96 | mad.100m.4  | madisonNAIP       | all          | svm_resp | N-30_C-9   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.4_N-30_C-9_madisonNAIP_all_svm_resp.tif               |
+| 17 |          0.94 | mad.100m.30 | madisonNAIP       | all          | svm_resp | N-100_C-60 | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.30_N-100_C-60_madisonNAIP_all_svm_resp.tif            |
+| 18 |          0.94 | mad.100m.30 | madisonNAIP       | all          | svm_resp | N-30_C-15  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.30_N-30_C-15_madisonNAIP_all_svm_resp.tif             |
+| 19 |          0.94 | mad.200m.2  | madisonNAIP       | all          | svm_resp | N-45_C-27  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.2_N-45_C-27_madisonNAIP_all_svm_resp.tif              |
+| 20 |          0.93 | mad.100m.18 | madisonNAIP       | all          | svm_resp | N-45_C-27  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.18_N-45_C-27_madisonNAIP_all_svm_resp.tif             |
  Error: object 'ClassifiedTilesDirName' not found
 Error in eval(expr, envir, enclos) :
   object 'worst.classified.grids' not found
@@ -1395,6 +1395,8 @@ Error in eval(expr, envir, enclos) :
   ##   pts.on.classified.tile.plot(fig.dir = "figs/worstgrids",points, ras, target = "a")
   ## })
 
+#+begin_src R
+
   lapply(1:nrow(worst.classified.grids), function(i){
       pts.on.classified.tile.plot.ErrorinTitle(error = worst.classified.grids$overall.error[i],
                                            grd.pts = grid.points,
@@ -1404,6 +1406,7 @@ Error in eval(expr, envir, enclos) :
   })
 
 
+#+end_src
 
   ## plts <- lapply(worst.classified.grids$path, function(path) {
   ##   grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
@@ -1422,22 +1425,40 @@ Error in eval(expr, envir, enclos) :
  Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 501 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 349 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 595 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 382 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 445 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 228 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 760 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 533 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 436 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 245 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 305 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 200 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 176 rows containing missing values (geom_raster).
+Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 371 rows containing missing values (geom_raster).
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 218 rows containing missing values (geom_raster).
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 113 rows containing missing values (geom_raster).
 Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
-Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
+Warning: Removed 52 rows containing missing values (geom_raster).
 [[1]]
 null device
           1
@@ -1544,16 +1565,84 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
 #+end_src
 
 #+results:
-|   | image             | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
-|---+-------------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
-| 1 | madisonNAIP       | all          | rf_prob  | Pixel      |         1.00 |             |          0.21 |                          0.34 |                               0.20 |                         0.35 |
-| 2 | madisonNAIP       | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.22 |                          0.51 |                               0.20 |                         0.29 |
-| 3 | madisonNAIP       | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.30 |                          0.58 |                               0.07 |                         0.59 |
-| 4 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   |        13.00 |        8.00 |          0.30 |                          0.54 |                               0.37 |                         0.37 |
-| 5 | madisonPanshpSPOT | all          | rf_prob  | Pixel      |         1.00 |             |          0.32 |                          0.47 |                               0.32 |                         0.48 |
-| 6 | madisonNAIP       | all          | svm_resp | Pixel      |         1.00 |             |          0.36 |                          0.32 |                               0.11 |                         0.83 |
-| 7 | madisonPanshpSPOT | all          | svm_resp | Pixel      |         1.00 |             |          0.45 |                          0.36 |                               0.24 |                         0.92 |
-| 8 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   |        13.00 |        8.00 |          0.45 |                          0.34 |                               0.22 |                         0.98 |
+|    | image             | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+|----+-------------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
+|  1 | madisonNAIP       | all          | rf_prob  | Pixel      |         1.00 |             |          0.21 |                          0.35 |                               0.24 |                         0.31 |
+|  2 | madisonPanshpSPOT | all          | rf_prob  | Pixel      |         1.00 |             |          0.29 |                          0.74 |                               0.22 |                         0.27 |
+|  3 | madisonNAIP       | all          | svm_resp | Pixel      |         1.00 |             |          0.30 |                          0.55 |                               0.06 |                         0.58 |
+|  4 | madisonPanshpSPOT | all          | svm_resp | Pixel      |         1.00 |             |          0.32 |                          0.79 |                               0.20 |                         0.32 |
+|  5 | madisonPanshpSPOT | all          | rf_prob  | N-67_C-20  |        67.00 |       20.00 |          0.54 |                          0.73 |                               0.28 |                         0.84 |
+|  6 | madisonPanshpSPOT | all          | svm_resp | N-67_C-20  |        67.00 |       20.00 |          0.54 |                          0.74 |                               0.15 |                         0.94 |
+|  7 | madisonPanshpSPOT | all          | svm_resp | N-13_C-7   |        13.00 |        7.00 |          0.55 |                          0.62 |                               0.49 |                         0.72 |
+|  8 | madisonNAIP       | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.56 |                          0.67 |                               1.00 |                         0.10 |
+|  9 | madisonNAIP       | all          | svm_resp | N-15_C-9   |        15.00 |        9.00 |          0.56 |                          0.72 |                               1.00 |                         0.08 |
+| 10 | madisonNAIP       | all          | svm_resp | N-20_C-6   |        20.00 |        6.00 |          0.57 |                          0.55 |                               1.00 |                         0.24 |
+| 11 | madisonNAIP       | all          | rf_prob  | N-15_C-8   |        15.00 |        8.00 |          0.57 |                          0.69 |                               1.00 |                         0.14 |
+| 12 | madisonNAIP       | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.57 |                          0.75 |                               1.00 |                         0.04 |
+| 13 | madisonNAIP       | all          | svm_resp | N-60_C-18  |        60.00 |       18.00 |          0.57 |                          0.75 |                               1.00 |                         0.05 |
+| 14 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-7   |        13.00 |        7.00 |          0.58 |                          0.71 |                               0.52 |                         0.66 |
+| 15 | madisonNAIP       | all          | svm_resp | N-15_C-4   |        15.00 |        4.00 |          0.58 |                          0.60 |                               1.00 |                         0.21 |
+| 16 | madisonNAIP       | all          | rf_prob  | N-15_C-9   |        15.00 |        9.00 |          0.59 |                          0.74 |                               0.98 |                         0.10 |
+| 17 | madisonNAIP       | all          | svm_resp | N-100_C-60 |       100.00 |       60.00 |          0.59 |                          0.83 |                               1.00 |                         0.04 |
+| 18 | madisonNAIP       | all          | rf_prob  | N-60_C-18  |        60.00 |       18.00 |          0.59 |                          0.64 |                               1.00 |                         0.15 |
+| 19 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   |        13.00 |        8.00 |          0.59 |                          0.61 |                               0.29 |                         0.94 |
+| 20 | madisonNAIP       | all          | svm_resp | N-15_C-8   |        15.00 |        8.00 |          0.59 |                          0.81 |                               1.00 |                         0.06 |
+| 21 | madisonNAIP       | all          | rf_prob  | N-100_C-60 |       100.00 |       60.00 |          0.60 |                          0.71 |                               1.00 |                         0.15 |
+| 22 | madisonNAIP       | all          | rf_prob  | N-45_C-27  |        45.00 |       27.00 |          0.60 |                          0.82 |                               0.99 |                         0.06 |
+| 23 | madisonNAIP       | all          | rf_prob  | N-20_C-10  |        20.00 |       10.00 |          0.60 |                          0.84 |                               1.00 |                         0.07 |
+| 24 | madisonNAIP       | all          | rf_prob  | N-45_C-14  |        45.00 |       14.00 |          0.60 |                          0.82 |                               0.98 |                         0.10 |
+| 25 | madisonNAIP       | all          | rf_prob  | N-60_C-36  |        60.00 |       36.00 |          0.60 |                          0.88 |                               0.98 |                         0.02 |
+| 26 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   |        13.00 |        8.00 |          0.60 |                          0.62 |                               0.32 |                         0.92 |
+| 27 | madisonPanshpSPOT | all          | svm_resp | N-20_C-6   |        20.00 |        6.00 |          0.61 |                          0.50 |                               0.39 |                         1.00 |
+| 28 | madisonNAIP       | all          | rf_prob  | N-30_C-15  |        30.00 |       15.00 |          0.61 |                          0.69 |                               1.00 |                         0.17 |
+| 29 | madisonPanshpSPOT | all          | svm_resp | N-40_C-20  |        40.00 |       20.00 |          0.61 |                          0.38 |                               0.57 |                         0.86 |
+| 30 | madisonNAIP       | all          | rf_prob  | N-30_C-18  |        30.00 |       18.00 |          0.61 |                          0.59 |                               0.98 |                         0.27 |
+| 31 | madisonNAIP       | all          | svm_resp | N-45_C-22  |        45.00 |       22.00 |          0.61 |                          0.90 |                               1.00 |                         0.01 |
+| 32 | madisonNAIP       | all          | rf_prob  | N-45_C-22  |        45.00 |       22.00 |          0.61 |                          0.85 |                               1.00 |                         0.05 |
+| 33 | madisonNAIP       | all          | svm_resp | N-45_C-14  |        45.00 |       14.00 |          0.61 |                          0.90 |                               1.00 |                         0.01 |
+| 34 | madisonNAIP       | all          | rf_prob  | N-100_C-30 |       100.00 |       30.00 |          0.61 |                          0.87 |                               0.99 |                         0.06 |
+| 35 | madisonNAIP       | all          | rf_prob  | N-20_C-6   |        20.00 |        6.00 |          0.61 |                          0.50 |                               1.00 |                         0.37 |
+| 36 | madisonPanshpSPOT | all          | rf_prob  | N-30_C-9   |        30.00 |        9.00 |          0.62 |                          0.74 |                               0.48 |                         0.73 |
+| 37 | madisonPanshpSPOT | all          | svm_resp | N-67_C-33  |        67.00 |       33.00 |          0.62 |                          0.64 |                               0.60 |                         0.72 |
+| 38 | madisonNAIP       | all          | rf_prob  | N-60_C-30  |        60.00 |       30.00 |          0.62 |                          0.85 |                               0.99 |                         0.07 |
+| 39 | madisonPanshpSPOT | all          | svm_resp | N-30_C-9   |        30.00 |        9.00 |          0.63 |                          0.75 |                               0.39 |                         0.85 |
+| 40 | madisonPanshpSPOT | all          | svm_resp | N-10_C-6   |        10.00 |        6.00 |          0.63 |                          0.46 |                               0.51 |                         0.94 |
+| 41 | madisonPanshpSPOT | all          | svm_resp | N-10_C-5   |        10.00 |        5.00 |          0.63 |                          0.35 |                               0.56 |                         0.97 |
+| 42 | madisonPanshpSPOT | all          | rf_prob  | N-40_C-12  |        40.00 |       12.00 |          0.63 |                          0.56 |                               0.68 |                         0.67 |
+| 43 | madisonPanshpSPOT | all          | svm_resp | N-40_C-12  |        40.00 |       12.00 |          0.63 |                          0.47 |                               0.64 |                         0.85 |
+| 44 | madisonPanshpSPOT | all          | rf_prob  | N-20_C-6   |        20.00 |        6.00 |          0.64 |                          0.54 |                               0.44 |                         0.96 |
+| 45 | madisonPanshpSPOT | all          | rf_prob  | N-10_C-6   |        10.00 |        6.00 |          0.64 |                          0.46 |                               0.56 |                         0.91 |
+| 46 | madisonNAIP       | all          | rf_prob  | N-100_C-50 |       100.00 |       50.00 |          0.64 |                          0.79 |                               1.00 |                         0.19 |
+| 47 | madisonNAIP       | all          | svm_resp | N-100_C-30 |       100.00 |       30.00 |          0.64 |                          0.97 |                               1.00 |                         0.00 |
+| 48 | madisonPanshpSPOT | all          | rf_prob  | N-40_C-20  |        40.00 |       20.00 |          0.64 |                          0.49 |                               0.58 |                         0.81 |
+| 49 | madisonNAIP       | all          | svm_resp | N-30_C-15  |        30.00 |       15.00 |          0.64 |                          0.89 |                               1.00 |                         0.07 |
+| 50 | madisonNAIP       | all          | svm_resp | N-30_C-18  |        30.00 |       18.00 |          0.64 |                          0.82 |                               1.00 |                         0.13 |
+| 51 | madisonNAIP       | all          | svm_resp | N-100_C-50 |       100.00 |       50.00 |          0.65 |                          0.95 |                               1.00 |                         0.03 |
+| 52 | madisonNAIP       | all          | svm_resp | N-60_C-36  |        60.00 |       36.00 |          0.65 |                          0.99 |                               1.00 |                         0.00 |
+| 53 | madisonNAIP       | all          | svm_resp | N-20_C-10  |        20.00 |       10.00 |          0.65 |                          0.97 |                               1.00 |                         0.01 |
+| 54 | madisonNAIP       | all          | svm_resp | N-60_C-30  |        60.00 |       30.00 |          0.65 |                          0.97 |                               1.00 |                         0.01 |
+| 55 | madisonPanshpSPOT | all          | svm_resp | N-13_C-4   |        13.00 |        4.00 |          0.65 |                          0.69 |                               0.65 |                         0.62 |
+| 56 | madisonNAIP       | all          | svm_resp | N-30_C-9   |        30.00 |        9.00 |          0.65 |                          0.49 |                               1.00 |                         0.39 |
+| 57 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-4   |        13.00 |        4.00 |          0.65 |                          0.73 |                               0.63 |                         0.61 |
+| 58 | madisonNAIP       | all          | svm_resp | N-45_C-27  |        45.00 |       27.00 |          0.65 |                          1.00 |                               1.00 |                         0.00 |
+| 59 | madisonPanshpSPOT | all          | rf_prob  | N-67_C-33  |        67.00 |       33.00 |          0.65 |                          0.65 |                               0.70 |                         0.65 |
+| 60 | madisonPanshpSPOT | all          | svm_resp | N-40_C-24  |        40.00 |       24.00 |          0.65 |                          0.63 |                               0.41 |                         0.88 |
+| 61 | madisonPanshpSPOT | all          | svm_resp | N-30_C-15  |        30.00 |       15.00 |          0.66 |                          0.82 |                               0.23 |                         0.95 |
+| 62 | madisonNAIP       | all          | rf_prob  | N-30_C-9   |        30.00 |        9.00 |          0.66 |                          0.48 |                               0.99 |                         0.45 |
+| 63 | madisonPanshpSPOT | all          | rf_prob  | N-67_C-40  |        67.00 |       40.00 |          0.66 |                          0.46 |                               0.73 |                         0.81 |
+| 64 | madisonNAIP       | all          | rf_prob  | N-15_C-4   |        15.00 |        4.00 |          0.66 |                          0.67 |                               1.00 |                         0.30 |
+| 65 | madisonPanshpSPOT | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.66 |                          0.54 |                               0.68 |                         0.75 |
+| 66 | madisonPanshpSPOT | all          | rf_prob  | N-40_C-24  |        40.00 |       24.00 |          0.66 |                          0.58 |                               0.52 |                         0.84 |
+| 67 | madisonPanshpSPOT | all          | rf_prob  | N-10_C-5   |        10.00 |        5.00 |          0.66 |                          0.57 |                               0.52 |                         0.86 |
+| 68 | madisonPanshpSPOT | all          | rf_prob  | N-30_C-18  |        30.00 |       18.00 |          0.67 |                          0.43 |                               0.80 |                         0.77 |
+| 69 | madisonPanshpSPOT | all          | rf_prob  | N-30_C-15  |        30.00 |       15.00 |          0.68 |                          0.74 |                               0.45 |                         0.83 |
+| 70 | madisonPanshpSPOT | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.69 |                          0.58 |                               0.64 |                         0.80 |
+| 71 | madisonPanshpSPOT | all          | svm_resp | N-67_C-40  |        67.00 |       40.00 |          0.70 |                          0.48 |                               0.75 |                         0.85 |
+| 72 | madisonPanshpSPOT | all          | svm_resp | N-30_C-18  |        30.00 |       18.00 |          0.71 |                          0.58 |                               0.74 |                         0.80 |
+| 73 | madisonPanshpSPOT | all          | rf_prob  | N-10_C-3   |        10.00 |        3.00 |          0.73 |                          0.66 |                               0.72 |                         0.73 |
+| 74 | madisonPanshpSPOT | all          | svm_resp | N-10_C-3   |        10.00 |        3.00 |          0.75 |                          0.66 |                               0.72 |                         0.77 |
+| 75 | madisonPanshpSPOT | all          | rf_prob  | N-20_C-10  |        20.00 |       10.00 |          0.77 |                          0.49 |                               0.84 |                         0.85 |
+| 76 | madisonPanshpSPOT | all          | svm_resp | N-20_C-10  |        20.00 |       10.00 |          0.80 |                          0.48 |                               0.86 |                         0.89 |
 
 
 
@@ -1612,16 +1701,84 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
 #+end_src
 
 #+results:
- |   | image             | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
- |---+-------------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
- | 1 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   |        13.00 |        8.00 |          0.45 |                          0.34 |                               0.22 |                         0.98 |
- | 2 | madisonPanshpSPOT | all          | svm_resp | Pixel      |         1.00 |             |          0.45 |                          0.36 |                               0.24 |                         0.92 |
- | 3 | madisonNAIP       | all          | svm_resp | Pixel      |         1.00 |             |          0.36 |                          0.32 |                               0.11 |                         0.83 |
- | 4 | madisonPanshpSPOT | all          | rf_prob  | Pixel      |         1.00 |             |          0.32 |                          0.47 |                               0.32 |                         0.48 |
- | 5 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   |        13.00 |        8.00 |          0.30 |                          0.54 |                               0.37 |                         0.37 |
- | 6 | madisonNAIP       | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.30 |                          0.58 |                               0.07 |                         0.59 |
- | 7 | madisonNAIP       | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.22 |                          0.51 |                               0.20 |                         0.29 |
- | 8 | madisonNAIP       | all          | rf_prob  | Pixel      |         1.00 |             |          0.21 |                          0.34 |                               0.20 |                         0.35 |
+ |    | image             | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+ |----+-------------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
+ |  1 | madisonPanshpSPOT | all          | svm_resp | N-20_C-10  |        20.00 |       10.00 |          0.80 |                          0.48 |                               0.86 |                         0.89 |
+ |  2 | madisonPanshpSPOT | all          | rf_prob  | N-20_C-10  |        20.00 |       10.00 |          0.77 |                          0.49 |                               0.84 |                         0.85 |
+ |  3 | madisonPanshpSPOT | all          | svm_resp | N-10_C-3   |        10.00 |        3.00 |          0.75 |                          0.66 |                               0.72 |                         0.77 |
+ |  4 | madisonPanshpSPOT | all          | rf_prob  | N-10_C-3   |        10.00 |        3.00 |          0.73 |                          0.66 |                               0.72 |                         0.73 |
+ |  5 | madisonPanshpSPOT | all          | svm_resp | N-30_C-18  |        30.00 |       18.00 |          0.71 |                          0.58 |                               0.74 |                         0.80 |
+ |  6 | madisonPanshpSPOT | all          | svm_resp | N-67_C-40  |        67.00 |       40.00 |          0.70 |                          0.48 |                               0.75 |                         0.85 |
+ |  7 | madisonPanshpSPOT | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.69 |                          0.58 |                               0.64 |                         0.80 |
+ |  8 | madisonPanshpSPOT | all          | rf_prob  | N-30_C-15  |        30.00 |       15.00 |          0.68 |                          0.74 |                               0.45 |                         0.83 |
+ |  9 | madisonPanshpSPOT | all          | rf_prob  | N-30_C-18  |        30.00 |       18.00 |          0.67 |                          0.43 |                               0.80 |                         0.77 |
+ | 10 | madisonPanshpSPOT | all          | rf_prob  | N-10_C-5   |        10.00 |        5.00 |          0.66 |                          0.57 |                               0.52 |                         0.86 |
+ | 11 | madisonPanshpSPOT | all          | rf_prob  | N-40_C-24  |        40.00 |       24.00 |          0.66 |                          0.58 |                               0.52 |                         0.84 |
+ | 12 | madisonPanshpSPOT | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.66 |                          0.54 |                               0.68 |                         0.75 |
+ | 13 | madisonNAIP       | all          | rf_prob  | N-15_C-4   |        15.00 |        4.00 |          0.66 |                          0.67 |                               1.00 |                         0.30 |
+ | 14 | madisonPanshpSPOT | all          | rf_prob  | N-67_C-40  |        67.00 |       40.00 |          0.66 |                          0.46 |                               0.73 |                         0.81 |
+ | 15 | madisonNAIP       | all          | rf_prob  | N-30_C-9   |        30.00 |        9.00 |          0.66 |                          0.48 |                               0.99 |                         0.45 |
+ | 16 | madisonPanshpSPOT | all          | svm_resp | N-30_C-15  |        30.00 |       15.00 |          0.66 |                          0.82 |                               0.23 |                         0.95 |
+ | 17 | madisonPanshpSPOT | all          | svm_resp | N-40_C-24  |        40.00 |       24.00 |          0.65 |                          0.63 |                               0.41 |                         0.88 |
+ | 18 | madisonPanshpSPOT | all          | rf_prob  | N-67_C-33  |        67.00 |       33.00 |          0.65 |                          0.65 |                               0.70 |                         0.65 |
+ | 19 | madisonNAIP       | all          | svm_resp | N-45_C-27  |        45.00 |       27.00 |          0.65 |                          1.00 |                               1.00 |                         0.00 |
+ | 20 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-4   |        13.00 |        4.00 |          0.65 |                          0.73 |                               0.63 |                         0.61 |
+ | 21 | madisonNAIP       | all          | svm_resp | N-30_C-9   |        30.00 |        9.00 |          0.65 |                          0.49 |                               1.00 |                         0.39 |
+ | 22 | madisonPanshpSPOT | all          | svm_resp | N-13_C-4   |        13.00 |        4.00 |          0.65 |                          0.69 |                               0.65 |                         0.62 |
+ | 23 | madisonNAIP       | all          | svm_resp | N-60_C-30  |        60.00 |       30.00 |          0.65 |                          0.97 |                               1.00 |                         0.01 |
+ | 24 | madisonNAIP       | all          | svm_resp | N-20_C-10  |        20.00 |       10.00 |          0.65 |                          0.97 |                               1.00 |                         0.01 |
+ | 25 | madisonNAIP       | all          | svm_resp | N-60_C-36  |        60.00 |       36.00 |          0.65 |                          0.99 |                               1.00 |                         0.00 |
+ | 26 | madisonNAIP       | all          | svm_resp | N-100_C-50 |       100.00 |       50.00 |          0.65 |                          0.95 |                               1.00 |                         0.03 |
+ | 27 | madisonNAIP       | all          | svm_resp | N-30_C-18  |        30.00 |       18.00 |          0.64 |                          0.82 |                               1.00 |                         0.13 |
+ | 28 | madisonNAIP       | all          | svm_resp | N-30_C-15  |        30.00 |       15.00 |          0.64 |                          0.89 |                               1.00 |                         0.07 |
+ | 29 | madisonPanshpSPOT | all          | rf_prob  | N-40_C-20  |        40.00 |       20.00 |          0.64 |                          0.49 |                               0.58 |                         0.81 |
+ | 30 | madisonNAIP       | all          | svm_resp | N-100_C-30 |       100.00 |       30.00 |          0.64 |                          0.97 |                               1.00 |                         0.00 |
+ | 31 | madisonNAIP       | all          | rf_prob  | N-100_C-50 |       100.00 |       50.00 |          0.64 |                          0.79 |                               1.00 |                         0.19 |
+ | 32 | madisonPanshpSPOT | all          | rf_prob  | N-10_C-6   |        10.00 |        6.00 |          0.64 |                          0.46 |                               0.56 |                         0.91 |
+ | 33 | madisonPanshpSPOT | all          | rf_prob  | N-20_C-6   |        20.00 |        6.00 |          0.64 |                          0.54 |                               0.44 |                         0.96 |
+ | 34 | madisonPanshpSPOT | all          | svm_resp | N-40_C-12  |        40.00 |       12.00 |          0.63 |                          0.47 |                               0.64 |                         0.85 |
+ | 35 | madisonPanshpSPOT | all          | rf_prob  | N-40_C-12  |        40.00 |       12.00 |          0.63 |                          0.56 |                               0.68 |                         0.67 |
+ | 36 | madisonPanshpSPOT | all          | svm_resp | N-10_C-5   |        10.00 |        5.00 |          0.63 |                          0.35 |                               0.56 |                         0.97 |
+ | 37 | madisonPanshpSPOT | all          | svm_resp | N-10_C-6   |        10.00 |        6.00 |          0.63 |                          0.46 |                               0.51 |                         0.94 |
+ | 38 | madisonPanshpSPOT | all          | svm_resp | N-30_C-9   |        30.00 |        9.00 |          0.63 |                          0.75 |                               0.39 |                         0.85 |
+ | 39 | madisonNAIP       | all          | rf_prob  | N-60_C-30  |        60.00 |       30.00 |          0.62 |                          0.85 |                               0.99 |                         0.07 |
+ | 40 | madisonPanshpSPOT | all          | svm_resp | N-67_C-33  |        67.00 |       33.00 |          0.62 |                          0.64 |                               0.60 |                         0.72 |
+ | 41 | madisonPanshpSPOT | all          | rf_prob  | N-30_C-9   |        30.00 |        9.00 |          0.62 |                          0.74 |                               0.48 |                         0.73 |
+ | 42 | madisonNAIP       | all          | rf_prob  | N-20_C-6   |        20.00 |        6.00 |          0.61 |                          0.50 |                               1.00 |                         0.37 |
+ | 43 | madisonNAIP       | all          | rf_prob  | N-100_C-30 |       100.00 |       30.00 |          0.61 |                          0.87 |                               0.99 |                         0.06 |
+ | 44 | madisonNAIP       | all          | svm_resp | N-45_C-14  |        45.00 |       14.00 |          0.61 |                          0.90 |                               1.00 |                         0.01 |
+ | 45 | madisonNAIP       | all          | rf_prob  | N-45_C-22  |        45.00 |       22.00 |          0.61 |                          0.85 |                               1.00 |                         0.05 |
+ | 46 | madisonNAIP       | all          | svm_resp | N-45_C-22  |        45.00 |       22.00 |          0.61 |                          0.90 |                               1.00 |                         0.01 |
+ | 47 | madisonNAIP       | all          | rf_prob  | N-30_C-18  |        30.00 |       18.00 |          0.61 |                          0.59 |                               0.98 |                         0.27 |
+ | 48 | madisonPanshpSPOT | all          | svm_resp | N-40_C-20  |        40.00 |       20.00 |          0.61 |                          0.38 |                               0.57 |                         0.86 |
+ | 49 | madisonNAIP       | all          | rf_prob  | N-30_C-15  |        30.00 |       15.00 |          0.61 |                          0.69 |                               1.00 |                         0.17 |
+ | 50 | madisonPanshpSPOT | all          | svm_resp | N-20_C-6   |        20.00 |        6.00 |          0.61 |                          0.50 |                               0.39 |                         1.00 |
+ | 51 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-8   |        13.00 |        8.00 |          0.60 |                          0.62 |                               0.32 |                         0.92 |
+ | 52 | madisonNAIP       | all          | rf_prob  | N-60_C-36  |        60.00 |       36.00 |          0.60 |                          0.88 |                               0.98 |                         0.02 |
+ | 53 | madisonNAIP       | all          | rf_prob  | N-45_C-14  |        45.00 |       14.00 |          0.60 |                          0.82 |                               0.98 |                         0.10 |
+ | 54 | madisonNAIP       | all          | rf_prob  | N-20_C-10  |        20.00 |       10.00 |          0.60 |                          0.84 |                               1.00 |                         0.07 |
+ | 55 | madisonNAIP       | all          | rf_prob  | N-45_C-27  |        45.00 |       27.00 |          0.60 |                          0.82 |                               0.99 |                         0.06 |
+ | 56 | madisonNAIP       | all          | rf_prob  | N-100_C-60 |       100.00 |       60.00 |          0.60 |                          0.71 |                               1.00 |                         0.15 |
+ | 57 | madisonNAIP       | all          | svm_resp | N-15_C-8   |        15.00 |        8.00 |          0.59 |                          0.81 |                               1.00 |                         0.06 |
+ | 58 | madisonPanshpSPOT | all          | svm_resp | N-13_C-8   |        13.00 |        8.00 |          0.59 |                          0.61 |                               0.29 |                         0.94 |
+ | 59 | madisonNAIP       | all          | rf_prob  | N-60_C-18  |        60.00 |       18.00 |          0.59 |                          0.64 |                               1.00 |                         0.15 |
+ | 60 | madisonNAIP       | all          | svm_resp | N-100_C-60 |       100.00 |       60.00 |          0.59 |                          0.83 |                               1.00 |                         0.04 |
+ | 61 | madisonNAIP       | all          | rf_prob  | N-15_C-9   |        15.00 |        9.00 |          0.59 |                          0.74 |                               0.98 |                         0.10 |
+ | 62 | madisonNAIP       | all          | svm_resp | N-15_C-4   |        15.00 |        4.00 |          0.58 |                          0.60 |                               1.00 |                         0.21 |
+ | 63 | madisonPanshpSPOT | all          | rf_prob  | N-13_C-7   |        13.00 |        7.00 |          0.58 |                          0.71 |                               0.52 |                         0.66 |
+ | 64 | madisonNAIP       | all          | svm_resp | N-60_C-18  |        60.00 |       18.00 |          0.57 |                          0.75 |                               1.00 |                         0.05 |
+ | 65 | madisonNAIP       | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.57 |                          0.75 |                               1.00 |                         0.04 |
+ | 66 | madisonNAIP       | all          | rf_prob  | N-15_C-8   |        15.00 |        8.00 |          0.57 |                          0.69 |                               1.00 |                         0.14 |
+ | 67 | madisonNAIP       | all          | svm_resp | N-20_C-6   |        20.00 |        6.00 |          0.57 |                          0.55 |                               1.00 |                         0.24 |
+ | 68 | madisonNAIP       | all          | svm_resp | N-15_C-9   |        15.00 |        9.00 |          0.56 |                          0.72 |                               1.00 |                         0.08 |
+ | 69 | madisonNAIP       | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.56 |                          0.67 |                               1.00 |                         0.10 |
+ | 70 | madisonPanshpSPOT | all          | svm_resp | N-13_C-7   |        13.00 |        7.00 |          0.55 |                          0.62 |                               0.49 |                         0.72 |
+ | 71 | madisonPanshpSPOT | all          | svm_resp | N-67_C-20  |        67.00 |       20.00 |          0.54 |                          0.74 |                               0.15 |                         0.94 |
+ | 72 | madisonPanshpSPOT | all          | rf_prob  | N-67_C-20  |        67.00 |       20.00 |          0.54 |                          0.73 |                               0.28 |                         0.84 |
+ | 73 | madisonPanshpSPOT | all          | svm_resp | Pixel      |         1.00 |             |          0.32 |                          0.79 |                               0.20 |                         0.32 |
+ | 74 | madisonNAIP       | all          | svm_resp | Pixel      |         1.00 |             |          0.30 |                          0.55 |                               0.06 |                         0.58 |
+ | 75 | madisonPanshpSPOT | all          | rf_prob  | Pixel      |         1.00 |             |          0.29 |                          0.74 |                               0.22 |                         0.27 |
+ | 76 | madisonNAIP       | all          | rf_prob  | Pixel      |         1.00 |             |          0.21 |                          0.35 |                               0.24 |                         0.31 |
 
 
 
@@ -1684,6 +1841,55 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
 #+end_src
 
 #+results:
+ Joining, by = c("image", "target.cover", "model", "seg.params")
+ |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
+|----+---------------+-------------+-------------+--------------+---------+------------+--------------------------------------------------------------------------------------------------|
+| 1  | 0.04          | mad.50m.2   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 2  | 0.04          | mad.100m.23 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_rf_prob.tif |
+| 3  | 0.04          | mad.100m.12 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_Pixel_madisonNAIP_all_rf_prob.tif |
+| 4  | 0.05          | mad.150m.9  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 5  | 0.05          | mad.50m.5   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 6  | 0.08          | mad.150m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 7  | 0.08          | mad.100m.13 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.13_Pixel_madisonNAIP_all_rf_prob.tif |
+| 8  | 0.08          | mad.100m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 9  | 0.08          | mad.100m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 10 | 0.12          | mad.100m.27 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.27_Pixel_madisonNAIP_all_rf_prob.tif |
+| 11 | 0.13          | mad.100m.28 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_Pixel_madisonNAIP_all_rf_prob.tif |
+| 12 | 0.14          | mad.100m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 13 | 0.15          | mad.200m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 14 | 0.16          | mad.100m.21 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.21_Pixel_madisonNAIP_all_rf_prob.tif |
+| 15 | 0.16          | mad.200m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 16 | 0.17          | mad.200m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 17 | 0.17          | mad.100m.14 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.14_Pixel_madisonNAIP_all_rf_prob.tif |
+| 18 | 0.21          | mad.100m.11 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.11_Pixel_madisonNAIP_all_rf_prob.tif |
+| 19 | 0.21          | mad.100m.30 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.30_Pixel_madisonNAIP_all_rf_prob.tif |
+| 20 | 0.21          | mad.100m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 21 | 0.22          | mad.100m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 22 | 0.22          | mad.100m.18 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.18_Pixel_madisonNAIP_all_rf_prob.tif |
+| 23 | 0.22          | mad.200m.2  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.2_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 24 | 0.23          | mad.50m.4   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.4_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 25 | 0.24          | mad.150m.2  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.2_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 26 | 0.24          | mad.150m.6  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.6_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 27 | 0.25          | mad.100m.24 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.24_Pixel_madisonNAIP_all_rf_prob.tif |
+| 28 | 0.25          | mad.150m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 29 | 0.25          | mad.150m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 30 | 0.26          | mad.100m.19 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.19_Pixel_madisonNAIP_all_rf_prob.tif |
+| 31 | 0.28          | mad.100m.20 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.20_Pixel_madisonNAIP_all_rf_prob.tif |
+| 32 | 0.28          | mad.150m.10 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.10_Pixel_madisonNAIP_all_rf_prob.tif |
+| 33 | 0.28          | mad.100m.7  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.7_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 34 | 0.29          | mad.50m.1   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.1_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 35 | 0.29          | mad.200m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 36 | 0.30          | mad.100m.29 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.29_Pixel_madisonNAIP_all_rf_prob.tif |
+| 37 | 0.30          | mad.150m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 38 | 0.30          | mad.150m.7  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.7_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 39 | 0.31          | mad.100m.17 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.17_Pixel_madisonNAIP_all_rf_prob.tif |
+| 40 | 0.31          | mad.100m.6  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.6_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 41 | 0.32          | mad.100m.10 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.10_Pixel_madisonNAIP_all_rf_prob.tif |
+| 42 | 0.32          | mad.100m.16 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.16_Pixel_madisonNAIP_all_rf_prob.tif |
+| 43 | 0.32          | mad.100m.9  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.9_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 44 | 0.37          | mad.50m.3   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 45 | 0.38          | mad.150m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 46 | 0.39          | mad.100m.22 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_Pixel_madisonNAIP_all_rf_prob.tif |
  Joining by: c("image", "target.cover", "model", "seg.params")
  |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
 |----+---------------+-------------+-------------+--------------+---------+------------+--------------------------------------------------------------------------------------------------|
@@ -1982,6 +2188,8 @@ Warning in dir.create(fig.dir) :
   'figs/bestclassif.bestgrids' already exists
 Warning in dir.create(fig.dir) :
   'figs/bestclassif.bestgrids' already exists
+Warning in dir.create(fig.dir) :
+  'figs/bestclassif.bestgrids' already exists
 [[1]]
 null device
           1
@@ -2075,7 +2283,7 @@ null device
       left_join(., error.df) %>%
       arrange(desc(overall.error)) %>%
       select(overall.error, grid,image, target.cover, model, seg.params) %>%
-      mutate(path = paste0(dd.accuracy.dir,"/",ClassifiedTilesDirName,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+      mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
       head(n=20)
 
 

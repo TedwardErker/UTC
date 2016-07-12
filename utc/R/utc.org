@@ -122,7 +122,6 @@
       polygons.in.image <- foreach(i = seq_along(polygons),.combine = "c") %do% {
           gIntersects(polygons[i,],image.extent)
       }
-  closeAllConnections()
 
       polygons <- polygons[polygons.in.image,]
 
@@ -138,7 +137,6 @@
                    writeRaster(r, paste0(output.dir,"/",image.name,".",tile.id,".tif"),
                                overwrite = T)
                }
-  closeAllConnections()
   }
 
                                           #  shapefile.dsn = grid.accuracy.region.imageCRS.dsn
@@ -865,7 +863,6 @@ wrapper for slic.
       names <- str_replace(names, "\\:",".")
       colnames(dat) <- names
 
-dat <- dat[sample(nrow(dat),1000),]
 
                                           # Create Tasks
       tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = "Class")
@@ -990,7 +987,6 @@ target from the FSelector Package
           mod
           saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_FeatureSelected",model.append, ".rds"))
       }
-  closeAllConnections()
   }
 
 #+end_src
