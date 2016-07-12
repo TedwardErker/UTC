@@ -1,0 +1,2628 @@
+Loading required package: methods
+rgeos version: 0.3-19, (SVN revision 524)
+ GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084 
+ Linking to sp version: 1.2-3 
+ Polygon checking: TRUE 
+
+Loading required package: BBmisc
+
+Attaching package: ‘BBmisc’
+
+The following object is masked from ‘package:rgeos’:
+
+    symdiff
+
+Loading required package: ggplot2
+Loading required package: ParamHelpers
+Loading required package: sp
+rgdal: version: 1.1-10, (SVN revision 622)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
+ Path to GDAL shared files: /usr/share/gdal/1.11
+ Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
+ Path to PROJ.4 shared files: (autodetected)
+ Linking to sp version: 1.2-3 
+
+Attaching package: ‘raster’
+
+The following object is masked from ‘package:mlr’:
+
+    resample
+
+The following object is masked from ‘package:ParamHelpers’:
+
+    getValues
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:BBmisc’:
+
+    coalesce, collapse
+
+The following objects are masked from ‘package:rgeos’:
+
+    intersect, setdiff, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: ‘tidyr’
+
+The following object is masked from ‘package:raster’:
+
+    extract
+
+The following object is masked from ‘package:ascii’:
+
+    expand
+
+Loading required package: iterators
+Loading required package: parallel
+randomForest 4.6-12
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: ‘randomForest’
+
+The following object is masked from ‘package:dplyr’:
+
+    combine
+
+The following object is masked from ‘package:ggplot2’:
+
+    margin
+
+
+Attaching package: ‘kernlab’
+
+The following objects are masked from ‘package:raster’:
+
+    buffer, rotated
+
+The following object is masked from ‘package:ggplot2’:
+
+    alpha
+
+                                 ../DD                 ../DD/madison_Training 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Training                      ../DD/madison_pca 
+                                 FALSE                                  FALSE 
+                      ../DD/wausau_pca                 ../DD/madison_Accuracy 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Accuracy                   ../DD/madison_Models 
+                                 FALSE                                  FALSE 
+                   ../DD/wausau_Models ../DD/madison_Accuracy/ClassifiedTiles 
+                                 FALSE                                  FALSE 
+ ../DD/wausau_Accuracy/ClassifiedTiles 
+                                 FALSE 
+There were 11 warnings (use warnings() to see them)
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonNAIP_madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonPanshpSPOT_madison_PCA_regions"
+with 8 features
+It has 1 fields
+[[1]]
+[[1]][[1]]
+class       : RasterBrick 
+dimensions  : 392, 561, 219912, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 300906, 301467, 4770791, 4771183  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.1.tif 
+names       : madisonNAIP.1.1, madisonNAIP.1.2, madisonNAIP.1.3, madisonNAIP.1.4 
+min values  :              36,              39,              53,              42 
+max values  :             242,             244,             235,             234 
+
+
+[[1]][[2]]
+class       : RasterBrick 
+dimensions  : 588, 661, 388668, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 301647, 302308, 4770758, 4771346  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.2.tif 
+names       : madisonNAIP.2.1, madisonNAIP.2.2, madisonNAIP.2.3, madisonNAIP.2.4 
+min values  :              36,              41,              52,              45 
+max values  :             241,             243,             237,             229 
+
+
+[[1]][[3]]
+class       : RasterBrick 
+dimensions  : 478, 542, 259076, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 306759, 307301, 4773086, 4773564  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.3.tif 
+names       : madisonNAIP.3.1, madisonNAIP.3.2, madisonNAIP.3.3, madisonNAIP.3.4 
+min values  :              28,              34,              51,              51 
+max values  :             246,             248,             237,             246 
+
+
+[[1]][[4]]
+class       : RasterBrick 
+dimensions  : 246, 252, 61992, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 307511, 307763, 4772422, 4772668  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.4.tif 
+names       : madisonNAIP.4.1, madisonNAIP.4.2, madisonNAIP.4.3, madisonNAIP.4.4 
+min values  :               0,               0,               0,               0 
+max values  :             243,             243,             227,             225 
+
+
+[[1]][[5]]
+class       : RasterBrick 
+dimensions  : 406, 489, 198534, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 308697, 309186, 4773470, 4773876  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.5.tif 
+names       : madisonNAIP.5.1, madisonNAIP.5.2, madisonNAIP.5.3, madisonNAIP.5.4 
+min values  :              32,              38,              63,              63 
+max values  :             245,             247,             247,             213 
+
+
+[[1]][[6]]
+class       : RasterBrick 
+dimensions  : 333, 437, 145521, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 310986, 311423, 4773457, 4773790  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.6.tif 
+names       : madisonNAIP.6.1, madisonNAIP.6.2, madisonNAIP.6.3, madisonNAIP.6.4 
+min values  :              32,              39,              57,              69 
+max values  :             244,             246,             242,             215 
+
+
+[[1]][[7]]
+class       : RasterBrick 
+dimensions  : 578, 590, 341020, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 312891, 313481, 4773127, 4773705  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.7.tif 
+names       : madisonNAIP.7.1, madisonNAIP.7.2, madisonNAIP.7.3, madisonNAIP.7.4 
+min values  :              29,              38,              52,              68 
+max values  :             252,             251,             249,             233 
+
+
+[[1]][[8]]
+class       : RasterBrick 
+dimensions  : 642, 1231, 790302, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 296632, 297863, 4772061, 4772703  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.8.tif 
+names       : madisonNAIP.8.1, madisonNAIP.8.2, madisonNAIP.8.3, madisonNAIP.8.4 
+min values  :              36,              40,              46,              37 
+max values  :             247,             246,             236,             227 
+
+
+
+[[2]]
+[[2]][[1]]
+class       : RasterBrick 
+dimensions  : 261, 374, 97614, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 300906, 301467, 4770792, 4771184  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.1.tif 
+names       : madisonPanshpSPOT.1.1, madisonPanshpSPOT.1.2, madisonPanshpSPOT.1.3, madisonPanshpSPOT.1.4 
+min values  :                    82,                   305,                   374,                     1 
+max values  :                  1869,                  1532,                  1286,                  4149 
+
+
+[[2]][[2]]
+class       : RasterBrick 
+dimensions  : 392, 441, 172872, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 301647, 302308.5, 4770758, 4771346  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.2.tif 
+names       : madisonPanshpSPOT.2.1, madisonPanshpSPOT.2.2, madisonPanshpSPOT.2.3, madisonPanshpSPOT.2.4 
+min values  :                    59,                   299,                   374,                     1 
+max values  :                  1528,                  1339,                  1215,                  3284 
+
+
+[[2]][[3]]
+class       : RasterBrick 
+dimensions  : 318, 361, 114798, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 306759, 307300.5, 4773087, 4773564  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.3.tif 
+names       : madisonPanshpSPOT.3.1, madisonPanshpSPOT.3.2, madisonPanshpSPOT.3.3, madisonPanshpSPOT.3.4 
+min values  :                   114,                   318,                   412,                    24 
+max values  :                  1635,                  1406,                  1282,                  4201 
+
+
+[[2]][[4]]
+class       : RasterBrick 
+dimensions  : 164, 169, 27716, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 307510.5, 307764, 4772421, 4772667  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.4.tif 
+names       : madisonPanshpSPOT.4.1, madisonPanshpSPOT.4.2, madisonPanshpSPOT.4.3, madisonPanshpSPOT.4.4 
+min values  :                   172,                   364,                   444,                     1 
+max values  :                  1593,                  1409,                  1276,                  3385 
+
+
+[[2]][[5]]
+class       : RasterBrick 
+dimensions  : 270, 326, 88020, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 308697, 309186, 4773471, 4773876  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.5.tif 
+names       : madisonPanshpSPOT.5.1, madisonPanshpSPOT.5.2, madisonPanshpSPOT.5.3, madisonPanshpSPOT.5.4 
+min values  :                    15,                   252,                   345,                     1 
+max values  :                  2161,                  1922,                  1676,                  3717 
+
+
+[[2]][[6]]
+class       : RasterBrick 
+dimensions  : 222, 292, 64824, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 310986, 311424, 4773458, 4773790  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.6.tif 
+names       : madisonPanshpSPOT.6.1, madisonPanshpSPOT.6.2, madisonPanshpSPOT.6.3, madisonPanshpSPOT.6.4 
+min values  :                   146,                   342,                   417,                   120 
+max values  :                  1473,                  1306,                  1199,                  3340 
+
+
+[[2]][[7]]
+class       : RasterBrick 
+dimensions  : 386, 393, 151698, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 312891, 313480.5, 4773126, 4773705  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.7.tif 
+names       : madisonPanshpSPOT.7.1, madisonPanshpSPOT.7.2, madisonPanshpSPOT.7.3, madisonPanshpSPOT.7.4 
+min values  :                   167,                   354,                   430,                   224 
+max values  :                  1779,                  1524,                  1340,                  4255 
+
+
+[[2]][[8]]
+class       : RasterBrick 
+dimensions  : 428, 820, 350960, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 296632.5, 297862.5, 4772061, 4772703  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.8.tif 
+names       : madisonPanshpSPOT.8.1, madisonPanshpSPOT.8.2, madisonPanshpSPOT.8.3, madisonPanshpSPOT.8.4 
+min values  :                   106,                   296,                   389,                     1 
+max values  :                  2823,                  2241,                  1887,                  7378 
+
+
+
+Error in socketConnection("localhost", port = port, server = TRUE, blocking = TRUE,  : 
+  all connections are in use
+Calls: makeCluster ... makePSOCKcluster -> newPSOCKnode -> socketConnection
+Execution halted
+Loading required package: methods
+rgeos version: 0.3-19, (SVN revision 524)
+ GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084 
+ Linking to sp version: 1.2-3 
+ Polygon checking: TRUE 
+
+Loading required package: BBmisc
+
+Attaching package: ‘BBmisc’
+
+The following object is masked from ‘package:rgeos’:
+
+    symdiff
+
+Loading required package: ggplot2
+Loading required package: ParamHelpers
+Loading required package: sp
+rgdal: version: 1.1-10, (SVN revision 622)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
+ Path to GDAL shared files: /usr/share/gdal/1.11
+ Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
+ Path to PROJ.4 shared files: (autodetected)
+ Linking to sp version: 1.2-3 
+
+Attaching package: ‘raster’
+
+The following object is masked from ‘package:mlr’:
+
+    resample
+
+The following object is masked from ‘package:ParamHelpers’:
+
+    getValues
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:BBmisc’:
+
+    coalesce, collapse
+
+The following objects are masked from ‘package:rgeos’:
+
+    intersect, setdiff, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: ‘tidyr’
+
+The following object is masked from ‘package:raster’:
+
+    extract
+
+The following object is masked from ‘package:ascii’:
+
+    expand
+
+Loading required package: iterators
+Loading required package: parallel
+randomForest 4.6-12
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: ‘randomForest’
+
+The following object is masked from ‘package:dplyr’:
+
+    combine
+
+The following object is masked from ‘package:ggplot2’:
+
+    margin
+
+
+Attaching package: ‘kernlab’
+
+The following objects are masked from ‘package:raster’:
+
+    buffer, rotated
+
+The following object is masked from ‘package:ggplot2’:
+
+    alpha
+
+                                 ../DD                 ../DD/madison_Training 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Training                      ../DD/madison_pca 
+                                 FALSE                                  FALSE 
+                      ../DD/wausau_pca                 ../DD/madison_Accuracy 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Accuracy                   ../DD/madison_Models 
+                                 FALSE                                  FALSE 
+                   ../DD/wausau_Models ../DD/madison_Accuracy/ClassifiedTiles 
+                                 FALSE                                  FALSE 
+ ../DD/wausau_Accuracy/ClassifiedTiles 
+                                 FALSE 
+There were 11 warnings (use warnings() to see them)
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonNAIP_madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonPanshpSPOT_madison_PCA_regions"
+with 8 features
+It has 1 fields
+[[1]]
+[[1]][[1]]
+class       : RasterBrick 
+dimensions  : 392, 561, 219912, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 300906, 301467, 4770791, 4771183  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.1.tif 
+names       : madisonNAIP.1.1, madisonNAIP.1.2, madisonNAIP.1.3, madisonNAIP.1.4 
+min values  :              36,              39,              53,              42 
+max values  :             242,             244,             235,             234 
+
+
+[[1]][[2]]
+class       : RasterBrick 
+dimensions  : 588, 661, 388668, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 301647, 302308, 4770758, 4771346  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.2.tif 
+names       : madisonNAIP.2.1, madisonNAIP.2.2, madisonNAIP.2.3, madisonNAIP.2.4 
+min values  :              36,              41,              52,              45 
+max values  :             241,             243,             237,             229 
+
+
+[[1]][[3]]
+class       : RasterBrick 
+dimensions  : 478, 542, 259076, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 306759, 307301, 4773086, 4773564  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.3.tif 
+names       : madisonNAIP.3.1, madisonNAIP.3.2, madisonNAIP.3.3, madisonNAIP.3.4 
+min values  :              28,              34,              51,              51 
+max values  :             246,             248,             237,             246 
+
+
+[[1]][[4]]
+class       : RasterBrick 
+dimensions  : 246, 252, 61992, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 307511, 307763, 4772422, 4772668  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.4.tif 
+names       : madisonNAIP.4.1, madisonNAIP.4.2, madisonNAIP.4.3, madisonNAIP.4.4 
+min values  :               0,               0,               0,               0 
+max values  :             243,             243,             227,             225 
+
+
+[[1]][[5]]
+class       : RasterBrick 
+dimensions  : 406, 489, 198534, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 308697, 309186, 4773470, 4773876  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.5.tif 
+names       : madisonNAIP.5.1, madisonNAIP.5.2, madisonNAIP.5.3, madisonNAIP.5.4 
+min values  :              32,              38,              63,              63 
+max values  :             245,             247,             247,             213 
+
+
+[[1]][[6]]
+class       : RasterBrick 
+dimensions  : 333, 437, 145521, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 310986, 311423, 4773457, 4773790  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.6.tif 
+names       : madisonNAIP.6.1, madisonNAIP.6.2, madisonNAIP.6.3, madisonNAIP.6.4 
+min values  :              32,              39,              57,              69 
+max values  :             244,             246,             242,             215 
+
+
+[[1]][[7]]
+class       : RasterBrick 
+dimensions  : 578, 590, 341020, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 312891, 313481, 4773127, 4773705  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.7.tif 
+names       : madisonNAIP.7.1, madisonNAIP.7.2, madisonNAIP.7.3, madisonNAIP.7.4 
+min values  :              29,              38,              52,              68 
+max values  :             252,             251,             249,             233 
+
+
+[[1]][[8]]
+class       : RasterBrick 
+dimensions  : 642, 1231, 790302, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 296632, 297863, 4772061, 4772703  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.8.tif 
+names       : madisonNAIP.8.1, madisonNAIP.8.2, madisonNAIP.8.3, madisonNAIP.8.4 
+min values  :              36,              40,              46,              37 
+max values  :             247,             246,             236,             227 
+
+
+
+[[2]]
+[[2]][[1]]
+class       : RasterBrick 
+dimensions  : 261, 374, 97614, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 300906, 301467, 4770792, 4771184  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.1.tif 
+names       : madisonPanshpSPOT.1.1, madisonPanshpSPOT.1.2, madisonPanshpSPOT.1.3, madisonPanshpSPOT.1.4 
+min values  :                    82,                   305,                   374,                     1 
+max values  :                  1869,                  1532,                  1286,                  4149 
+
+
+[[2]][[2]]
+class       : RasterBrick 
+dimensions  : 392, 441, 172872, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 301647, 302308.5, 4770758, 4771346  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.2.tif 
+names       : madisonPanshpSPOT.2.1, madisonPanshpSPOT.2.2, madisonPanshpSPOT.2.3, madisonPanshpSPOT.2.4 
+min values  :                    59,                   299,                   374,                     1 
+max values  :                  1528,                  1339,                  1215,                  3284 
+
+
+[[2]][[3]]
+class       : RasterBrick 
+dimensions  : 318, 361, 114798, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 306759, 307300.5, 4773087, 4773564  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.3.tif 
+names       : madisonPanshpSPOT.3.1, madisonPanshpSPOT.3.2, madisonPanshpSPOT.3.3, madisonPanshpSPOT.3.4 
+min values  :                   114,                   318,                   412,                    24 
+max values  :                  1635,                  1406,                  1282,                  4201 
+
+
+[[2]][[4]]
+class       : RasterBrick 
+dimensions  : 164, 169, 27716, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 307510.5, 307764, 4772421, 4772667  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.4.tif 
+names       : madisonPanshpSPOT.4.1, madisonPanshpSPOT.4.2, madisonPanshpSPOT.4.3, madisonPanshpSPOT.4.4 
+min values  :                   172,                   364,                   444,                     1 
+max values  :                  1593,                  1409,                  1276,                  3385 
+
+
+[[2]][[5]]
+class       : RasterBrick 
+dimensions  : 270, 326, 88020, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 308697, 309186, 4773471, 4773876  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.5.tif 
+names       : madisonPanshpSPOT.5.1, madisonPanshpSPOT.5.2, madisonPanshpSPOT.5.3, madisonPanshpSPOT.5.4 
+min values  :                    15,                   252,                   345,                     1 
+max values  :                  2161,                  1922,                  1676,                  3717 
+
+
+[[2]][[6]]
+class       : RasterBrick 
+dimensions  : 222, 292, 64824, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 310986, 311424, 4773458, 4773790  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.6.tif 
+names       : madisonPanshpSPOT.6.1, madisonPanshpSPOT.6.2, madisonPanshpSPOT.6.3, madisonPanshpSPOT.6.4 
+min values  :                   146,                   342,                   417,                   120 
+max values  :                  1473,                  1306,                  1199,                  3340 
+
+
+[[2]][[7]]
+class       : RasterBrick 
+dimensions  : 386, 393, 151698, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 312891, 313480.5, 4773126, 4773705  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.7.tif 
+names       : madisonPanshpSPOT.7.1, madisonPanshpSPOT.7.2, madisonPanshpSPOT.7.3, madisonPanshpSPOT.7.4 
+min values  :                   167,                   354,                   430,                   224 
+max values  :                  1779,                  1524,                  1340,                  4255 
+
+
+[[2]][[8]]
+class       : RasterBrick 
+dimensions  : 428, 820, 350960, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 296632.5, 297862.5, 4772061, 4772703  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.8.tif 
+names       : madisonPanshpSPOT.8.1, madisonPanshpSPOT.8.2, madisonPanshpSPOT.8.3, madisonPanshpSPOT.8.4 
+min values  :                   106,                   296,                   389,                     1 
+max values  :                  2823,                  2241,                  1887,                  7378 
+
+
+
+Error in socketConnection("localhost", port = port, server = TRUE, blocking = TRUE,  : 
+  all connections are in use
+Calls: makeCluster ... makePSOCKcluster -> newPSOCKnode -> socketConnection
+Execution halted
+Loading required package: methods
+rgeos version: 0.3-19, (SVN revision 524)
+ GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084 
+ Linking to sp version: 1.2-3 
+ Polygon checking: TRUE 
+
+Loading required package: BBmisc
+
+Attaching package: ‘BBmisc’
+
+The following object is masked from ‘package:rgeos’:
+
+    symdiff
+
+Loading required package: ggplot2
+Loading required package: ParamHelpers
+Loading required package: sp
+rgdal: version: 1.1-10, (SVN revision 622)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
+ Path to GDAL shared files: /usr/share/gdal/1.11
+ Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
+ Path to PROJ.4 shared files: (autodetected)
+ Linking to sp version: 1.2-3 
+
+Attaching package: ‘raster’
+
+The following object is masked from ‘package:mlr’:
+
+    resample
+
+The following object is masked from ‘package:ParamHelpers’:
+
+    getValues
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:BBmisc’:
+
+    coalesce, collapse
+
+The following objects are masked from ‘package:rgeos’:
+
+    intersect, setdiff, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: ‘tidyr’
+
+The following object is masked from ‘package:raster’:
+
+    extract
+
+The following object is masked from ‘package:ascii’:
+
+    expand
+
+Loading required package: iterators
+Loading required package: parallel
+randomForest 4.6-12
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: ‘randomForest’
+
+The following object is masked from ‘package:dplyr’:
+
+    combine
+
+The following object is masked from ‘package:ggplot2’:
+
+    margin
+
+
+Attaching package: ‘kernlab’
+
+The following objects are masked from ‘package:raster’:
+
+    buffer, rotated
+
+The following object is masked from ‘package:ggplot2’:
+
+    alpha
+
+                                 ../DD                 ../DD/madison_Training 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Training                      ../DD/madison_pca 
+                                 FALSE                                  FALSE 
+                      ../DD/wausau_pca                 ../DD/madison_Accuracy 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Accuracy                   ../DD/madison_Models 
+                                 FALSE                                  FALSE 
+                   ../DD/wausau_Models ../DD/madison_Accuracy/ClassifiedTiles 
+                                 FALSE                                  FALSE 
+ ../DD/wausau_Accuracy/ClassifiedTiles 
+                                 FALSE 
+There were 11 warnings (use warnings() to see them)
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonNAIP_madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonPanshpSPOT_madison_PCA_regions"
+with 8 features
+It has 1 fields
+[[1]]
+[[1]][[1]]
+class       : RasterBrick 
+dimensions  : 392, 561, 219912, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 300906, 301467, 4770791, 4771183  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.1.tif 
+names       : madisonNAIP.1.1, madisonNAIP.1.2, madisonNAIP.1.3, madisonNAIP.1.4 
+min values  :              36,              39,              53,              42 
+max values  :             242,             244,             235,             234 
+
+
+[[1]][[2]]
+class       : RasterBrick 
+dimensions  : 588, 661, 388668, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 301647, 302308, 4770758, 4771346  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.2.tif 
+names       : madisonNAIP.2.1, madisonNAIP.2.2, madisonNAIP.2.3, madisonNAIP.2.4 
+min values  :              36,              41,              52,              45 
+max values  :             241,             243,             237,             229 
+
+
+[[1]][[3]]
+class       : RasterBrick 
+dimensions  : 478, 542, 259076, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 306759, 307301, 4773086, 4773564  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.3.tif 
+names       : madisonNAIP.3.1, madisonNAIP.3.2, madisonNAIP.3.3, madisonNAIP.3.4 
+min values  :              28,              34,              51,              51 
+max values  :             246,             248,             237,             246 
+
+
+[[1]][[4]]
+class       : RasterBrick 
+dimensions  : 246, 252, 61992, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 307511, 307763, 4772422, 4772668  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.4.tif 
+names       : madisonNAIP.4.1, madisonNAIP.4.2, madisonNAIP.4.3, madisonNAIP.4.4 
+min values  :               0,               0,               0,               0 
+max values  :             243,             243,             227,             225 
+
+
+[[1]][[5]]
+class       : RasterBrick 
+dimensions  : 406, 489, 198534, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 308697, 309186, 4773470, 4773876  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.5.tif 
+names       : madisonNAIP.5.1, madisonNAIP.5.2, madisonNAIP.5.3, madisonNAIP.5.4 
+min values  :              32,              38,              63,              63 
+max values  :             245,             247,             247,             213 
+
+
+[[1]][[6]]
+class       : RasterBrick 
+dimensions  : 333, 437, 145521, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 310986, 311423, 4773457, 4773790  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.6.tif 
+names       : madisonNAIP.6.1, madisonNAIP.6.2, madisonNAIP.6.3, madisonNAIP.6.4 
+min values  :              32,              39,              57,              69 
+max values  :             244,             246,             242,             215 
+
+
+[[1]][[7]]
+class       : RasterBrick 
+dimensions  : 578, 590, 341020, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 312891, 313481, 4773127, 4773705  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.7.tif 
+names       : madisonNAIP.7.1, madisonNAIP.7.2, madisonNAIP.7.3, madisonNAIP.7.4 
+min values  :              29,              38,              52,              68 
+max values  :             252,             251,             249,             233 
+
+
+[[1]][[8]]
+class       : RasterBrick 
+dimensions  : 642, 1231, 790302, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 296632, 297863, 4772061, 4772703  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.8.tif 
+names       : madisonNAIP.8.1, madisonNAIP.8.2, madisonNAIP.8.3, madisonNAIP.8.4 
+min values  :              36,              40,              46,              37 
+max values  :             247,             246,             236,             227 
+
+
+
+[[2]]
+[[2]][[1]]
+class       : RasterBrick 
+dimensions  : 261, 374, 97614, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 300906, 301467, 4770792, 4771184  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.1.tif 
+names       : madisonPanshpSPOT.1.1, madisonPanshpSPOT.1.2, madisonPanshpSPOT.1.3, madisonPanshpSPOT.1.4 
+min values  :                    82,                   305,                   374,                     1 
+max values  :                  1869,                  1532,                  1286,                  4149 
+
+
+[[2]][[2]]
+class       : RasterBrick 
+dimensions  : 392, 441, 172872, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 301647, 302308.5, 4770758, 4771346  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.2.tif 
+names       : madisonPanshpSPOT.2.1, madisonPanshpSPOT.2.2, madisonPanshpSPOT.2.3, madisonPanshpSPOT.2.4 
+min values  :                    59,                   299,                   374,                     1 
+max values  :                  1528,                  1339,                  1215,                  3284 
+
+
+[[2]][[3]]
+class       : RasterBrick 
+dimensions  : 318, 361, 114798, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 306759, 307300.5, 4773087, 4773564  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.3.tif 
+names       : madisonPanshpSPOT.3.1, madisonPanshpSPOT.3.2, madisonPanshpSPOT.3.3, madisonPanshpSPOT.3.4 
+min values  :                   114,                   318,                   412,                    24 
+max values  :                  1635,                  1406,                  1282,                  4201 
+
+
+[[2]][[4]]
+class       : RasterBrick 
+dimensions  : 164, 169, 27716, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 307510.5, 307764, 4772421, 4772667  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.4.tif 
+names       : madisonPanshpSPOT.4.1, madisonPanshpSPOT.4.2, madisonPanshpSPOT.4.3, madisonPanshpSPOT.4.4 
+min values  :                   172,                   364,                   444,                     1 
+max values  :                  1593,                  1409,                  1276,                  3385 
+
+
+[[2]][[5]]
+class       : RasterBrick 
+dimensions  : 270, 326, 88020, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 308697, 309186, 4773471, 4773876  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.5.tif 
+names       : madisonPanshpSPOT.5.1, madisonPanshpSPOT.5.2, madisonPanshpSPOT.5.3, madisonPanshpSPOT.5.4 
+min values  :                    15,                   252,                   345,                     1 
+max values  :                  2161,                  1922,                  1676,                  3717 
+
+
+[[2]][[6]]
+class       : RasterBrick 
+dimensions  : 222, 292, 64824, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 310986, 311424, 4773458, 4773790  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.6.tif 
+names       : madisonPanshpSPOT.6.1, madisonPanshpSPOT.6.2, madisonPanshpSPOT.6.3, madisonPanshpSPOT.6.4 
+min values  :                   146,                   342,                   417,                   120 
+max values  :                  1473,                  1306,                  1199,                  3340 
+
+
+[[2]][[7]]
+class       : RasterBrick 
+dimensions  : 386, 393, 151698, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 312891, 313480.5, 4773126, 4773705  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.7.tif 
+names       : madisonPanshpSPOT.7.1, madisonPanshpSPOT.7.2, madisonPanshpSPOT.7.3, madisonPanshpSPOT.7.4 
+min values  :                   167,                   354,                   430,                   224 
+max values  :                  1779,                  1524,                  1340,                  4255 
+
+
+[[2]][[8]]
+class       : RasterBrick 
+dimensions  : 428, 820, 350960, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 296632.5, 297862.5, 4772061, 4772703  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.8.tif 
+names       : madisonPanshpSPOT.8.1, madisonPanshpSPOT.8.2, madisonPanshpSPOT.8.3, madisonPanshpSPOT.8.4 
+min values  :                   106,                   296,                   389,                     1 
+max values  :                  2823,                  2241,                  1887,                  7378 
+
+
+
+Error in socketConnection("localhost", port = port, server = TRUE, blocking = TRUE,  : 
+  all connections are in use
+Calls: makeCluster ... makePSOCKcluster -> newPSOCKnode -> socketConnection
+Execution halted
+Loading required package: methods
+rgeos version: 0.3-19, (SVN revision 524)
+ GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084 
+ Linking to sp version: 1.2-3 
+ Polygon checking: TRUE 
+
+Loading required package: BBmisc
+
+Attaching package: ‘BBmisc’
+
+The following object is masked from ‘package:rgeos’:
+
+    symdiff
+
+Loading required package: ggplot2
+Loading required package: ParamHelpers
+Loading required package: sp
+rgdal: version: 1.1-10, (SVN revision 622)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
+ Path to GDAL shared files: /usr/share/gdal/1.11
+ Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
+ Path to PROJ.4 shared files: (autodetected)
+ Linking to sp version: 1.2-3 
+
+Attaching package: ‘raster’
+
+The following object is masked from ‘package:mlr’:
+
+    resample
+
+The following object is masked from ‘package:ParamHelpers’:
+
+    getValues
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:BBmisc’:
+
+    coalesce, collapse
+
+The following objects are masked from ‘package:rgeos’:
+
+    intersect, setdiff, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: ‘tidyr’
+
+The following object is masked from ‘package:raster’:
+
+    extract
+
+The following object is masked from ‘package:ascii’:
+
+    expand
+
+Loading required package: iterators
+Loading required package: parallel
+randomForest 4.6-12
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: ‘randomForest’
+
+The following object is masked from ‘package:dplyr’:
+
+    combine
+
+The following object is masked from ‘package:ggplot2’:
+
+    margin
+
+
+Attaching package: ‘kernlab’
+
+The following objects are masked from ‘package:raster’:
+
+    buffer, rotated
+
+The following object is masked from ‘package:ggplot2’:
+
+    alpha
+
+                                 ../DD                 ../DD/madison_Training 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Training                      ../DD/madison_pca 
+                                 FALSE                                  FALSE 
+                      ../DD/wausau_pca                 ../DD/madison_Accuracy 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Accuracy                   ../DD/madison_Models 
+                                 FALSE                                  FALSE 
+                   ../DD/wausau_Models ../DD/madison_Accuracy/ClassifiedTiles 
+                                 FALSE                                  FALSE 
+ ../DD/wausau_Accuracy/ClassifiedTiles 
+                                 FALSE 
+There were 11 warnings (use warnings() to see them)
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonNAIP_madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonPanshpSPOT_madison_PCA_regions"
+with 8 features
+It has 1 fields
+[[1]]
+[[1]][[1]]
+class       : RasterBrick 
+dimensions  : 392, 561, 219912, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 300906, 301467, 4770791, 4771183  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.1.tif 
+names       : madisonNAIP.1.1, madisonNAIP.1.2, madisonNAIP.1.3, madisonNAIP.1.4 
+min values  :              36,              39,              53,              42 
+max values  :             242,             244,             235,             234 
+
+
+[[1]][[2]]
+class       : RasterBrick 
+dimensions  : 588, 661, 388668, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 301647, 302308, 4770758, 4771346  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.2.tif 
+names       : madisonNAIP.2.1, madisonNAIP.2.2, madisonNAIP.2.3, madisonNAIP.2.4 
+min values  :              36,              41,              52,              45 
+max values  :             241,             243,             237,             229 
+
+
+[[1]][[3]]
+class       : RasterBrick 
+dimensions  : 478, 542, 259076, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 306759, 307301, 4773086, 4773564  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.3.tif 
+names       : madisonNAIP.3.1, madisonNAIP.3.2, madisonNAIP.3.3, madisonNAIP.3.4 
+min values  :              28,              34,              51,              51 
+max values  :             246,             248,             237,             246 
+
+
+[[1]][[4]]
+class       : RasterBrick 
+dimensions  : 246, 252, 61992, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 307511, 307763, 4772422, 4772668  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.4.tif 
+names       : madisonNAIP.4.1, madisonNAIP.4.2, madisonNAIP.4.3, madisonNAIP.4.4 
+min values  :               0,               0,               0,               0 
+max values  :             243,             243,             227,             225 
+
+
+[[1]][[5]]
+class       : RasterBrick 
+dimensions  : 406, 489, 198534, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 308697, 309186, 4773470, 4773876  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.5.tif 
+names       : madisonNAIP.5.1, madisonNAIP.5.2, madisonNAIP.5.3, madisonNAIP.5.4 
+min values  :              32,              38,              63,              63 
+max values  :             245,             247,             247,             213 
+
+
+[[1]][[6]]
+class       : RasterBrick 
+dimensions  : 333, 437, 145521, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 310986, 311423, 4773457, 4773790  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.6.tif 
+names       : madisonNAIP.6.1, madisonNAIP.6.2, madisonNAIP.6.3, madisonNAIP.6.4 
+min values  :              32,              39,              57,              69 
+max values  :             244,             246,             242,             215 
+
+
+[[1]][[7]]
+class       : RasterBrick 
+dimensions  : 578, 590, 341020, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 312891, 313481, 4773127, 4773705  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.7.tif 
+names       : madisonNAIP.7.1, madisonNAIP.7.2, madisonNAIP.7.3, madisonNAIP.7.4 
+min values  :              29,              38,              52,              68 
+max values  :             252,             251,             249,             233 
+
+
+[[1]][[8]]
+class       : RasterBrick 
+dimensions  : 642, 1231, 790302, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1, 1  (x, y)
+extent      : 296632, 297863, 4772061, 4772703  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonNAIP.8.tif 
+names       : madisonNAIP.8.1, madisonNAIP.8.2, madisonNAIP.8.3, madisonNAIP.8.4 
+min values  :              36,              40,              46,              37 
+max values  :             247,             246,             236,             227 
+
+
+
+[[2]]
+[[2]][[1]]
+class       : RasterBrick 
+dimensions  : 261, 374, 97614, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 300906, 301467, 4770792, 4771184  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.1.tif 
+names       : madisonPanshpSPOT.1.1, madisonPanshpSPOT.1.2, madisonPanshpSPOT.1.3, madisonPanshpSPOT.1.4 
+min values  :                    82,                   305,                   374,                     1 
+max values  :                  1869,                  1532,                  1286,                  4149 
+
+
+[[2]][[2]]
+class       : RasterBrick 
+dimensions  : 392, 441, 172872, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 301647, 302308.5, 4770758, 4771346  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.2.tif 
+names       : madisonPanshpSPOT.2.1, madisonPanshpSPOT.2.2, madisonPanshpSPOT.2.3, madisonPanshpSPOT.2.4 
+min values  :                    59,                   299,                   374,                     1 
+max values  :                  1528,                  1339,                  1215,                  3284 
+
+
+[[2]][[3]]
+class       : RasterBrick 
+dimensions  : 318, 361, 114798, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 306759, 307300.5, 4773087, 4773564  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.3.tif 
+names       : madisonPanshpSPOT.3.1, madisonPanshpSPOT.3.2, madisonPanshpSPOT.3.3, madisonPanshpSPOT.3.4 
+min values  :                   114,                   318,                   412,                    24 
+max values  :                  1635,                  1406,                  1282,                  4201 
+
+
+[[2]][[4]]
+class       : RasterBrick 
+dimensions  : 164, 169, 27716, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 307510.5, 307764, 4772421, 4772667  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.4.tif 
+names       : madisonPanshpSPOT.4.1, madisonPanshpSPOT.4.2, madisonPanshpSPOT.4.3, madisonPanshpSPOT.4.4 
+min values  :                   172,                   364,                   444,                     1 
+max values  :                  1593,                  1409,                  1276,                  3385 
+
+
+[[2]][[5]]
+class       : RasterBrick 
+dimensions  : 270, 326, 88020, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 308697, 309186, 4773471, 4773876  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.5.tif 
+names       : madisonPanshpSPOT.5.1, madisonPanshpSPOT.5.2, madisonPanshpSPOT.5.3, madisonPanshpSPOT.5.4 
+min values  :                    15,                   252,                   345,                     1 
+max values  :                  2161,                  1922,                  1676,                  3717 
+
+
+[[2]][[6]]
+class       : RasterBrick 
+dimensions  : 222, 292, 64824, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 310986, 311424, 4773458, 4773790  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.6.tif 
+names       : madisonPanshpSPOT.6.1, madisonPanshpSPOT.6.2, madisonPanshpSPOT.6.3, madisonPanshpSPOT.6.4 
+min values  :                   146,                   342,                   417,                   120 
+max values  :                  1473,                  1306,                  1199,                  3340 
+
+
+[[2]][[7]]
+class       : RasterBrick 
+dimensions  : 386, 393, 151698, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 312891, 313480.5, 4773126, 4773705  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.7.tif 
+names       : madisonPanshpSPOT.7.1, madisonPanshpSPOT.7.2, madisonPanshpSPOT.7.3, madisonPanshpSPOT.7.4 
+min values  :                   167,                   354,                   430,                   224 
+max values  :                  1779,                  1524,                  1340,                  4255 
+
+
+[[2]][[8]]
+class       : RasterBrick 
+dimensions  : 428, 820, 350960, 4  (nrow, ncol, ncell, nlayers)
+resolution  : 1.5, 1.5  (x, y)
+extent      : 296632.5, 297862.5, 4772061, 4772703  (xmin, xmax, ymin, ymax)
+coord. ref. : +proj=utm +zone=16 +datum=WGS84 +units=m +no_defs +ellps=WGS84 +towgs84=0,0,0 
+data source : /home/erker/Pjt_UTC/DD/madison_pca/madisonPanshpSPOT.8.tif 
+names       : madisonPanshpSPOT.8.1, madisonPanshpSPOT.8.2, madisonPanshpSPOT.8.3, madisonPanshpSPOT.8.4 
+min values  :                   106,                   296,                   389,                     1 
+max values  :                  2823,                  2241,                  1887,                  7378 
+
+
+
+Error in socketConnection("localhost", port = port, server = TRUE, blocking = TRUE,  : 
+  all connections are in use
+Calls: makeCluster ... makePSOCKcluster -> newPSOCKnode -> socketConnection
+Execution halted
+Loading required package: methods
+rgeos version: 0.3-19, (SVN revision 524)
+ GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084 
+ Linking to sp version: 1.2-3 
+ Polygon checking: TRUE 
+
+Loading required package: BBmisc
+
+Attaching package: ‘BBmisc’
+
+The following object is masked from ‘package:rgeos’:
+
+    symdiff
+
+Loading required package: ggplot2
+Loading required package: ParamHelpers
+Loading required package: sp
+rgdal: version: 1.1-10, (SVN revision 622)
+ Geospatial Data Abstraction Library extensions to R successfully loaded
+ Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
+ Path to GDAL shared files: /usr/share/gdal/1.11
+ Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
+ Path to PROJ.4 shared files: (autodetected)
+ Linking to sp version: 1.2-3 
+
+Attaching package: ‘raster’
+
+The following object is masked from ‘package:mlr’:
+
+    resample
+
+The following object is masked from ‘package:ParamHelpers’:
+
+    getValues
+
+
+Attaching package: ‘dplyr’
+
+The following objects are masked from ‘package:plyr’:
+
+    arrange, count, desc, failwith, id, mutate, rename, summarise,
+    summarize
+
+The following objects are masked from ‘package:raster’:
+
+    intersect, select, union
+
+The following objects are masked from ‘package:BBmisc’:
+
+    coalesce, collapse
+
+The following objects are masked from ‘package:rgeos’:
+
+    intersect, setdiff, union
+
+The following objects are masked from ‘package:stats’:
+
+    filter, lag
+
+The following objects are masked from ‘package:base’:
+
+    intersect, setdiff, setequal, union
+
+
+Attaching package: ‘tidyr’
+
+The following object is masked from ‘package:raster’:
+
+    extract
+
+The following object is masked from ‘package:ascii’:
+
+    expand
+
+Loading required package: iterators
+Loading required package: parallel
+randomForest 4.6-12
+Type rfNews() to see new features/changes/bug fixes.
+
+Attaching package: ‘randomForest’
+
+The following object is masked from ‘package:dplyr’:
+
+    combine
+
+The following object is masked from ‘package:ggplot2’:
+
+    margin
+
+
+Attaching package: ‘kernlab’
+
+The following objects are masked from ‘package:raster’:
+
+    buffer, rotated
+
+The following object is masked from ‘package:ggplot2’:
+
+    alpha
+
+                                 ../DD                 ../DD/madison_Training 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Training                      ../DD/madison_pca 
+                                 FALSE                                  FALSE 
+                      ../DD/wausau_pca                 ../DD/madison_Accuracy 
+                                 FALSE                                  FALSE 
+                 ../DD/wausau_Accuracy                   ../DD/madison_Models 
+                                 FALSE                                  FALSE 
+                   ../DD/wausau_Models ../DD/madison_Accuracy/ClassifiedTiles 
+                                 FALSE                                  FALSE 
+ ../DD/wausau_Accuracy/ClassifiedTiles 
+                                 FALSE 
+There were 11 warnings (use warnings() to see them)
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
+[[1]]
+[1] FALSE
+
+Warning message:
+In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonNAIP_madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_PCA_Regions/", layer: "madison_PCA_regions"
+with 8 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.PCA_Regions", layer: "madisonPanshpSPOT_madison_PCA_regions"
+with 8 features
+It has 1 fields
+[[1]]
+NULL
+
+[[2]]
+NULL
+
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_Training_Regions/", layer: "madison_TrainingPolygons"
+with 15 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.Training_Regions", layer: "madisonNAIP_madison_TrainingPolygons"
+with 15 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../RD_Training_Regions/", layer: "madison_TrainingPolygons"
+with 15 features
+It has 1 fields
+OGR data source with driver: ESRI Shapefile 
+Source: "../DD/reprojected.Training_Regions", layer: "madisonPanshpSPOT_madison_TrainingPolygons"
+with 15 features
+It has 1 fields
+[[1]]
+NULL
+
+[[2]]
+NULL
+
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.1_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.14_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.15_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.2_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.4_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.13_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.6_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.12_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.3_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.5_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.9_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.10_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.11_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.7_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 4
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 8
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 15.0
+compactness parameter is 9
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 6
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 10
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 20.0
+compactness parameter is 12
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 9
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 15
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 30.0
+compactness parameter is 18
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 14
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 22
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 45.0
+compactness parameter is 27
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 18
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 30
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 60.0
+compactness parameter is 36
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 30
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 50
+madisonNAIP.8_pca.tif
+../DD/madison_Training
+average number of pixels per segment is 100.0
+compactness parameter is 60
+madisonNAIP.8_pca.tif

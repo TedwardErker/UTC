@@ -202,11 +202,13 @@ Same structure as DD_NAIP
 
 
 
-
-
 * Workflow
 ** Libraries
 #+BEGIN_SRC R
+  ## install.packages(c("gdalUtils","ascii","rgeos","mlr","broom","rgdal","raster","plyr","ggplot2","dplyr","tidyr","stringr","foreach","doParallel","glcm","randomForest","kernlab","irace","parallelMap"))
+##install.packages("e1071")
+##  install.packages("FSelector")
+
   library(gdalUtils)
   library(ascii)
   library(rgeos)
@@ -226,77 +228,78 @@ Same structure as DD_NAIP
   library(kernlab)
   library(irace)
   library(parallelMap)
+  library(FSelector)
 #+END_SRC
 
 #+results:
 #+begin_example
 rgeos version: 0.3-19, (SVN revision 524)
- GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
- Linking to sp version: 1.2-1
+ GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084
+ Linking to sp version: 1.2-3
  Polygon checking: TRUE
 Loading required package: BBmisc
 
-Attaching package: 'BBmisc'
+Attaching package: ‘BBmisc’
 
-The following object is masked from 'package:rgeos':
+The following object is masked from ‘package:rgeos’:
 
     symdiff
 
 Loading required package: ggplot2
 Loading required package: ParamHelpers
 Loading required package: sp
-rgdal: version: 1.1-3, (SVN revision 594)
+rgdal: version: 1.1-10, (SVN revision 622)
  Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 1.11.1, released 2014/09/24
- Path to GDAL shared files: /usr/local/Cellar/gdal/1.11.1_3/share/gdal
- Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
+ Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
+ Path to GDAL shared files: /usr/share/gdal/1.11
+ Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
  Path to PROJ.4 shared files: (autodetected)
- Linking to sp version: 1.2-1
+ Linking to sp version: 1.2-3
 
-Attaching package: 'raster'
+Attaching package: ‘raster’
 
-The following object is masked from 'package:mlr':
+The following object is masked from ‘package:mlr’:
 
     resample
 
-The following object is masked from 'package:ParamHelpers':
+The following object is masked from ‘package:ParamHelpers’:
 
     getValues
 
-Attaching package: 'dplyr'
+Attaching package: ‘dplyr’
 
-The following objects are masked from 'package:plyr':
+The following objects are masked from ‘package:plyr’:
 
     arrange, count, desc, failwith, id, mutate, rename, summarise,
     summarize
 
-The following objects are masked from 'package:raster':
+The following objects are masked from ‘package:raster’:
 
     intersect, select, union
 
-The following object is masked from 'package:BBmisc':
+The following objects are masked from ‘package:BBmisc’:
 
-    collapse
+    coalesce, collapse
 
-The following objects are masked from 'package:rgeos':
+The following objects are masked from ‘package:rgeos’:
 
     intersect, setdiff, union
 
-The following objects are masked from 'package:stats':
+The following objects are masked from ‘package:stats’:
 
     filter, lag
 
-The following objects are masked from 'package:base':
+The following objects are masked from ‘package:base’:
 
     intersect, setdiff, setequal, union
 
-Attaching package: 'tidyr'
+Attaching package: ‘tidyr’
 
-The following object is masked from 'package:raster':
+The following object is masked from ‘package:raster’:
 
     extract
 
-The following object is masked from 'package:ascii':
+The following object is masked from ‘package:ascii’:
 
     expand
 foreach: simple, scalable parallel programming from Revolution Analytics
@@ -307,23 +310,23 @@ Loading required package: parallel
 randomForest 4.6-12
 Type rfNews() to see new features/changes/bug fixes.
 
-Attaching package: 'randomForest'
+Attaching package: ‘randomForest’
 
-The following object is masked from 'package:dplyr':
+The following object is masked from ‘package:dplyr’:
 
     combine
 
-The following object is masked from 'package:ggplot2':
+The following object is masked from ‘package:ggplot2’:
 
     margin
 
-Attaching package: 'kernlab'
+Attaching package: ‘kernlab’
 
-The following objects are masked from 'package:raster':
+The following objects are masked from ‘package:raster’:
 
     buffer, rotated
 
-The following object is masked from 'package:ggplot2':
+The following object is masked from ‘package:ggplot2’:
 
     alpha
 #+end_example
@@ -384,7 +387,6 @@ The following object is masked from 'package:ggplot2':
 #+begin_src R
   grid.pattern = "[a-zA-Z]{3}\\.[0-9]+m\\.[0-9]+" #I removed "_" from end. <2016-07-02 Sat>
   texture.pattern = "stat-.*_window-.*_angle[-]+[0-9]+"
-  segmentation.pattern = "_N-[0-9]+_C-[0-9]+"
   segmentation.pattern = "Pixel|N-[0-9]+_C-[0-9]+"
   target.pattern = "all|grass|impervious|tree"
   image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
@@ -396,15 +398,15 @@ The following object is masked from 'package:ggplot2':
 **** Texture Params
 #+begin_src R
 
-  ## band.for.texture.appendage = "_ratio.nir"
-  ## window <- list(c(3,3), c(5,5), c(7,7))
-  ## statistics = list("homogeneity", "contrast", "correlation", "entropy")
-  ## shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
-
   band.for.texture.appendage = "_ratio.nir"
-  window <- list(c(3,3))
-  statistics = list("homogeneity")
-  shift = list(c(0,1))
+  window <- list(c(3,3), c(5,5), c(7,7))
+  statistics = list("homogeneity", "contrast", "correlation", "entropy")
+  shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
+
+  ## band.for.texture.appendage = "_ratio.nir"
+  ## window <- list(c(3,3))
+  ## statistics = list("homogeneity")
+  ## shift = list(c(0,1))
 
   texture.params <- expand.grid(band.appendage = band.for.texture.appendage,window = window, statistics = statistics, shift = shift, stringsAsFactors = F)
 
@@ -414,16 +416,16 @@ The following object is masked from 'package:ggplot2':
 
 **** Segmentation Params
 #+begin_src R
-  segment.size <- c(rep(15,3), rep(20,3),rep(30,3),rep(45,3),rep(60,3),rep(100,3))
-  compactness <- round(segment.size * c(.3, .5, .6))
+    segment.size <- c(rep(15,3), rep(20,3),rep(30,3),rep(45,3),rep(60,3),rep(100,3))
+    compactness <- round(segment.size * c(.3, .5, .6))
 
-  ## segment.size <- c(rep(30,1), rep(100,1))
-  ## compactness <- segment.size * c(.5)
+    ## segment.size <- c(rep(30,1), rep(100,1))
+    ## compactness <- segment.size * c(.5)
 
-segment.size <- 20
-compactness <- 12
+  ## segment.size <- 20
+  ## compactness <- 12
 
-  segment.params <- data.frame(compactness = compactness, segment.size = segment.size)
+    segment.params <- data.frame(compactness = compactness, segment.size = segment.size)
 #+end_src
 
 #+results:
@@ -478,8 +480,7 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
 
 #+results:
 #+begin_example
-
-                                ../DD                 ../DD/madison_Training
+                                 ../DD                 ../DD/madison_Training
                                  FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
                                  FALSE                                  FALSE
@@ -529,8 +530,8 @@ In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
 
 **** number of cores
 #+BEGIN_SRC R
-  cores <- 14
 cores <- detectCores()
+cores <- 44
 #+END_SRC
 
 #+results:
@@ -607,27 +608,27 @@ dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*
 
 **** Add Features (ratios and ndvi)
 #+BEGIN_SRC R
-         cl <- makeCluster(cores)
-         registerDoParallel(cl)
+     cl <- makeCluster(cores)
+     registerDoParallel(cl)
 
-          tile.names <- list.files(dd.pca.dir) %>%
-              str_extract(., pattern = ".*[0-9]+.tif") %>%
-                  str_extract(., pattern = ".*[0-9]+") %>%
-                      na.omit()
+      tile.names <- list.files(dd.pca.dir) %>%
+          str_extract(., pattern = ".*[0-9]+.tif") %>%
+              str_extract(., pattern = ".*[0-9]+") %>%
+                  na.omit()
 
-         ratios <- foreach (j = tile.names,
-                  .packages = c("raster","stringr")) %dopar% {
-                      add.features(tile.dir = dd.pca.dir,
-                                   tile.name = j,
-                                   band.names = c("blue","green","red","nir"),
-                                   ratio.bands = c("blue","green","red","nir"),
-                                   texture = F)
-                  }
+     ratios <- foreach (j = tile.names,
+              .packages = c("raster","stringr")) %dopar% {
+                  add.features(tile.dir = dd.pca.dir,
+                               tile.name = j,
+                               band.names = c("blue","green","red","nir"),
+                               ratio.bands = c("blue","green","red","nir"),
+                               texture = F)
+              }
 
-      stopCluster(cl)
+  closeAllConnections()
+
+  stopCluster(cl)
  #+END_SRC
-
-#+results:
 
 **** Create and Save PCA model/rotation
 #+BEGIN_SRC R :results none
@@ -636,11 +637,11 @@ dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*
                                                  image.name = img.nm,
                                                  location = location)
     }
+closeAllConnections()
  #+END_SRC
 
 *** Training
 **** Make Training Tiles
-
 #+BEGIN_SRC R :results none
 
   foreach(img.pth = image.paths) %do% {
@@ -656,40 +657,41 @@ dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*
                                            cores = cores,
                                            output.dir = dd.training.dir)
 }
-
+closeAllConnections()
 #+END_SRC
 
 **** Make Feature data frames, for Each Training Tile
 
  #+begin_src R :results silent
-   cl <- makeCluster(cores)
-   registerDoParallel(cl)
+      cl <- makeCluster(cores)
+      registerDoParallel(cl)
 
-   pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
+      pixel.added.features.raster.list <- foreach(img.nm = image.names) %do% {
 
-       tile.names <- list.files(dd.training.dir) %>%
-           str_extract(., pattern = str_c(location,img.nm,".[0-9]+.tif")) %>%
-           str_extract(., pattern = str_c(location,img.nm,".[0-9]+")) %>%
-           na.omit()
+          tile.names <- list.files(dd.training.dir) %>%
+              str_extract(., pattern = str_c(location,img.nm,".[0-9]+.tif")) %>%
+              str_extract(., pattern = str_c(location,img.nm,".[0-9]+")) %>%
+              na.omit()
 
-       foreach (i = tile.names[13],
-                .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
+          foreach (i = tile.names,
+                   .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
 
-                    feature.dfs <- make.feature.df(tile.dir = dd.training.dir,
-                                                   tile.name = i,
-                                                   image.name = img.nm,
-                                                   band.names = c("blue","green","red","nir"),
-                                                   ndvi = T,
-                                                   ratio.bands = c("blue","green","red","nir"),
-                                                   texture.params.df = texture.params,
-                                                   pixel.df = T,
-                                                   pca.location = location,
-                                                   segmentation = T,
-                                                   segment.params.df = segment.params)
+                       feature.dfs <- make.feature.df(tile.dir = dd.training.dir,
+                                                      tile.name = i,
+                                                      image.name = img.nm,
+                                                      band.names = c("blue","green","red","nir"),
+                                                      ndvi = T,
+                                                      ratio.bands = c("blue","green","red","nir"),
+                                                      texture.params.df = texture.params,
+                                                      pixel.df = T,
+                                                      pca.location = location,
+                                                      segmentation = T,
+                                                      segment.params.df = segment.params)
 
-                }
-   }
+                   }
+      }
+   closeAllConnections()
 #+end_src
 
 **** Combine Feature Dataframes
@@ -716,6 +718,7 @@ Pattern is image.name_Segmentation
           saveRDS(combined.dfs, file = str_c(dd.training.dir, "/", location,img.nm, "_",seg.param.set, feature.df.appendage,".rds"))
       }
   }
+closeAllConnections()
 #+END_SRC
 
 **** Create Model Building Dataframes, assign Class to feature dfs
@@ -777,7 +780,7 @@ Pattern is image.name_Segmentation
           }
       }
   }
-
+closeAllConnections()
  #+END_SRC
 
 **** Plot Model Building Dataframes?? Visualize discriminating features
@@ -822,6 +825,7 @@ Pattern is image.name_Segmentation
                                         location = location)
               }
           }
+closeAllConnections()
 #+end_src
 ***** NEXT feature selecting and tuning models
 ****** feature selection
