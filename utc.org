@@ -207,6 +207,10 @@ Same structure as DD_NAIP
 * Workflow
 ** Libraries
 #+BEGIN_SRC R
+  ## install.packages(c("gdalUtils","ascii","rgeos","mlr","broom","rgdal","raster","plyr","ggplot2","dplyr","tidyr","stringr","foreach","doParallel","glcm","randomForest","kernlab","irace","parallelMap"))
+
+##  install.packages("FSelector")
+
   library(gdalUtils)
   library(ascii)
   library(rgeos)
@@ -226,107 +230,10 @@ Same structure as DD_NAIP
   library(kernlab)
   library(irace)
   library(parallelMap)
+  library(FSelector)
 #+END_SRC
 
 #+results:
-#+begin_example
-rgeos version: 0.3-19, (SVN revision 524)
- GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
- Linking to sp version: 1.2-1
- Polygon checking: TRUE
-Loading required package: BBmisc
-
-Attaching package: 'BBmisc'
-
-The following object is masked from 'package:rgeos':
-
-    symdiff
-
-Loading required package: ggplot2
-Loading required package: ParamHelpers
-Loading required package: sp
-rgdal: version: 1.1-3, (SVN revision 594)
- Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 1.11.1, released 2014/09/24
- Path to GDAL shared files: /usr/local/Cellar/gdal/1.11.1_3/share/gdal
- Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
- Path to PROJ.4 shared files: (autodetected)
- Linking to sp version: 1.2-1
-
-Attaching package: 'raster'
-
-The following object is masked from 'package:mlr':
-
-    resample
-
-The following object is masked from 'package:ParamHelpers':
-
-    getValues
-
-Attaching package: 'dplyr'
-
-The following objects are masked from 'package:plyr':
-
-    arrange, count, desc, failwith, id, mutate, rename, summarise,
-    summarize
-
-The following objects are masked from 'package:raster':
-
-    intersect, select, union
-
-The following object is masked from 'package:BBmisc':
-
-    collapse
-
-The following objects are masked from 'package:rgeos':
-
-    intersect, setdiff, union
-
-The following objects are masked from 'package:stats':
-
-    filter, lag
-
-The following objects are masked from 'package:base':
-
-    intersect, setdiff, setequal, union
-
-Attaching package: 'tidyr'
-
-The following object is masked from 'package:raster':
-
-    extract
-
-The following object is masked from 'package:ascii':
-
-    expand
-foreach: simple, scalable parallel programming from Revolution Analytics
-Use Revolution R for scalability, fault tolerance and more.
-http://www.revolutionanalytics.com
-Loading required package: iterators
-Loading required package: parallel
-randomForest 4.6-12
-Type rfNews() to see new features/changes/bug fixes.
-
-Attaching package: 'randomForest'
-
-The following object is masked from 'package:dplyr':
-
-    combine
-
-The following object is masked from 'package:ggplot2':
-
-    margin
-
-Attaching package: 'kernlab'
-
-The following objects are masked from 'package:raster':
-
-    buffer, rotated
-
-The following object is masked from 'package:ggplot2':
-
-    alpha
-#+end_example
 
 
 ** set figure Cairo
@@ -478,8 +385,7 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
 
 #+results:
 #+begin_example
-
-                                ../DD                 ../DD/madison_Training
+                                 ../DD                 ../DD/madison_Training
                                  FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
                                  FALSE                                  FALSE
@@ -529,8 +435,8 @@ In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
 
 **** number of cores
 #+BEGIN_SRC R
-  cores <- 14
 cores <- detectCores()
+cores <- 44
 #+END_SRC
 
 #+results:
@@ -607,27 +513,27 @@ dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*
 
 **** Add Features (ratios and ndvi)
 #+BEGIN_SRC R
-         cl <- makeCluster(cores)
-         registerDoParallel(cl)
+     cl <- makeCluster(cores)
+     registerDoParallel(cl)
 
-          tile.names <- list.files(dd.pca.dir) %>%
-              str_extract(., pattern = ".*[0-9]+.tif") %>%
-                  str_extract(., pattern = ".*[0-9]+") %>%
-                      na.omit()
+      tile.names <- list.files(dd.pca.dir) %>%
+          str_extract(., pattern = ".*[0-9]+.tif") %>%
+              str_extract(., pattern = ".*[0-9]+") %>%
+                  na.omit()
 
-         ratios <- foreach (j = tile.names,
-                  .packages = c("raster","stringr")) %dopar% {
-                      add.features(tile.dir = dd.pca.dir,
-                                   tile.name = j,
-                                   band.names = c("blue","green","red","nir"),
-                                   ratio.bands = c("blue","green","red","nir"),
-                                   texture = F)
-                  }
+     ratios <- foreach (j = tile.names,
+              .packages = c("raster","stringr")) %dopar% {
+                  add.features(tile.dir = dd.pca.dir,
+                               tile.name = j,
+                               band.names = c("blue","green","red","nir"),
+                               ratio.bands = c("blue","green","red","nir"),
+                               texture = F)
+              }
 
-      stopCluster(cl)
+  closeAllConnections()
+
+  stopCluster(cl)
  #+END_SRC
-
-#+results:
 
 **** Create and Save PCA model/rotation
 #+BEGIN_SRC R :results none
@@ -636,6 +542,7 @@ dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*
                                                  image.name = img.nm,
                                                  location = location)
     }
+closeAllConnections()
  #+END_SRC
 
 *** Training
@@ -656,7 +563,7 @@ dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*
                                            cores = cores,
                                            output.dir = dd.training.dir)
 }
-
+closeAllConnections()
 #+END_SRC
 
 **** Make Feature data frames, for Each Training Tile
@@ -672,7 +579,7 @@ dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*
            str_extract(., pattern = str_c(location,img.nm,".[0-9]+")) %>%
            na.omit()
 
-       foreach (i = tile.names[13],
+       foreach (i = tile.names,
                 .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
 
@@ -690,6 +597,7 @@ dd.accuracy.classified.dir <-str_extract(dd.accuracy.classified.dirs, paste0(".*
 
                 }
    }
+closeAllConnections()
 #+end_src
 
 **** Combine Feature Dataframes
