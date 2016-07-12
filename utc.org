@@ -673,8 +673,8 @@ closeAllConnections()
               str_extract(., pattern = str_c(location,img.nm,".[0-9]+")) %>%
               na.omit()
 
-          foreach (i = tile.names,
-                   .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
+       foreach (i = tile.names,
+                .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
 
                        feature.dfs <- make.feature.df(tile.dir = dd.training.dir,
@@ -689,9 +689,9 @@ closeAllConnections()
                                                       segmentation = T,
                                                       segment.params.df = segment.params)
 
-                   }
-      }
-   closeAllConnections()
+                }
+   }
+closeAllConnections()
 #+end_src
 
 **** Combine Feature Dataframes
