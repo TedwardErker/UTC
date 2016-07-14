@@ -3330,17 +3330,17 @@ cores <- detectCores() - 2
 *** Urban, Water, and Wetland shapefiles
 #+BEGIN_SRC R
   urban.areas.dsn <- "../RD_merged_WIurbanAreas_and_incorporatedAreas"
-  urban.areas.layer <- "Dissolve_Merge_WI_census_inc"
+    urban.areas.layer <- "Dissolve_Merge_WI_census_inc"
 
-  ## urban.areas.dsn <- "../RD_US_UrbanAreasShapefile"
-  ## urban.areas.layer <- "cb_2013_us_ua10_500k"
+     ## urban.areas.dsn <- "../RD_US_UrbanAreasShapefile"
+     ## urban.areas.layer <- "cb_2013_us_ua10_500k"
 
 
-  water.dsn <- "../RD_WI-waterbody-24k"
-  water.layer <- "WD-Hydro-Waterbody-WBIC-AR-24K"
+    water.dsn <- "../RD_WI-waterbody-24k"
+    water.layer <- "WD-Hydro-Waterbody-WBIC-AR-24K"
 
-  wetlands.dsn <- "../RD_Wetland"
-  wetlands.layer <- "WI_Wetlands"
+    wetlands.dsn <- "../RD_Wetland"
+    wetlands.layer <- "WI_Wetlands"
 
 #+END_SRC
 
@@ -3425,10 +3425,15 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 
 ** Reproject shapefiles to be wtm, the same as the images
 #+BEGIN_SRC R
-  urban <- readOGR(dsn = urban.areas.dsn, layer = urban.areas.layer)
-#  water <- readOGR(dsn = water.dsn, layer = water.layer)
+        urban <- readOGR(dsn = urban.areas.dsn, layer = urban.areas.layer)
+  ## wi <- urban[which(!is.na(str_extract(as.character(urban@data$NAME10), ".*WI"))),]
+  ##   urban <- spTransform(wi, utm16)
 
-  # Both are already in wtm, no need to transform
+
+
+      #  water <- readOGR(dsn = water.dsn, layer = water.layer)
+
+        # Both are already in wtm, no need to transform
 #+END_SRC
 
 #+results:
@@ -3487,24 +3492,29 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 
 #+begin_src R
 
-  prob <- .10
+  low.q <- .10
+  high.q <- .8
 
     areas <- foreach(i = 1:length(urb.polys), .combine = "rbind") %do% gArea(urb.polys[i])
-    quant <- quantile(areas[,1],probs = prob)
-    i_areas_less_quant <- which(areas[,1] < quant)
+    low.quant <- quantile(areas[,1],probs = low.q)
+    high.quant <- quantile(areas[,1],probs = high.q)
+
+    i_areas_less_quant <- which(areas[,1] < high.quant & areas[,1] > low.quant)
 #+end_src
 
 #+results:
 
  #+BEGIN_SRC R
-              cl <- makeCluster(cores)
-              registerDoParallel(cl)
+       cl <- makeCluster(cores)
+       registerDoParallel(cl)
 
-          out <- foreach(i = i_areas_less_quant,
-                        .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr")) %dopar% {
+   out <- foreach(i = i_areas_less_quant,
+                 .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr")) %dopar% {
 
-              urb.poly <- urb.polys[i]
+       urb.poly <- urb.polys[i]
 #+END_SRC
+
+ #+results:
 
 **** Set temp dir for this urban area
 #+BEGIN_SRC R
@@ -3514,8 +3524,6 @@ rasterOptions(tmpdir=temp_i)
 #+END_SRC
 
 #+results:
-: Warning message:
-: In dir.create(temp_i) : '../R_raster_temp/1' already exists
 
 **** Make output dir for this urban area
 #+BEGIN_SRC R
@@ -3524,6 +3532,8 @@ dir.create(urb.path)
 #+END_SRC
 
 #+results:
+: Warning message:
+: In dir.create(urb.path) : '../DD/ClassifiedUrbanAreas/13' already exists
 
 **** Get names of NAIP tiles that intersect with Urban Area
 #+BEGIN_SRC R
@@ -3543,14 +3553,14 @@ dir.create(urb.path)
 **** For each NAIP tile that intersects with Urban Area
 #+BEGIN_SRC R
 
-     foreach(tile.name.at.urb.poly = tiles.names.at.urb.poly,
-                     .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr","glcm")) %do% {
+     foreach(t.p = tiles.names.at.urb.poly,
+                     .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr","glcm")) %dopar% {
 
 #+END_SRC
 
 ***** Make output dir for this tile
 #+BEGIN_SRC R
-  tile.name <- basename(tile.name.at.urb.poly) %>%
+  tile.name <- basename(t.p) %>%
     str_sub(start = 1, end = -5)  # remove .tif
   tile.urb.path <- paste0(urb.path,"/",tile.name)
   dir.create(tile.urb.path)
@@ -3558,16 +3568,28 @@ paste("make tile output dir", tile.urb.path)
 #+END_SRC
 
 #+results:
-: [1] "make tile output dir ../DD/ClassifiedUrbanAreas/1/m_4208831_se_16_1_20130619_w"
+: [1] "make tile output dir ../DD/ClassifiedUrbanAreas/13/m_4208909_se_16_1_20130705_w"
 
 ***** Crop to intersection of image and Urban Extent
+
+It would be better to only use one NAIP image if it contains the whole
+urban area.  I'm including some tiles that don't add any extra
+information because the urban extent only goes into the overlap area.
+This causes thin slivers to be made which are unnecessary and cause
+errors.  Also cause additional misregistration problems and funny
+looking borders of objects because I decide disagreemnst randomlys.
+
+Also some of the extents of the large tiles overlap with urban area,
+but the images themselves don't.  THis creates intersection images
+that are empty.
+
 #+BEGIN_SRC R
                                           # Crop image
   eu <- extent(urb.poly)
-  ei <- extent(raster(tile.name.at.urb.poly))
+  ei <- extent(raster(t.p))
   e <- raster::intersect(ei,eu)
 
-  inFile <- tile.name.at.urb.poly
+  inFile <- t.p
   outFile <- str_c(tile.urb.path,"/urbanExtent.tif")
 
   gdal_translate(inFile, outFile,
@@ -3579,20 +3601,17 @@ paste("make tile output dir", tile.urb.path)
 #+END_SRC
 
 #+results:
-#+begin_example
-[[1]]
-NULL
+:  NULL
+: Crop to Urban Extent
 
-[[2]]
-NULL
+***** make sure the intersection image has datavalues
 
-[[3]]
-NULL
+#+begin_src R
+  r.test <- raster(paste0(tile.urb.path,"/urbanExtent.tif"))
 
-[[4]]
-NULL
-#+end_example
+  if (sum(!is.na(values(r.test))) > 500) {
 
+#+end_src
 ***** Generate Feature data frame
 #+begin_src R
 
@@ -3609,43 +3628,55 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
                                  segment.params.df = segment.params)
 
 #+end_src
+
+#+results:
+:  Error in seq.default(min_x, max_x, length.out = (n_grey + 1)) (from #12) :
+:   'from' cannot be NA, NaN or infinite
+: In addition: Warning messages:
+: 1: In min(x, na.rm = na.rm) :
+:   no non-missing arguments to min; returning Inf
+: 2: In max(x, na.rm = na.rm) :
+:   no non-missing arguments to max; returning -Inf
+
 ***** Classify
 #+begin_src R
 
-    model <- list.files(dd.models.dir) %>%
-        str_extract("best_.*") %>% na.omit()
+      model <- list.files(dd.models.dir) %>%
+          str_extract("best_.*") %>% na.omit()
 
-    seg.p <- str_extract(model, segmentation.pattern)
+      seg.p <- str_extract(model, segmentation.pattern)
 
-    if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
-        segment.tile.name.append <- paste0("_",seg.p,".tif")
-        segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
+      if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
+          segment.tile.name.append <- paste0("_",seg.p,".tif")
+          segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
 
-        classify.segmented.raster(segment.feature.df.dir = tile.urb.path,
-                                  model.dir = dd.models.dir,
-                                  segment.dir = tile.urb.path,
-                                  classify.out.dir = tile.urb.path,
-                                  tile.name = "urbanExtent",
-                                  segmentation.appendage = segment.tile.name.append,
-                                  model.name.rds = model,
-                                  segment.feature.appendage = segment.feature.df.name.append,
-                                  segmentation.prms = seg.p)
+          classify.segmented.raster(segment.feature.df.dir = tile.urb.path,
+                                    model.dir = dd.models.dir,
+                                    segment.dir = tile.urb.path,
+                                    classify.out.dir = tile.urb.path,
+                                    tile.name = "urbanExtent",
+                                    segmentation.appendage = segment.tile.name.append,
+                                    model.name.rds = model,
+                                    segment.feature.appendage = segment.feature.df.name.append,
+                                    segmentation.prms = seg.p)
 
-    } else {
-        classify.pixel.raster(tile.dir = tile.urb.path,
-                              tile.name = "urbanExtent",
-                              pixelFeatureDF.appendage = feature.df.appendage,
-                              model.dir = dd.models.dir,
-                              model.rds = model,
-                              classify.out.dir = tile.urb.path,
-                              seg.prms = seg.p)
-    }
-    message("Image Classified")
+      } else {
+          classify.pixel.raster(tile.dir = tile.urb.path,
+                                tile.name = "urbanExtent",
+                                pixelFeatureDF.appendage = feature.df.appendage,
+                                model.dir = dd.models.dir,
+                                model.rds = model,
+                                classify.out.dir = tile.urb.path,
+                                seg.prms = seg.p)
+      }
+      message("Image Classified")
 
-    message("Done with",tile.urb.path)
+      message("Done with",tile.urb.path)
 
 }
   #+end_src
+
+#+results:
 
 
 **** Merge NAIP Tiles if there is more than one over an urban area and Save Classified image as <UrbanArea>.tif
@@ -3658,7 +3689,11 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 
   rlist <- lapply(classified.tiles, stack)
 
-  out <- do.call(mosaic, c(rlist,list(fun = sample.with.na.rm, tolerance = 0.5)))
+  if(length(rlist) > 1) {
+      out <- do.call(mosaic, c(rlist,list(fun = sample.with.na.rm, tolerance = 0.5)))
+  } else {
+      out <- rlist[[1]]
+  }
 
   writeRaster(x = out, filename = paste0(urb.path,"/ClassifiedUrbanArea_",i,".tif"), overwrite = T, datatype = 'INT1U')
 
@@ -3671,7 +3706,13 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 
   rlist <- lapply(rgbn.tiles, stack)
 
+  if(length(rlist) > 1) {
   out <- do.call(mosaic, c(rlist,list(fun = mean, tolerance = 0.5)))
+  } else {
+      out <- rlist[[1]]
+  }
+
+
 
   writeRaster(x = out, filename = paste0(urb.path,"/rgbn_",i,".tif"), overwrite = T)
   paste0("Wrote ","RGBN_",i,".tif")
@@ -3682,8 +3723,8 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 #+END_SRC
 
 #+results:
-: [1] "Wrote ClassifiedUrbanArea_1.tif"
-: [1] "Wrote RGBN_1.tif"
+: [1] "Wrote ClassifiedUrbanArea_803.tif"
+: [1] "Wrote RGBN_803.tif"
 
 **** Delete intermediate steps
 #+BEGIN_SRC R
@@ -3697,10 +3738,18 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 
 #+results:
 
-**** End Loop for all urban areas
+**** End if statement and Loop for all urban areas
 #+BEGIN_SRC R
 }
+}
+}
 #+END_SRC
+
+#+results:
+:  Error in .local(.Object, ...) :
+:   `/home/erker/Pjt_UTC/DD/ClassifiedUrbanAreas/13/m_4208909_se_16_1_20130705_w/urbanExtent.tif' does not exist in the file system,
+: and is not recognised as a supported dataset name.
+: Error: unexpected '}' in "}"
 
 **** Mask Classified image, Post Processing
 ***** Mask Out Wetlands Post Processing

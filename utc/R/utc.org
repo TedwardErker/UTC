@@ -58,6 +58,11 @@ sample.with.na.rm <- function(x, na.rm = T) {
 
 
 #+end_src
+
+#+results:
+: Warning message:
+: closing unused connection 3 (../R_raster_temp/1//r_tmp_2016-07-13_200121_26459_50210.gri)
+
 ** Crop Image
 
 *** Crop image to each Shapefile polygon
