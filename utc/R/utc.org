@@ -42,7 +42,22 @@
 #+end_src
 
 #+results:
+*** sample with na rm
+#+begin_src R
 
+sample.with.na.rm <- function(x, na.rm = T) {
+    nona <- x[!is.na(x)]
+    if (length(nona) == 0) {
+        NA
+    } else if (length(nona) == 1) {
+        nona
+    } else {
+        sample(x = nona, size = 1)
+    }
+}
+
+
+#+end_src
 ** Crop Image
 
 *** Crop image to each Shapefile polygon
@@ -641,7 +656,6 @@ wrapper for slic.
                               pca.location,
                               segmentation = T,
                               segment.params.df,
-                              segment.feature.df = T,
                               using.krusty = T) {
 
       add.features(tile.dir,
@@ -662,6 +676,8 @@ wrapper for slic.
 
       message("pixel feature df saved")
 
+      if (segmentation == T) {
+
       pca.transformation(tile.dir = tile.dir,
                          tile.name = tile.name,
                          image.name = image.name,
@@ -669,19 +685,17 @@ wrapper for slic.
 
       message("pca done")
 
-      if (segmentation == T) {
-
           segment.multiple(tile.dir = tile.dir,
                            tile.name = tile.name,
                            image.name = image.name,
                            segment.params.df = segment.params.df,
-                           krusty = using.krusty)}
+                           krusty = using.krusty)
       message("segmentation done")
-      if (segment.feature.df == T) {
 
           make.segment.feature.df.foreach.segmentation(tile.dir = tile.dir,
                                                        tile.name = tile.name,
                                                        feature.pattern = feature.pattern)}
+
 
 
   }
@@ -1002,93 +1016,132 @@ target from the FSelector Package
 ** Classify Raster
 #+BEGIN_SRC R
 
-    classify.segmented.raster <- function(segment.feature.df.dir,
-                                          segment.dir,
-                                          model.dir,
-                                          model.name.rds = "models",
-                                          segment.feature.appendage = segment.feature.df.name.append,
-                                          segmentation.appendage = segment.tile.name.append,
-                                          segmentation.prms,
-                                          classify.out.dir,
-                                          tile.name = i) {
-        df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
-        mod <-readRDS(paste0(model.dir,"/",model.name.rds))
-                                            #    umod <- unlist(models, recursive = F)
-        seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage)
+      classify.segmented.raster <- function(segment.feature.df.dir,
+                                            segment.dir,
+                                            model.dir,
+                                            model.name.rds = "models",
+                                            segment.feature.appendage = segment.feature.df.name.append,
+                                            segmentation.appendage = segment.tile.name.append,
+                                            segmentation.prms,
+                                            classify.out.dir = dd.accuracy.classified.dir,
+                                            tile.name = i) {
+          df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage))
+          mod <-readRDS(paste0(model.dir,"/",model.name.rds))
+                                              #    umod <- unlist(models, recursive = F)
+          seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage)
+          seg <- raster(seg.path)
+                                              #       dfRowsWithNA <- which(is.na(df[,2]))
+          complete.df <- df[complete.cases(df),] # svm can't predict with NAs
+
+          pred <- predict(mod, newdata = complete.df)
+          response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
+          m <- cbind(zone = complete.df$segment, response)
+          m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
+          seg.df <- as.data.frame(seg, xy = T)
+          names(seg.df)[3] <- "segment"
+          seg.df <- left_join(seg.df, m)
+          seg.df$response <- mapvalues(seg.df$response, from = c(1,2,3,4), to = c("g","i","t","o"))
+          seg.df$response <- factor(seg.df$response)
+          r <- seg
+          values(r) <- seg.df$response
+
+                                              #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
+                                              #            filter(LandCover %in% levels(factor(response)))
+                                              #        levels(r) <- x
+                                              # Removing Probability layer because can't have attributes with it.  When I do final classifcaiton I should add back in.
+
+          ## if (ncol(pred$data) > 2) {
+          ##     prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
+          ##     ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
+          ##     m <- cbind(segment = df$segment, ProbOfClass)
+          ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
+          ##     p <- reclassify(seg, m)
+          ##     r <- stack(r,p)
+          ## }
+          tuning = str_extract(model.name.rds, tuned.pattern)
+          path <- paste0(classify.out.dir,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",tuning,"_",mod$learner$id,".tif")
+          writeRaster(r, path, overwrite=TRUE)
+          print(path)
+
+      }
+
+
+
+
+      classify.pixel.raster <- function(tile.dir = dd.accuracy.dir,
+                                        tile.name,
+                                        pixelFeatureDF.appendage = pixel.feature.df.appendage,
+                                        model.dir = Models.dir,
+                                        model.rds,
+                                        seg.prms = "Pixel",
+                                        classify.out.dir = dd.accuracy.classified.dir) {
+          ras <- stack(str_c(tile.dir,"/",tile.name,".tif"))
+          pix.mod <- readRDS(str_c(model.dir,"/",model.rds))
+                                              #      pix.umods <- unlist(pix.mods, recursive = F)
+
+          pix.feature.df <- readRDS(str_c(tile.dir,"/",tile.name,"_",seg.prms,pixelFeatureDF.appendage,".rds"))
+
+          if(!is.null(pix.feature.df$y)) {
+              pix.feature.df <- dplyr::select(pix.feature.df, -x, -y)
+          }
+
+          pred <- predict(pix.mod, newdata = pix.feature.df)
+          a <- ras[[1]]
+          values(a) <- pred$data$response
+          tuning = str_extract(model.rds, tuned.pattern)
+          path <- paste0(classify.out.dir,"/",tile.name,"_",seg.prms,"_",pix.mod$task.desc$id,"_",tuning,"_",pix.mod$learner$id,".tif")
+          writeRaster(a, path, overwrite = T)
+          print(path)
+      }
+
+
+  # this is old but may contain useful snippets
+    classify.segmented.raster.forWholeState <- function(segment.feature.df.dir,
+                                                        segment.dir,
+                                                        model = model,
+                                                        segment.feature.appendage = segment.feature.df.name.append,
+                                                        segmentation.appendage = segment.tile.name.append,
+                                                        segmentation.prms,
+                                                        classify.out.dir,
+                                                        tile.name) {
+
+        df <- readRDS(paste0(segment.feature.df.dir,"/",tile.name,segment.feature.appendage,".rds"))
+        seg.path <- paste0(segment.dir,"/",tile.name,segmentation.appendage,".tif")
         seg <- raster(seg.path)
                                             #       dfRowsWithNA <- which(is.na(df[,2]))
         complete.df <- df[complete.cases(df),] # svm can't predict with NAs
 
+        mod <- model
         pred <- predict(mod, newdata = complete.df)
         response <- factor(as.character(pred$data$response), levels = c("g","i","t","o"))
         m <- cbind(zone = complete.df$segment, response)
         m <- left_join(as.data.frame(df["segment"]), as.data.frame(m), by = c("segment" = "zone"))
+
         seg.df <- as.data.frame(seg, xy = T)
-        names(seg.df)[3] <- "segment"
-        seg.df <- left_join(seg.df, m)
-        seg.df$response <- mapvalues(seg.df$response, from = c(1,2,3,4), to = c("g","i","t","o"))
-        seg.df$response <- factor(seg.df$response)
-        r <- seg
-        values(r) <- seg.df$response
 
-                                            #        x <- data.frame(ID = 1:4, LandCover = c("G","I","T","O")) %>%
-                                            #            filter(LandCover %in% levels(factor(response)))
-                                            #        levels(r) <- x
-                                            # Removing Probability layer because can't have attributes with it.  When I do final classifcaiton I should add back in.
+        colnames(seg.df) <- c("x","y","segID")
+        seg.df1 <- mutate(seg.df, class = plyr::mapvalues(segID, from = m$segment, to = m$response))
 
-        ## if (ncol(pred$data) > 2) {
-        ##     prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
-        ##     ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
-        ##     m <- cbind(segment = df$segment, ProbOfClass)
-        ##     m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
-        ##     p <- reclassify(seg, m)
-        ##     r <- stack(r,p)
-        ## }
-        tuning = str_extract(model.name.rds, tuned.pattern)
-        path <- paste0(dd.accuracy.classified.dir,"/",tile.name,"_",segmentation.prms,"_",mod$task.desc$id,"_",tuning,"_",mod$learner$id,".tif")
-        writeRaster(r, path, overwrite=TRUE)
-        print(path)
+        r <- setValues(seg, values = seg.df1$class)
+        names(r) <- "class"
 
-    }
+        if (ncol(pred$data) > 2) {
+            prob <- (pred$data[,grep("prob.*", x = colnames(pred$data))]) # get columns that contain probabilities
+            ProbOfClass <- apply(prob, MARGIN = 1, FUN = max)
+            m <- cbind(segment = complete.df$segment, ProbOfClass)
+            m <- left_join(as.data.frame(df["segment"]), as.data.frame(m))
 
-
-
-
-    classify.pixel.raster <- function(tile.dir = dd.accuracy.dir,
-                                      tile.name,
-                                      pixelFeatureDF.appendage = pixel.feature.df.appendage,
-                                      model.dir = Models.dir,
-                                      model.rds,
-                                      seg.prms = "Pixel") {
-        ras <- stack(str_c(tile.dir,"/",tile.name,".tif"))
-        pix.mod <- readRDS(str_c(model.dir,"/",model.rds))
-                                            #      pix.umods <- unlist(pix.mods, recursive = F)
-
-        pix.feature.df <- readRDS(str_c(tile.dir,"/",tile.name,"_",seg.prms,pixelFeatureDF.appendage,".rds"))
-
-        if(!is.null(pix.feature.df$y)) {
-            pix.feature.df <- dplyr::select(pix.feature.df, -x, -y)
+            seg.df2 <- mutate(seg.df, ProbOfClass = plyr::mapvalues(segID, from = m$segment, to = m$ProbOfClass))
+            p <- setValues(seg, values = seg.df2$ProbOfClass)
+            r <- stack(r,p)
+            names(r) <- c("class","prob")
         }
 
-                                            # I set NA's to 0 here.  Not the best choice.  Not sure why they exist.
-                                            # Maybe because pca transform
-                                            # imputing to mean would probably be better
+            path <- paste0(segment.dir,"/classified_",tile.name,"_",seg.tile.name.append,"_",mod$task.desc$id,"_",mod$learner$id,".tif")
+            writeRaster(r, path, overwrite=TRUE)
+            print(path)
 
-        pix.feature.df <- as.matrix(pix.feature.df)
-
-        pix.feature.df[which(is.na(pix.feature.df))] <- 0
-
-        pix.feature.df <- as.data.frame(pix.feature.df)
-
-        pred <- predict(pix.mod, newdata = pix.feature.df)
-        a <- ras[[1]]
-        values(a) <- pred$data$response
-        tuning = str_extract(model.rds, tuned.pattern)
-        path <- paste0(dd.accuracy.classified.dir,"/",tile.name,"_",seg.prms,"_",pix.mod$task.desc$id,"_",tuning,"_",pix.mod$learner$id,".tif")
-        writeRaster(a, path, overwrite = T)
-        print(path)
     }
-
 
 
 #+END_SRC
