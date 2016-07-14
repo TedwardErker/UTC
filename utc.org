@@ -3695,7 +3695,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
       out <- rlist[[1]]
   }
 
-  writeRaster(x = out, filename = paste0(urb.path,"/ClassifiedUrbanArea_",i,".tif"), overwrite = T, datatype = 'INT1U')
+  writeRaster(x = out, filename = paste0(urb.path,"ClassifiedUrbanArea.tif"), overwrite = T, datatype = 'INT1U')
 
   paste0("Wrote ","ClassifiedUrbanArea_",i,".tif")
 
@@ -3714,7 +3714,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 
 
 
-  writeRaster(x = out, filename = paste0(urb.path,"/rgbn_",i,".tif"), overwrite = T)
+  writeRaster(x = out, filename = paste0(urb.path,"rgbn.tif"), overwrite = T)
   paste0("Wrote ","RGBN_",i,".tif")
 
 
@@ -3731,7 +3731,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
   intermediate.work <- list.files(urb.path, full.names = T)
   intermediate.work <- intermediate.work[!grepl(intermediate.work,pattern = ".*(tif)$", perl = T)]
   unlink(intermediate.work, recursive = T)
-
+  unlink(urb.path)
   unlink(temp_i, recursive = T)
 
 #+END_SRC
