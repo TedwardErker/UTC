@@ -3524,6 +3524,8 @@ rasterOptions(tmpdir=temp_i)
 #+END_SRC
 
 #+results:
+: Warning message:
+: In dir.create(temp_i) : '../R_raster_temp/13' already exists
 
 **** Make output dir for this urban area
 #+BEGIN_SRC R
@@ -3554,7 +3556,7 @@ dir.create(urb.path)
 #+BEGIN_SRC R
 
      foreach(t.p = tiles.names.at.urb.poly,
-                     .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr","glcm")) %dopar% {
+                     .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr","glcm")) %do% {
 
 #+END_SRC
 
@@ -3629,15 +3631,6 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 
 #+end_src
 
-#+results:
-:  Error in seq.default(min_x, max_x, length.out = (n_grey + 1)) (from #12) :
-:   'from' cannot be NA, NaN or infinite
-: In addition: Warning messages:
-: 1: In min(x, na.rm = na.rm) :
-:   no non-missing arguments to min; returning Inf
-: 2: In max(x, na.rm = na.rm) :
-:   no non-missing arguments to max; returning -Inf
-
 ***** Classify
 #+begin_src R
 
@@ -3674,6 +3667,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
       message("Done with",tile.urb.path)
 
 }
+}
   #+end_src
 
 #+results:
@@ -3695,7 +3689,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
       out <- rlist[[1]]
   }
 
-  writeRaster(x = out, filename = paste0(urb.path,"ClassifiedUrbanArea.tif"), overwrite = T, datatype = 'INT1U')
+  writeRaster(x = out, filename = paste0(urb.path,"_ClassifiedUrbanArea.tif"), overwrite = T, datatype = 'INT1U')
 
   paste0("Wrote ","ClassifiedUrbanArea_",i,".tif")
 
@@ -3714,7 +3708,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 
 
 
-  writeRaster(x = out, filename = paste0(urb.path,"rgbn.tif"), overwrite = T)
+  writeRaster(x = out, filename = paste0(urb.path,"_rgbn.tif"), overwrite = T)
   paste0("Wrote ","RGBN_",i,".tif")
 
 
@@ -3746,9 +3740,8 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 #+END_SRC
 
 #+results:
-:  Error in .local(.Object, ...) :
-:   `/home/erker/Pjt_UTC/DD/ClassifiedUrbanAreas/13/m_4208909_se_16_1_20130705_w/urbanExtent.tif' does not exist in the file system,
-: and is not recognised as a supported dataset name.
+: Error in summary.connection(connection) : invalid connection
+: Error: unexpected '}' in "}"
 : Error: unexpected '}' in "}"
 
 **** Mask Classified image, Post Processing
