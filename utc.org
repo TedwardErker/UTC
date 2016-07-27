@@ -333,18 +333,6 @@ The following object is masked from ‘package:ggplot2’:
     alpha
 #+end_example
 
-
-** set figure Cairo
-#+begin_src R :exports none :results silent
-  library(Cairo)
-  mainfont <- "Garamond"
-  CairoFonts(regular = paste(mainfont,"style=Regular",sep=":"),
-             bold = paste(mainfont,"style=Bold",sep=":"),
-             italic = paste(mainfont,"style=Italic",sep=":"),
-             bolditalic = paste(mainfont,"style=Bold Italic,BoldItalic",sep=":"))
-  pdf <- CairoPDF
-  png <- CairoPNG
-#+end_src
 ** Inputs
 **** Input Directories
 #+BEGIN_SRC R
