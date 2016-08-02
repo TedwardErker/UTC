@@ -7551,3 +7551,21 @@ https://mlr-org.github.io/mlr-tutorial/release/html/nested_resampling/index.html
 
 
 #+END_SRC
+
+* set figure Cairo
+:PROPERTIES:
+:ARCHIVE_TIME: 2016-07-27 Wed 11:27
+:ARCHIVE_FILE: /ssh:krusty:/home/erker/Pjt_UTC/code/utc.org
+:ARCHIVE_OLPATH: Workflow
+:ARCHIVE_CATEGORY: utc
+:END:
+#+begin_src R :exports none :results silent
+  library(Cairo)
+  mainfont <- "Garamond"
+  CairoFonts(regular = paste(mainfont,"style=Regular",sep=":"),
+             bold = paste(mainfont,"style=Bold",sep=":"),
+             italic = paste(mainfont,"style=Italic",sep=":"),
+             bolditalic = paste(mainfont,"style=Bold Italic,BoldItalic",sep=":"))
+  pdf <- CairoPDF
+  png <- CairoPNG
+#+end_src
