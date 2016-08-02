@@ -441,8 +441,11 @@ running it on a small image.
   field.accuracy.region.dsn <- "../RD_Accuracy/FieldData"
   field.accuracy.region.layer <- "fieldPoints"
 
-  accuracy.region.dsn <- c(grid.accuracy.region.dsn, field.accuracy.region.dsn)
-  accuracy.region.layer <- c(grid.accuracy.region.layer, field.accuracy.region.layer)
+point.accuracy.region.dsn <- "../RD_Accuracy/PointsByRobi"
+point.accuracy.region.layer <- "PointsInDomain"
+
+  accuracy.region.dsn <- c(grid.accuracy.region.dsn, field.accuracy.region.dsn, point.accuracy.region.dsn)
+  accuracy.region.layer <- c(grid.accuracy.region.layer, field.accuracy.region.layer, point.accuracy.region.layer)
 #+END_SRC
 
 #+results:
@@ -1111,7 +1114,7 @@ closeAllConnections()
 
   closeAllConnections()
 #+END_SRC
-**** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data
+**** Point-wise accuracy.  regular confusion matrix thing.  I should also do this for the grids and the field plot data
 #+BEGIN_SRC R
         grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
 
@@ -1212,6 +1215,7 @@ closeAllConnections()
 : Source: "../RD_Accuracy/Grids", layer: "Grids"
 : with 20209 features
 : It has 15 fields
+**** Area-wise accuracy, RMSE.  Grids and Field Data
 
 
 *** Summarize Accuracy Assessment Results
@@ -1249,7 +1253,6 @@ Comparing classification to other estimates of cover.
 ***** Plots showing how image, segment size, compactness, and model affect accuracy
 
 **** Field Data
-
 **** Grid of Points
 
 ***** load grid.points
