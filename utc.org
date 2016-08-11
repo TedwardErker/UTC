@@ -78,53 +78,6 @@ Pointwise - confusion matrix
 - contains this file
 **** figs
 **** DD
-***** Training
-****** Tiles
-******* image.name_tile.id
-******* image.name_tile.id_dir
-******** with.ratios
-******** PixelFeatureDF
-******** pca
-******** segmentation.params
-******** segmentation.params.FeatureDF
-****** image.name_reprojected.training.regions
-****** image.name_pca.transformation
-****** Models
-***** Testing
-
-
-***** NAIP.image
-****** pca.model.transformation
-****** reprojected.training.regions
-****** reprojected.testing.regions
-******* grid
-******* field.data
-****** reprojected.pca.regions
-****** training.outputs
-****** feature.dfs
-******* pixel.feature.df
-******* segment.X.feature.df
-****** Models
-****** testing.accuracy.outputs
-******** grid.classified.regions
-******** field.classified.regions
-***** PansharpenedSPOT.image
-****** pca.model.transformation
-****** reprojected.training.regions
-****** reprojected.testing.regions
-******* grid
-******* field.data
-****** reprojected.pca.regions
-****** training.outputs
-****** feature.dfs
-******* pixel.feature.df
-******* segment.X.feature.df
-****** Models
-****** testing.accuracy.outputs
-******** grid.classified.regions
-******** field.classified.regions
-
-
 
 **** RD_UrbanAreasShapefile
 **** RD_WaterShapefile
@@ -144,62 +97,6 @@ manual/supervised classification in the Madison Area
 ***** Robi's Points
 **** RD_NAIP
 **** RD_SPOT
-**** DD_NAIP
-***** Training
-****** Madison
-******* j directories for each polygon of the training shapefile
-******** image : raw image that is cropped to tile
-******** masked : image that is masked by water, crops, and urban boundary
-******** AddedFeatures : image that has added derived bands
-******** PCA : image that is the PCA results scaled to 0 - 255
-******** Segmentation : image that is the segmentation layer
-******** Segmentation Polygons: polygonized Segmentation Layer
-******** SegmentFeatures : dataframe that has each row as segment, columns as features, Class from Segmentation Polygons added.
-******** Classified Segmentation Polygons: polygonized Segmentation Layer with manual classifications
-******* CombinedSegmentFeatures : dataframe that is combined
-****** Wausau
-Same as in Madison, but for Wausau
-
-***** Testing
-****** grids
-******* i directories for each polygon of the grids
-******** image : raw image that is cropped to tile
-******** masked : image that is masked by water, crops, and urban boundary
-******** AddedFeatures : image that has added derived bands
-******** PCA : image that is the PCA results scaled to 0 - 255
-******** Segmentation : image that is the segmentation layer
-******** SegmentFeatures : dataframe that has each row as segment, columns as features.
-******** ClassifiedImages : classified images that use each model
-********* k classified images for each model
-
-****** fieldplots
-Same as for grids
-
-***** Accuracy Assessment
-****** Dataframe that summary statistics for each classification, accuracy method
-****** Tables of Results
-
-
-***** Models
-R model objects
-***** Best Model
-R model object, determined by accuracy assessment
-***** i directories for each urban area
-****** image cropped to urban area .tif
-****** j directories for each tile within each of the i urban areas
-******* image : raw image that is cropped to tile
-******* masked : image that is masked by water, crops, and urban boundary
-******* AddedFeatures : image that has added derived bands
-******* PCA : image that is the PCA results scaled to 0 - 255
-******* Segmentation : image that is the segmentation layer
-******* SegmentFeatures : dataframe that has each row as segment, columns as features
-******* ClassifiedImage : classified image that uses the best model
-
-**** DD_SPOT
-Same structure as DD_NAIP
-
-
-
 
 * Workflow
 ** Libraries
@@ -236,72 +133,72 @@ Same structure as DD_NAIP
 #+results:
 #+begin_example
 rgeos version: 0.3-19, (SVN revision 524)
- GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
- Linking to sp version: 1.2-1
+ GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084
+ Linking to sp version: 1.2-3
  Polygon checking: TRUE
 Loading required package: BBmisc
 
-Attaching package: 'BBmisc'
+Attaching package: ‘BBmisc’
 
-The following object is masked from 'package:rgeos':
+The following object is masked from ‘package:rgeos’:
 
     symdiff
 
 Loading required package: ggplot2
 Loading required package: ParamHelpers
 Loading required package: sp
-rgdal: version: 1.1-3, (SVN revision 594)
+rgdal: version: 1.1-10, (SVN revision 622)
  Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 1.11.1, released 2014/09/24
- Path to GDAL shared files: /usr/local/Cellar/gdal/1.11.1_3/share/gdal
- Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
+ Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
+ Path to GDAL shared files: /usr/share/gdal/1.11
+ Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
  Path to PROJ.4 shared files: (autodetected)
- Linking to sp version: 1.2-1
+ Linking to sp version: 1.2-3
 
-Attaching package: 'raster'
+Attaching package: ‘raster’
 
-The following object is masked from 'package:mlr':
+The following object is masked from ‘package:mlr’:
 
     resample
 
-The following object is masked from 'package:ParamHelpers':
+The following object is masked from ‘package:ParamHelpers’:
 
     getValues
 
-Attaching package: 'dplyr'
+Attaching package: ‘dplyr’
 
-The following objects are masked from 'package:plyr':
+The following objects are masked from ‘package:plyr’:
 
     arrange, count, desc, failwith, id, mutate, rename, summarise,
     summarize
 
-The following objects are masked from 'package:raster':
+The following objects are masked from ‘package:raster’:
 
     intersect, select, union
 
-The following object is masked from 'package:BBmisc':
+The following objects are masked from ‘package:BBmisc’:
 
-    collapse
+    coalesce, collapse
 
-The following objects are masked from 'package:rgeos':
+The following objects are masked from ‘package:rgeos’:
 
     intersect, setdiff, union
 
-The following objects are masked from 'package:stats':
+The following objects are masked from ‘package:stats’:
 
     filter, lag
 
-The following objects are masked from 'package:base':
+The following objects are masked from ‘package:base’:
 
     intersect, setdiff, setequal, union
 
-Attaching package: 'tidyr'
+Attaching package: ‘tidyr’
 
-The following object is masked from 'package:raster':
+The following object is masked from ‘package:raster’:
 
     extract
 
-The following object is masked from 'package:ascii':
+The following object is masked from ‘package:ascii’:
 
     expand
 foreach: simple, scalable parallel programming from Revolution Analytics
@@ -312,23 +209,23 @@ Loading required package: parallel
 randomForest 4.6-12
 Type rfNews() to see new features/changes/bug fixes.
 
-Attaching package: 'randomForest'
+Attaching package: ‘randomForest’
 
-The following object is masked from 'package:dplyr':
+The following object is masked from ‘package:dplyr’:
 
     combine
 
-The following object is masked from 'package:ggplot2':
+The following object is masked from ‘package:ggplot2’:
 
     margin
 
-Attaching package: 'kernlab'
+Attaching package: ‘kernlab’
 
-The following objects are masked from 'package:raster':
+The following objects are masked from ‘package:raster’:
 
     buffer, rotated
 
-The following object is masked from 'package:ggplot2':
+The following object is masked from ‘package:ggplot2’:
 
     alpha
 #+end_example
@@ -368,7 +265,7 @@ The following object is masked from 'package:ggplot2':
 
   ModelBuilding.appendage = "_modelBuildingDF"
 
-  tile.id.col.nm.for.grid.and.field.accuracy <- c("unq__ID", "Plot")
+  tile.id.col.nm.for.grid.and.field.accuracy <- c("unq__ID", "Plot", "accuracy_2")
 #+END_SRC
 
 #+results:
@@ -382,6 +279,9 @@ The following object is masked from 'package:ggplot2':
     image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
     model.pattern = "rf_prob|rf_resp|svm_resp"
   tuned.pattern = "Untuned|Tuned"
+
+grid.field.point.pattern <- "(([a-zA-Z]{3}\\.[0-9]+m\\.[0-9]+)|([A-Z].[0-9]*)|(MC.[0-9]*))"
+
 #+end_src
 
 #+results:
@@ -441,10 +341,11 @@ running it on a small image.
   field.accuracy.region.dsn <- "../RD_Accuracy/FieldData"
   field.accuracy.region.layer <- "fieldPoints"
 
+point.accuracy.region.dsn <- "../RD_Accuracy/PointsByRobi"
+point.accuracy.region.layer <- "PointsInDomain"
 
-
-  accuracy.region.dsn <- c(grid.accuracy.region.dsn, field.accuracy.region.dsn)
-  accuracy.region.layer <- c(grid.accuracy.region.layer, field.accuracy.region.layer)
+  accuracy.region.dsn <- c(grid.accuracy.region.dsn, field.accuracy.region.dsn, point.accuracy.region.dsn)
+  accuracy.region.layer <- c(grid.accuracy.region.layer, field.accuracy.region.layer, point.accuracy.region.layer)
 #+END_SRC
 
 #+results:
@@ -1003,25 +904,26 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 #+BEGIN_SRC R :results none
 
-    foreach(i = 1) %do% {
+        foreach(i = 2:3) %do% {
 
-      foreach(img.pth = image.paths) %do% {
+          foreach(img.pth = image.paths) %do% {
 
-          Reproject_Shapefile_to_Image_CRS(accuracy.region.dsn[i],
-                                           accuracy.region.layer[i],
-                                           img.pth,
-                                           accuracy.region.imageCRS.dsn)
+              Reproject_Shapefile_to_Image_CRS(accuracy.region.dsn[i],
+                                               accuracy.region.layer[i],
+                                               img.pth,
+                                               accuracy.region.imageCRS.dsn)
 
-          Crop_image_to_regions_around_points_nameBygrid(shapefile.dsn = accuracy.region.imageCRS.dsn,
-                                                         shapefile.layer = accuracy.region.layer[i],
-                                                         image.path = img.pth,
-                                                         cores = cores,
-                                                         output.dir = dd.accuracy.dir,
-                                                         column.name = tile.id.col.nm.for.grid.and.field.accuracy[i])
+              Crop_image_to_regions_around_points_nameBygrid(shapefile.dsn = accuracy.region.imageCRS.dsn,
+                                                             shapefile.layer = accuracy.region.layer[i],
+                                                             image.path = img.pth,
+                                                             cores = cores,
+                                                             output.dir = dd.accuracy.dir,
+                                                             column.name = tile.id.col.nm.for.grid.and.field.accuracy[i],
+                                                             polygon.buffer.size = 50)
 
+          }
       }
-  }
-closeAllConnections()
+    closeAllConnections()
 
 #+END_SRC
 
@@ -1032,7 +934,7 @@ closeAllConnections()
    registerDoParallel(cl)
 
    tile.names <- list.files(dd.accuracy.dir) %>%
-       str_match(., pattern = str_c("(",location,".*",grid.pattern,")(.tif)"))
+       str_match(., pattern = str_c("(",location,".*",grid.field.point.pattern,")(.tif)"))
 
    tile.names <- tile.names[,2] %>% na.omit()
 
@@ -1353,7 +1255,6 @@ Comparing classification to other estimates of cover.
 ***** Plots showing how image, segment size, compactness, and model affect accuracy
 
 **** Field Data
-
 **** Grid of Points
 
 ***** load grid.points
