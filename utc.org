@@ -1,7 +1,7 @@
 #+TITLE: Wisconsin Urban Tree Canopy Mapping
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY:  header-args:R :session *R:utc* :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link
+#+PROPERTY:  header-args:R :session *R:utc:sumac* :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link
 #+STARTUP: indent
 
 * Begin with end in mind
@@ -441,6 +441,8 @@ running it on a small image.
   field.accuracy.region.dsn <- "../RD_Accuracy/FieldData"
   field.accuracy.region.layer <- "fieldPoints"
 
+
+
   accuracy.region.dsn <- c(grid.accuracy.region.dsn, field.accuracy.region.dsn)
   accuracy.region.layer <- c(grid.accuracy.region.layer, field.accuracy.region.layer)
 #+END_SRC
@@ -479,23 +481,16 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
                                  ../DD                 ../DD/madison_Training
                                  FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
-                                  TRUE                                  FALSE
+                                 FALSE                                  FALSE
                       ../DD/wausau_pca                 ../DD/madison_Accuracy
-                                  TRUE                                  FALSE
+                                 FALSE                                  FALSE
                  ../DD/wausau_Accuracy                   ../DD/madison_Models
-                                  TRUE                                  FALSE
+                                 FALSE                                  FALSE
                    ../DD/wausau_Models ../DD/madison_Accuracy/ClassifiedTiles
-                                  TRUE                                  FALSE
+                                 FALSE                                  FALSE
  ../DD/wausau_Accuracy/ClassifiedTiles
-                                  TRUE
-Warning messages:
-1: In dir.create(x) : '../DD' already exists
-2: In dir.create(x) : '../DD/madison_Training' already exists
-3: In dir.create(x) : '../DD/madison_pca' already exists
-4: In dir.create(x) : '../DD/madison_Accuracy' already exists
-5: In dir.create(x) : '../DD/madison_Models' already exists
-6: In dir.create(x) :
-  '../DD/madison_Accuracy/ClassifiedTiles' already exists
+                                 FALSE
+There were 11 warnings (use warnings() to see them)
 #+end_example
 
 **** Define Derived Shapefile DSNs and Layers
@@ -1086,7 +1081,7 @@ closeAllConnections()
              foreach(tile.nm = tile.names,
                      .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
 
-                 foreach(model = models[37]) %do% {
+                 foreach(model = models) %do% {
 
                      seg.p <- str_extract(model, segmentation.pattern)
 
@@ -1118,7 +1113,108 @@ closeAllConnections()
 
   closeAllConnections()
 #+END_SRC
-**** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data
+**** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data also, but there is spatial association to consider.
+***** Random Points
+****** Google as reference
+
+#+BEGIN_SRC R
+    r.pts <- readOGR(dsn = , layer = , stringsAsFactors = F)
+
+        xy <- coordinates(grd)
+        grd@data$x <- xy[,1]
+        grd@data$y <- xy[,2]
+
+    classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+        str_extract(., pattern = ".*.tif$") %>%
+            str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
+            na.omit()
+
+
+    grid.names <- classified.tile.paths %>%
+        str_match(., paste0(".*(",grid.pattern,").*"))
+
+    grid.names <- grid.names[,2] %>%
+        unique() %>%
+        na.omit()
+
+    ## grid.name = str_extract(grid.names, ".*150m-[56].*") %>% na.omit()
+
+
+
+        cl <- makeCluster(cores)
+        registerDoParallel(cl)
+
+
+        error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
+
+            pts <- grd[grd@data$unq__ID== grid.name,]
+
+            classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
+                na.omit()
+
+            ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
+            ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
+            ##      na.omit()
+
+    #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
+
+
+
+            foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
+                    .combine = "rbind",
+                    .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+
+                        classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
+                        classified.tile <- raster(classified.tile.path.at.grid)
+
+                        tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
+                        tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+
+                       ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
+                       ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
+                       ## dev.off()
+
+                        PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
+
+                        if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
+                            error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
+                            error <- error %>%
+                                t() %>%
+                                data.frame() %>%
+                                mutate(grid = grid.name,
+                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                       seg.params = str_extract(classified.tile.name.at.grid, segmentation.pattern),
+                                       tuned = str_extract(classified.tile.name.at.grid, tuned.pattern))
+                            error
+                        } else {
+                            target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
+                            target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                            error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
+                            error <- error %>%
+                                t() %>%
+                                data.frame() %>%
+                                mutate(grid = grid.name,
+                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                       seg.params = str_extract(classified.tile.name.at.grid, seg.prms),
+                                       tuned = str_extract(classified.tile.name.at.grid, tuned.pattern))
+                            error
+                        }
+                    }
+        }
+  closeAllConnections()
+
+
+        saveRDS(error.df, str_c(derived.dir, "/RandomPoints.point2pixel.error.df.rds"))
+
+#+END_SRC
+
+****** NAIP as reference
+***** Grids
+
 #+BEGIN_SRC R
         grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
 
@@ -1219,7 +1315,8 @@ closeAllConnections()
 : Source: "../RD_Accuracy/Grids", layer: "Grids"
 : with 20209 features
 : It has 15 fields
-
+***** Field Plots
+**** Area-wise accuracy. RMSE, grids and field plots
 
 *** Summarize Accuracy Assessment Results
 
