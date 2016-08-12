@@ -133,72 +133,72 @@ manual/supervised classification in the Madison Area
 #+results:
 #+begin_example
 rgeos version: 0.3-19, (SVN revision 524)
- GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084
- Linking to sp version: 1.2-3
+ GEOS runtime version: 3.4.2-CAPI-1.8.2 r3921
+ Linking to sp version: 1.2-1
  Polygon checking: TRUE
 Loading required package: BBmisc
 
-Attaching package: ‘BBmisc’
+Attaching package: 'BBmisc'
 
-The following object is masked from ‘package:rgeos’:
+The following object is masked from 'package:rgeos':
 
     symdiff
 
 Loading required package: ggplot2
 Loading required package: ParamHelpers
 Loading required package: sp
-rgdal: version: 1.1-10, (SVN revision 622)
+rgdal: version: 1.1-3, (SVN revision 594)
  Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
- Path to GDAL shared files: /usr/share/gdal/1.11
- Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
+ Loaded GDAL runtime: GDAL 1.11.1, released 2014/09/24
+ Path to GDAL shared files: /usr/local/Cellar/gdal/1.11.1_3/share/gdal
+ Loaded PROJ.4 runtime: Rel. 4.8.0, 6 March 2012, [PJ_VERSION: 480]
  Path to PROJ.4 shared files: (autodetected)
- Linking to sp version: 1.2-3
+ Linking to sp version: 1.2-1
 
-Attaching package: ‘raster’
+Attaching package: 'raster'
 
-The following object is masked from ‘package:mlr’:
+The following object is masked from 'package:mlr':
 
     resample
 
-The following object is masked from ‘package:ParamHelpers’:
+The following object is masked from 'package:ParamHelpers':
 
     getValues
 
-Attaching package: ‘dplyr’
+Attaching package: 'dplyr'
 
-The following objects are masked from ‘package:plyr’:
+The following objects are masked from 'package:plyr':
 
     arrange, count, desc, failwith, id, mutate, rename, summarise,
     summarize
 
-The following objects are masked from ‘package:raster’:
+The following objects are masked from 'package:raster':
 
     intersect, select, union
 
-The following objects are masked from ‘package:BBmisc’:
+The following object is masked from 'package:BBmisc':
 
-    coalesce, collapse
+    collapse
 
-The following objects are masked from ‘package:rgeos’:
+The following objects are masked from 'package:rgeos':
 
     intersect, setdiff, union
 
-The following objects are masked from ‘package:stats’:
+The following objects are masked from 'package:stats':
 
     filter, lag
 
-The following objects are masked from ‘package:base’:
+The following objects are masked from 'package:base':
 
     intersect, setdiff, setequal, union
 
-Attaching package: ‘tidyr’
+Attaching package: 'tidyr'
 
-The following object is masked from ‘package:raster’:
+The following object is masked from 'package:raster':
 
     extract
 
-The following object is masked from ‘package:ascii’:
+The following object is masked from 'package:ascii':
 
     expand
 foreach: simple, scalable parallel programming from Revolution Analytics
@@ -209,23 +209,23 @@ Loading required package: parallel
 randomForest 4.6-12
 Type rfNews() to see new features/changes/bug fixes.
 
-Attaching package: ‘randomForest’
+Attaching package: 'randomForest'
 
-The following object is masked from ‘package:dplyr’:
+The following object is masked from 'package:dplyr':
 
     combine
 
-The following object is masked from ‘package:ggplot2’:
+The following object is masked from 'package:ggplot2':
 
     margin
 
-Attaching package: ‘kernlab’
+Attaching package: 'kernlab'
 
-The following objects are masked from ‘package:raster’:
+The following objects are masked from 'package:raster':
 
     buffer, rotated
 
-The following object is masked from ‘package:ggplot2’:
+The following object is masked from 'package:ggplot2':
 
     alpha
 #+end_example
@@ -280,6 +280,7 @@ The following object is masked from ‘package:ggplot2’:
     model.pattern = "rf_prob|rf_resp|svm_resp"
   tuned.pattern = "Untuned|Tuned"
 
+point.pattern = "A.[0-9]{4}"
 grid.field.point.pattern <- "(([a-zA-Z]{3}\\.[0-9]+m\\.[0-9]+)|([A-Z].[0-9]*)|(MC.[0-9]*))"
 
 #+end_src
@@ -379,7 +380,8 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
 
 #+results:
 #+begin_example
-                                 ../DD                 ../DD/madison_Training
+
+                                ../DD                 ../DD/madison_Training
                                  FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
                                  FALSE                                  FALSE
@@ -994,7 +996,6 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
                             classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
                                             model.dir = dd.models.dir,
                                             segment.dir = dd.accuracy.dir,
-                                            classify.out.dir = dd.accuracy.dir,
                                             tile.name = tile.nm,
                                             segmentation.appendage = segment.tile.name.append,
                                             model.name.rds = model,
@@ -1020,22 +1021,25 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 ****** Google as reference
 
 #+BEGIN_SRC R
-    r.pts <- readOGR(dsn = , layer = , stringsAsFactors = F)
+    r.pts <- readOGR(dsn = point.accuracy.region.dsn, layer = point.accuracy.region.layer, stringsAsFactors = F)
 
-        xy <- coordinates(grd)
-        grd@data$x <- xy[,1]
-        grd@data$y <- xy[,2]
+  r.pts@data$cover = mapvalues(r.pts@data$cover,
+            from = c("imperv", "grass", "tree", "soil", "water", "wetland"),
+            to = c("i","g","t","i",NA,NA))
+
+        xy <- coordinates(r.pts)
+        r.pts@data$x <- xy[,1]
+        r.pts@data$y <- xy[,2]
 
     classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
         str_extract(., pattern = ".*.tif$") %>%
-            str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
+            str_extract(., pattern = str_c(".*",grid.field.point.pattern, ".*")) %>%
             na.omit()
 
+    point.names <- classified.tile.paths %>%
+        str_match(., paste0(".*(",point.pattern,").*"))
 
-    grid.names <- classified.tile.paths %>%
-        str_match(., paste0(".*(",grid.pattern,").*"))
-
-    grid.names <- grid.names[,2] %>%
+    point.names <- point.names[,2] %>%
         unique() %>%
         na.omit()
 
@@ -1047,11 +1051,11 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
         registerDoParallel(cl)
 
 
-        error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
+        error.df <- foreach(pt.name = point.names, .combine = "rbind") %do% {
 
-            pts <- grd[grd@data$unq__ID== grid.name,]
+            pts <- r.pts[r.pts@data$accuracy_2== pt.name,]
 
-            classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
+            classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*",pt.name,"_.*")) %>%
                 na.omit()
 
             ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
@@ -1062,51 +1066,53 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 
 
-            foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
+            foreach(classified.tile.path.at.point = classified.tile.paths.at.point,
                     .combine = "rbind",
                     .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
 
-                        classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
-                        classified.tile <- raster(classified.tile.path.at.grid)
+                        classified.tile.name.at.point <- basename(classified.tile.path.at.point)
+                        classified.tile <- raster(classified.tile.path.at.point)
 
-                        tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
+                        tgt <- str_extract(classified.tile.name.at.point, "tree|grass|impervious|all")
                         tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
 
                        ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
                        ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
                        ## dev.off()
 
-                        PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
+                        PixBool <- !is.na((str_extract(classified.tile.path.at.point, "_Pixel_")))
 
-                        if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
-                            error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
+                        if(!is.na(str_extract(classified.tile.path.at.point, "_all_"))) {
+
+                            error <- calcErrorAllMultinomial.wrefColumn(pts, classified.tile, Pixel = PixBool, referenceColumn = "cover", one.point = T)
                             error <- error %>%
                                 t() %>%
                                 data.frame() %>%
-                                mutate(grid = grid.name,
-                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
-                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
-                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                                       seg.params = str_extract(classified.tile.name.at.grid, segmentation.pattern),
-                                       tuned = str_extract(classified.tile.name.at.grid, tuned.pattern))
+                                mutate(point = pt.name,
+                                       image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                       target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                       model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                       seg.params = str_extract(classified.tile.name.at.point, segmentation.pattern),
+                                       tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
                             error
                         } else {
-                            target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
+                            target = str_extract(classified.tile.name.at.point, "tree|grass|impervious")
                             target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
-                            error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
+                            error <- calcErrorBinomial.wrefColumn(pts, classified.tile, target, Pixel = PixBool, referenceColumn = "cover", one.point = T)
                             error <- error %>%
                                 t() %>%
                                 data.frame() %>%
-                                mutate(grid = grid.name,
-                                       image =  str_extract(classified.tile.name.at.grid, image.pattern),
-                                       target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
-                                       model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                                       seg.params = str_extract(classified.tile.name.at.grid, seg.prms),
-                                       tuned = str_extract(classified.tile.name.at.grid, tuned.pattern))
+                                mutate(point = pt.name,
+                                       image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                       target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                       model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                       seg.params = str_extract(classified.tile.name.at.point, seg.prms),
+                                       tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
                             error
                         }
                     }
         }
+
   closeAllConnections()
 
 
@@ -1219,6 +1225,264 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 : It has 15 fields
 ***** Field Plots
 **** Area-wise accuracy. RMSE, grids and field plots
+***** RMSE at grid level
+****** Combine google earth grid estimates of cover with classified tile estimates of cover
+
+ Create dataframe with structure:
+
+ | %t.img | %g.img | %i.img | %o.img | image      | segmentation | target.cover        | target.type         | model                   | tile                   | cropped.to.n.pts | %t.goog | %g.goog | %i.goog | %o.goog |   |   |   |   |   |   |   |   |
+ |--------+--------+--------+--------+------------+--------------+---------------------+---------------------+-------------------------+------------------------+------------------+---------+---------+---------+---------+---+---+---+---+---+---+---+---|
+ |    0-1 |    0-1 |    0-1 |    0-1 | NAIP       | Pixel        | grass               | binomial (two)      | random forest prob      | mad-size-id (up to 50) |                4 |     0-1 |     0-1 |     0-1 |     0-1 |   |   |   |   |   |   |   |   |
+ |        |        |        |        | panshpSPOT | 30 m2        | tree                | multinomial (three) | random forest resp      |                        |                9 |         |         |         |         |   |   |   |   |   |   |   |   |
+ |        |        |        |        |            | 60 m2        | impervious          |                     | support vector machines |                        |               16 |         |         |         |         |   |   |   |   |   |   |   |   |
+ |        |        |        |        |            |              | NA (if multinomial) |                     |                         |                        |               25 |         |         |         |         |   |   |   |   |   |   |   |   |
+ |        |        |        |        |            | 105 m2       |                     |                     |                         |                        |              ... |         |         |         |         |   |   |   |   |   |   |   |   |
+
+
+
+******* Create DF of % cover from grids cropped to different extents
+ #+BEGIN_SRC R
+        grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
+        grd.df <- grd@data
+
+   n.rows.and.columns.for.subset = c(15)
+
+        out <- foreach(n.rows.and.columns.for.sub = n.rows.and.columns.for.subset) %do% {
+            calc.pct.cvr.for.grid.subset(grd.df, n.rows.and.columns.for.sub)
+        }
+
+        Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- bind_rows(out)
+
+   Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets %>%
+       rename(grid = unq__ID)
+
+     saveRDS(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets, str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
+ #+END_SRC
+
+******* Create DF of % cover from classified rasters cropped to different extents
+
+#+BEGIN_SRC R
+
+    grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
+
+
+    # get path of grid tiles (not interested in fieldplot classified tiles)
+        classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+            str_extract(., pattern = ".*.tif$") %>%
+            str_extract(., pattern = str_c(".*",wau.grid.id.pattern, ".*")) %>%
+              na.omit()
+
+
+  n.rows.and.columns.for.subset = c(15)
+
+
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+
+      out <- foreach(n.rows.and.columns.for.sub = n.rows.and.columns.for.subset) %do% {
+             pct.class.cover <- foreach(tile.path = classified.tile.paths, .packages = c("raster","dplyr","stringr")) %dopar% {
+               calculate.percent.cover.in.classified.tile(pts = grd,
+                                                           tile.pth = tile.path,
+                                                           n.rows.and.columns.subset = n.rows.and.columns.for.sub)
+
+            }
+                saveRDS(pct.class.cover, str_c(derived.dir,"/","Wausau.Percent.Cover.Classified.Tiles.nPoints",n.rows.and.columns.for.sub, ".rds"))
+      }
+
+
+  class.cover.files <- list.files(derived.dir, pattern = "Wausau.Percent.Cover.Classified.Tiles.nPoints*", full.names = T)
+
+  class.cover.dfs <- lapply(class.cover.files, readRDS)
+
+  out <- unlist(class.cover.dfs,recursive = F)
+
+       Percent.Cover.Classified.Tiles.dataframe <- bind_rows(out)
+
+
+
+
+
+  # delete this line if I run it again.
+  ## Percent.Cover.Classified.Tiles.dataframe <-rename(Percent.Cover.Classified.Tiles.dataframe,
+  ##                                                   image = tile,
+  ##                                                   pct_g_pred = pct_g,
+  ##                                                   pct_i_pred = pct_i,
+  ##                                                   pct_t_pred = pct_t,
+  ##                                                   pct_o_pred = pct_o)
+
+    ## saveRDS(Percent.Cover.Classified.Tiles.dataframe, str_c(derived.dir,"/","Percent.Cover.Classified.Tiles.dataframe",".rds"))
+
+#+END_SRC
+
+
+
+
+******* Join Cover from Grids with predicted Cover from images
+#+BEGIN_SRC R
+    Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- readRDS(str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
+
+    str(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets)
+    str(Percent.Cover.Classified.Tiles.dataframe)
+
+  Percent.Cover.Classified.Tiles.dataframe %>%
+      filter(seg.params == "Pixel") %>%
+      data.frame() %>%
+      head()
+
+    Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets %>%
+        filter(n.points == 400)
+
+
+  #Percent.Cover.Classified.Tiles.dataframe <- Percent.Cover.Classified.Tiles.dataframe %>%
+  #    rename(pct_g_pred = pct_g, pct_t_pred = pct_t, pct_i_pred = pct_i, pct_o_pred = pct_o)
+
+
+    grid.master.df <- left_join(Percent.Cover.Classified.Tiles.dataframe, Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets)
+
+    # Should join by Joining by: c("grid", "target.cover", "n.points", "target.type")
+
+    str(grid.master.df)
+
+    grid.master.df %>%
+  #      filter(n.points == 400) %>%
+        data.frame() %>%
+        head(n=40)
+
+
+
+
+#+END_SRC
+
+
+****** Make RMSE plots
+
+#+BEGIN_SRC R :results graphics :file figs/wausauNAIP.100m.RMSE_plot.png :height 800 :width 600
+
+    sub.for.rmse.plot <- grid.master.df %>%
+        filter(target.type == "multinomial",
+               image == "wausauNAIP",
+               n.points == 225)
+
+
+    ggplot(sub.for.rmse.plot, aes( x = pct.t.googleEarth, y = pct_t_pred, color = model)) +
+  geom_point() + geom_smooth() + theme_classic() +
+  geom_line(data = data.frame(pct.t.googleEarth = c(0,1), pct_t_pred = c(0,1), seg.params = "1:1"),
+  color = "black", size = 1) +
+  ggtitle("NAIP, n.pts: 225")
+
+#+END_SRC
+
+
+
+****** Calc RMSE table
+
+ Create dataframe with structure:
+
+ | RMSE | image | segmentation | target | model | cropped.to.n.pts | cover_type |   |   |   |   |   |   |   |
+ |------+-------+--------------+--------+-------+------------------+------------+---+---+---+---+---+---+---|
+ |      |       |              |        |       |                  |            |   |   |   |   |   |   |   |
+
+
+******* Calc Error Column
+
+#+BEGIN_SRC R
+  error_tree <- grid.master.df %>%
+      filter(target.cover == "tree" | target.cover == "all") %>%
+      select(-target.cover) %>%
+      group_by(image, model, n.points, seg.params, target.type) %>%
+      mutate(t_error = (pct_t_pred - pct.t.googleEarth))
+
+  error_tree %>%
+      select(image, model, n.points, seg.params, target.type, grid, t_error) %>%
+      filter(n.points == 225) %>%
+      ungroup() %>%
+      arrange(desc(abs(t_error))) %>%
+      data.frame() %>%
+      head(n=50)
+#+END_SRC
+
+
+
+#+BEGIN_SRC R
+
+    RMSE_tree <- grid.master.df %>%
+        filter(target.cover == "tree" | target.cover == "all") %>%
+        select(-target.cover) %>%
+        group_by(image, model, n.points, seg.params, target.type) %>%
+        summarize(RMSE_t = sqrt( mean( (pct_t_pred - pct.t.googleEarth)^2, na.rm =T ) ) )
+
+  RMSE_tree <- RMSE_tree %>%
+      mutate(segment.size = ifelse(!is.na(str_extract(seg.params, ".*105.*")), 105,
+                            ifelse(!is.na(str_extract(seg.params, ".*60.*")), 60,
+                            ifelse(!is.na(str_extract(seg.params, ".*30.*")), 30,
+                            ifelse(!is.na(str_extract(seg.params, ".*70.*")), 105,
+                            ifelse(!is.na(str_extract(seg.params, ".*40.*")), 60,
+                            ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
+#+END_SRC
+
+****** RMSE analysis
+
+Which combination of image, segmentation, target, model and n.pts
+(spatial scale) minimize error for each cover_type?
+
+#+BEGIN_SRC R :results raw
+options(asciiType = "org")
+options(warn = -1)
+  RMSE_tree %>%
+      ungroup() %>%
+      arrange(RMSE_t) %>%
+      head(n = 30) %>%
+      ascii()
+#+END_SRC
+
+
+
+Plot:
+x = cropped.to.n.pts
+y = RMSE
+color = model
+facet(segmentation~cover_type)
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_n.ptsXRMSE.png :height 800 :width 600
+
+  ggplot(RMSE_tree, aes(x = n.points, y = RMSE_t, color = model)) + geom_point() +
+      facet_grid(segment.size~image)
+
+#+END_SRC
+
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_AreaXRMSE_NAIP_seg60.png
+  RMSE_tree.sub <- RMSE_tree%>%
+      filter(segment.size == 60, image == "madisonNAIP", target.type == "binomial", model == "svm_resp") %>%
+      mutate(area_meters_squared = ((sqrt(n.points) - 1) * 7)^2)
+
+
+  ggplot(RMSE_tree.sub, aes(x = area_meters_squared, y = RMSE_t), color = "blue") + geom_point() +
+      labs(y = "Root Mean Squared Prediction Error \n for Percent Tree Cover") +
+      theme_classic() +
+      theme(axis.title = element_text(size = 24),
+            axis.text =  element_text(size = 22)) +
+      xlim(0,45000)
+
+#+END_SRC
+
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_seg.sizeXRMSE.png :height 800 :width 600
+
+  ggplot(RMSE_tree, aes(x = segment.size, y = RMSE_t, color = n.points, group = interaction(n.points,target.type))) + geom_line() +
+      facet_grid(model~image)
+
+#+END_SRC
+
+
+#+BEGIN_SRC R :results raw
+
+  m1 <-lm(RMSE_t*100 ~ image * (model +  target.type + n.points * segment.size), data = RMSE_tree)
+  tidy(m1, digits = 2) %>%
+ascii()
+#+END_SRC
+
 
 *** Summarize Accuracy Assessment Results
 
@@ -2594,264 +2858,6 @@ Error in eval(expr, envir, enclos) :
 ***** Plots showing how grid characteristics (e.g. heterogeneity) affect accuracy
 
 
-***** RMSE at grid level
-****** Combine google earth grid estimates of cover with classified tile estimates of cover
-
- Create dataframe with structure:
-
- | %t.img | %g.img | %i.img | %o.img | image      | segmentation | target.cover        | target.type         | model                   | tile                   | cropped.to.n.pts | %t.goog | %g.goog | %i.goog | %o.goog |   |   |   |   |   |   |   |   |
- |--------+--------+--------+--------+------------+--------------+---------------------+---------------------+-------------------------+------------------------+------------------+---------+---------+---------+---------+---+---+---+---+---+---+---+---|
- |    0-1 |    0-1 |    0-1 |    0-1 | NAIP       | Pixel        | grass               | binomial (two)      | random forest prob      | mad-size-id (up to 50) |                4 |     0-1 |     0-1 |     0-1 |     0-1 |   |   |   |   |   |   |   |   |
- |        |        |        |        | panshpSPOT | 30 m2        | tree                | multinomial (three) | random forest resp      |                        |                9 |         |         |         |         |   |   |   |   |   |   |   |   |
- |        |        |        |        |            | 60 m2        | impervious          |                     | support vector machines |                        |               16 |         |         |         |         |   |   |   |   |   |   |   |   |
- |        |        |        |        |            |              | NA (if multinomial) |                     |                         |                        |               25 |         |         |         |         |   |   |   |   |   |   |   |   |
- |        |        |        |        |            | 105 m2       |                     |                     |                         |                        |              ... |         |         |         |         |   |   |   |   |   |   |   |   |
-
-
-
-******* Create DF of % cover from grids cropped to different extents
- #+BEGIN_SRC R
-        grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
-        grd.df <- grd@data
-
-   n.rows.and.columns.for.subset = c(15)
-
-        out <- foreach(n.rows.and.columns.for.sub = n.rows.and.columns.for.subset) %do% {
-            calc.pct.cvr.for.grid.subset(grd.df, n.rows.and.columns.for.sub)
-        }
-
-        Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- bind_rows(out)
-
-   Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets %>%
-       rename(grid = unq__ID)
-
-     saveRDS(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets, str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
- #+END_SRC
-
-******* Create DF of % cover from classified rasters cropped to different extents
-
-#+BEGIN_SRC R
-
-    grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
-
-
-    # get path of grid tiles (not interested in fieldplot classified tiles)
-        classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-            str_extract(., pattern = ".*.tif$") %>%
-            str_extract(., pattern = str_c(".*",wau.grid.id.pattern, ".*")) %>%
-              na.omit()
-
-
-  n.rows.and.columns.for.subset = c(15)
-
-
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-
-      out <- foreach(n.rows.and.columns.for.sub = n.rows.and.columns.for.subset) %do% {
-             pct.class.cover <- foreach(tile.path = classified.tile.paths, .packages = c("raster","dplyr","stringr")) %dopar% {
-               calculate.percent.cover.in.classified.tile(pts = grd,
-                                                           tile.pth = tile.path,
-                                                           n.rows.and.columns.subset = n.rows.and.columns.for.sub)
-
-            }
-                saveRDS(pct.class.cover, str_c(derived.dir,"/","Wausau.Percent.Cover.Classified.Tiles.nPoints",n.rows.and.columns.for.sub, ".rds"))
-      }
-
-
-  class.cover.files <- list.files(derived.dir, pattern = "Wausau.Percent.Cover.Classified.Tiles.nPoints*", full.names = T)
-
-  class.cover.dfs <- lapply(class.cover.files, readRDS)
-
-  out <- unlist(class.cover.dfs,recursive = F)
-
-       Percent.Cover.Classified.Tiles.dataframe <- bind_rows(out)
-
-
-
-
-
-  # delete this line if I run it again.
-  ## Percent.Cover.Classified.Tiles.dataframe <-rename(Percent.Cover.Classified.Tiles.dataframe,
-  ##                                                   image = tile,
-  ##                                                   pct_g_pred = pct_g,
-  ##                                                   pct_i_pred = pct_i,
-  ##                                                   pct_t_pred = pct_t,
-  ##                                                   pct_o_pred = pct_o)
-
-    ## saveRDS(Percent.Cover.Classified.Tiles.dataframe, str_c(derived.dir,"/","Percent.Cover.Classified.Tiles.dataframe",".rds"))
-
-#+END_SRC
-
-
-
-
-******* Join Cover from Grids with predicted Cover from images
-#+BEGIN_SRC R
-    Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- readRDS(str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
-
-    str(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets)
-    str(Percent.Cover.Classified.Tiles.dataframe)
-
-  Percent.Cover.Classified.Tiles.dataframe %>%
-      filter(seg.params == "Pixel") %>%
-      data.frame() %>%
-      head()
-
-    Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets %>%
-        filter(n.points == 400)
-
-
-  #Percent.Cover.Classified.Tiles.dataframe <- Percent.Cover.Classified.Tiles.dataframe %>%
-  #    rename(pct_g_pred = pct_g, pct_t_pred = pct_t, pct_i_pred = pct_i, pct_o_pred = pct_o)
-
-
-    grid.master.df <- left_join(Percent.Cover.Classified.Tiles.dataframe, Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets)
-
-    # Should join by Joining by: c("grid", "target.cover", "n.points", "target.type")
-
-    str(grid.master.df)
-
-    grid.master.df %>%
-  #      filter(n.points == 400) %>%
-        data.frame() %>%
-        head(n=40)
-
-
-
-
-#+END_SRC
-
-
-****** Make RMSE plots
-
-#+BEGIN_SRC R :results graphics :file figs/wausauNAIP.100m.RMSE_plot.png :height 800 :width 600
-
-    sub.for.rmse.plot <- grid.master.df %>%
-        filter(target.type == "multinomial",
-               image == "wausauNAIP",
-               n.points == 225)
-
-
-    ggplot(sub.for.rmse.plot, aes( x = pct.t.googleEarth, y = pct_t_pred, color = model)) +
-  geom_point() + geom_smooth() + theme_classic() +
-  geom_line(data = data.frame(pct.t.googleEarth = c(0,1), pct_t_pred = c(0,1), seg.params = "1:1"),
-  color = "black", size = 1) +
-  ggtitle("NAIP, n.pts: 225")
-
-#+END_SRC
-
-
-
-****** Calc RMSE table
-
- Create dataframe with structure:
-
- | RMSE | image | segmentation | target | model | cropped.to.n.pts | cover_type |   |   |   |   |   |   |   |
- |------+-------+--------------+--------+-------+------------------+------------+---+---+---+---+---+---+---|
- |      |       |              |        |       |                  |            |   |   |   |   |   |   |   |
-
-
-******* Calc Error Column
-
-#+BEGIN_SRC R
-  error_tree <- grid.master.df %>%
-      filter(target.cover == "tree" | target.cover == "all") %>%
-      select(-target.cover) %>%
-      group_by(image, model, n.points, seg.params, target.type) %>%
-      mutate(t_error = (pct_t_pred - pct.t.googleEarth))
-
-  error_tree %>%
-      select(image, model, n.points, seg.params, target.type, grid, t_error) %>%
-      filter(n.points == 225) %>%
-      ungroup() %>%
-      arrange(desc(abs(t_error))) %>%
-      data.frame() %>%
-      head(n=50)
-#+END_SRC
-
-
-
-#+BEGIN_SRC R
-
-    RMSE_tree <- grid.master.df %>%
-        filter(target.cover == "tree" | target.cover == "all") %>%
-        select(-target.cover) %>%
-        group_by(image, model, n.points, seg.params, target.type) %>%
-        summarize(RMSE_t = sqrt( mean( (pct_t_pred - pct.t.googleEarth)^2, na.rm =T ) ) )
-
-  RMSE_tree <- RMSE_tree %>%
-      mutate(segment.size = ifelse(!is.na(str_extract(seg.params, ".*105.*")), 105,
-                            ifelse(!is.na(str_extract(seg.params, ".*60.*")), 60,
-                            ifelse(!is.na(str_extract(seg.params, ".*30.*")), 30,
-                            ifelse(!is.na(str_extract(seg.params, ".*70.*")), 105,
-                            ifelse(!is.na(str_extract(seg.params, ".*40.*")), 60,
-                            ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
-#+END_SRC
-
-****** RMSE analysis
-
-Which combination of image, segmentation, target, model and n.pts
-(spatial scale) minimize error for each cover_type?
-
-#+BEGIN_SRC R :results raw
-options(asciiType = "org")
-options(warn = -1)
-  RMSE_tree %>%
-      ungroup() %>%
-      arrange(RMSE_t) %>%
-      head(n = 30) %>%
-      ascii()
-#+END_SRC
-
-
-
-Plot:
-x = cropped.to.n.pts
-y = RMSE
-color = model
-facet(segmentation~cover_type)
-
-#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_n.ptsXRMSE.png :height 800 :width 600
-
-  ggplot(RMSE_tree, aes(x = n.points, y = RMSE_t, color = model)) + geom_point() +
-      facet_grid(segment.size~image)
-
-#+END_SRC
-
-
-#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_AreaXRMSE_NAIP_seg60.png
-  RMSE_tree.sub <- RMSE_tree%>%
-      filter(segment.size == 60, image == "madisonNAIP", target.type == "binomial", model == "svm_resp") %>%
-      mutate(area_meters_squared = ((sqrt(n.points) - 1) * 7)^2)
-
-
-  ggplot(RMSE_tree.sub, aes(x = area_meters_squared, y = RMSE_t), color = "blue") + geom_point() +
-      labs(y = "Root Mean Squared Prediction Error \n for Percent Tree Cover") +
-      theme_classic() +
-      theme(axis.title = element_text(size = 24),
-            axis.text =  element_text(size = 22)) +
-      xlim(0,45000)
-
-#+END_SRC
-
-
-#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_seg.sizeXRMSE.png :height 800 :width 600
-
-  ggplot(RMSE_tree, aes(x = segment.size, y = RMSE_t, color = n.points, group = interaction(n.points,target.type))) + geom_line() +
-      facet_grid(model~image)
-
-#+END_SRC
-
-
-#+BEGIN_SRC R :results raw
-
-  m1 <-lm(RMSE_t*100 ~ image * (model +  target.type + n.points * segment.size), data = RMSE_tree)
-  tidy(m1, digits = 2) %>%
-ascii()
-#+END_SRC
-
 *** Save Best Model
 #+begin_src R
 
@@ -3249,47 +3255,7 @@ options(warn = 1)
 |  9 |          0.42 |                          0.17 |                               0.15 |                         0.76 | wau.100m.8  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.8_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
 | 10 |          0.59 |                          0.53 |                               0.28 |                         0.70 | wau.100m.9  | wausauNAIP | all          | rf_prob | Pixel      | ../DD/wausau_Accuracy/ClassifiedTiles/wausauNAIP.wau.100m.9_Pixel_madisonNAIP_all_rf_prob.tif  |         1.00 |             |
 
-** How accurate is NAIP?
 
-If I use the grids, I can also show how naip accuracy changes with
-grid characteristics like heterogeneity.
-
-#+BEGIN_SRC R
-  pts.robi <- readOGR(dsn = "../RD_Accuracy/PointsByRobi/", layer = "accuracy_cover_2500")
-  proj4string(pts.robi) <- utm16
-  #pts.robi <- spTransform(pts.robi, utm16)
-  plot(pts.robi)
-
-  madison <-  readOGR(dsn = "../RD_US_UrbanAreasShapefile", layer = "cb_2013_us_ua10_500k")
-  madison <- madison[madison@data$NAME10 == "Madison, WI",]
-  plot(madison, add = T)
-
-  madison <- spTransform(madison, utm16)
-
-  pts.urb <- over(pts.robi, madison) %>% na.omit()
-
-***** Generate Feature data frame
-#+begin_src R
-      make.feature.df(image.dir = tile.urb.path,
-                      image.name = "urbanExtent",
-                      band.names = c("blue","green","red","nir"),
-                      ndvi = T,
-                      ratio.bands = c("blue","green","red","nir"),
-                      texture.params.df = texture.params,
-                      pixel.df = F,
-                      pca.source.image.name = "madisonNAIP",
-                      segmentation = T,
-                      segment.params.df = segment.params,
-                      seg.dir.up = " ../../../../")
-
-
-***** Classify
-
-#+END_SRC
-
-#+begin_src R
-table(cover, naip_cover
-#+end_src
 
 
 * Classify Every Urban Area in the State
