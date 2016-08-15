@@ -382,8 +382,7 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
 
 #+results:
 #+begin_example
-
-                                ../DD                 ../DD/madison_Training
+                                 ../DD                 ../DD/madison_Training
                                  FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
                                  FALSE                                  FALSE
@@ -3505,8 +3504,6 @@ rasterOptions(tmpdir=R_raster_temp)
 #+END_SRC
 
 #+results:
-: Warning message:
-: In dir.create(R_raster_temp) : '../R_raster_temp' already exists
 
 *** Projections
 #+BEGIN_SRC R
@@ -3573,6 +3570,15 @@ dir.create(classified.urban.areas.dir)
 : Warning message:
 : In dir.create(classified.urban.areas.dir) :
 :   '../DD/ClassifiedUrbanAreas' already exists
+*** Segmentation Parameters
+#+BEGIN_SRC R :eval yes
+  pixel_size  <- 1 # m^2
+  segment_size <- 30 # m^2
+  compactness <- 15
+  segment.params <- data.frame(compactness = compactness, segment.size = segment_size)
+#+END_SRC
+
+#+results:
 
 *** delete
 **** PCA
@@ -3581,12 +3587,6 @@ madison.naip.pca.path <- "../DD/Madison_pca/madisonNAIP_pca.rds"
 #+END_SRC
 
 #+results:
-**** Segmentation Parameters
-#+BEGIN_SRC R :eval no
-pixel_size  <- 1 # m^2
-segment_size <- 30 # m^2
-compactness <- 15
-#+END_SRC
 
 #+results:
 
@@ -3819,9 +3819,9 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
                                  ndvi = T,
                                  ratio.bands = c("blue","green","red","nir"),
                                  texture.params.df = texture.params,
-                                 pixel.df = T,
+                                 pixel.df = F,
                                  pca.location = location,
-                                 segmentation = F,
+                                 segmentation = T,
                                  segment.params.df = segment.params)
 
 #+end_src
@@ -3935,6 +3935,11 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 #+END_SRC
 
 #+results:
+: Error in e$fun(obj, substitute(ex), parent.frame(), e$data) :
+:   worker initialization failed: Error in {: task 1 failed - "error in evaluating the argument 'x' in selecting a method for function 'raster': Error in if (test) { : argument is of length zero
+: "
+: Error: unexpected '}' in "}"
+: Error: unexpected '}' in "}"
 
 
 **** Mask Classified image, Post Processing
