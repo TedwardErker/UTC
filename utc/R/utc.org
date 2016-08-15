@@ -1084,13 +1084,19 @@ target from the FSelector Package
 
           pix.feature.df <- readRDS(str_c(tile.dir,"/",tile.name,"_",seg.prms,pixelFeatureDF.appendage,".rds"))
 
+          pix.feature.df$id <- 1:nrow(pix.feature.df)
+
           if(!is.null(pix.feature.df$y)) {
               pix.feature.df <- dplyr::select(pix.feature.df, -x, -y)
           }
 
-          pred <- predict(pix.mod, newdata = pix.feature.df)
+          pix.feature.df.complete <- pix.feature.df[complete.cases(pix.feature.df),] # svm can't predict with NAs
+          pred <- predict(pix.mod, newdata = pix.feature.df.complete[,!(names(pix.feature.df.complete) %in% c("id"))])
+          df <- data.frame(id = pix.feature.df.complete$id, response = pred$data$response)
+          df <- left_join(data.frame(id = pix.feature.df$id), df)
+
           a <- ras[[1]]
-          values(a) <- pred$data$response
+          values(a) <- df$response
           tuning = str_extract(model.rds, tuned.pattern)
           path <- paste0(classify.out.dir,"/",tile.name,"_",seg.prms,"_",pix.mod$task.desc$id,"_",tuning,"_",pix.mod$learner$id,".tif")
           writeRaster(a, path, overwrite = T)
@@ -1359,6 +1365,41 @@ target from the FSelector Package
 ** Point-wise error functions
 #+BEGIN_SRC R
 
+
+  calcErrorAllMultinomial.wrefColumn <-  function(pts, tile, Pixel = F, referenceColumn, one.point = T) {
+      classification <- raster::extract(classified.tile, pts)
+      if(Pixel == T) {
+          lvls <- levels(classified.tile)[[1]]
+          classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
+      } else {
+          m <- tile@data@attributes[[1]]
+          classification <- mapvalues(classification, from = m$ID, to = levels(m$category))
+      }
+      reference = pts@data[,referenceColumn]
+      overall.error <- 1 - mean(classification == reference, na.rm = T)
+      pct.grass.classified.as.other <- 1 - mean(classification[which(reference == "g")] == reference[which(reference == "g")], na.rm = T)
+      pct.impervious.classified.as.other <- 1 - mean(classification[which(reference == "i")] == reference[which(reference == "i")], na.rm = T)
+      pct.tree.classified.as.other <- 1 - mean(classification[which(reference == "t")] == reference[which(reference == "t")], na.rm = T)
+
+      if(one.point == T) {
+          error <- c(overall.error = overall.error,
+                     pct.grass.classified.as.other = pct.grass.classified.as.other,
+                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                     pct.tree.classified.as.other = pct.tree.classified.as.other,
+                     classification = classification,
+                     referenceColumn = referenceColumn,
+                     reference = reference)
+      } else {
+          error <- c(overall.error = overall.error,
+                     pct.grass.classified.as.other = pct.grass.classified.as.other,
+                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                     pct.tree.classified.as.other = pct.tree.classified.as.other,
+                     referenceColumn = referenceColumn)
+      }
+      return(error)
+  }
+
+
   calcErrorAllMultinomial <-  function(pts, tile, Pixel = F) {
       classification <- raster::extract(classified.tile, pts)
       if(Pixel == T) {
@@ -1379,6 +1420,41 @@ target from the FSelector Package
                  pct.tree.classified.as.other = pct.tree.classified.as.other)
       return(error)
   }
+
+  calcErrorBinomial.wrefColumn <-  function(pts, tile, target, Pixel = F, referenceColumn, one.point = T) {
+      classification <- raster::extract(classified.tile, pts)
+      if(Pixel == T) {
+          lvls <- levels(classified.tile)[[1]]
+          classification <- mapvalues(classification, from = lvls[,1], to = as.character(lvls[,2]))
+      } else {
+          classification <- mapvalues(classification, from = c(1,2,3,4), to = c("g","i","t","o"))
+      }
+      classification <- ifelse(classification == target, classification, "o")
+      reference <- pts@data[,referenceColumn]
+      overall.error <- 1 - mean(classification == reference)
+      pct.grass.classified.as.other <- 1 - mean(classification[which(reference == "g")] == reference[which(reference == "g")])
+      pct.impervious.classified.as.other <- 1 - mean(classification[which(reference == "i")] == reference[which(reference == "i")])
+      pct.tree.classified.as.other <- 1 - mean(classification[which(reference == "t")] == reference[which(reference == "t")])
+
+          if(one.point == T) {
+          error <- c(overall.error = overall.error,
+                     pct.grass.classified.as.other = pct.grass.classified.as.other,
+                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                     pct.tree.classified.as.other = pct.tree.classified.as.other,
+                     classification = classification,
+                     referenceColumn = referenceColumn,
+                     reference = reference)
+      } else {
+          error <- c(overall.error = overall.error,
+                     pct.grass.classified.as.other = pct.grass.classified.as.other,
+                     pct.impervious.classified.as.other = pct.impervious.classified.as.other,
+                     pct.tree.classified.as.other = pct.tree.classified.as.other,
+                     referenceColumn = referenceColumn)
+      }
+      return(error)
+  }
+
+
 
   calcErrorBinomial <-  function(pts, tile, target, Pixel = F) {
       classification <- raster::extract(classified.tile, pts)
