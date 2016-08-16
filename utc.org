@@ -1852,6 +1852,409 @@ For each grid, find the worst classification.  Plot worst 20 grids.
           mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
           head(n = 20)
 
+        saveRDS(error.df, str_c(derived.dir, "/RandomPoints.GoogleReference.point2pixel.error.df.rds"))
+
+#+END_SRC
+
+**** Area-wise accuracy. RMSE, grids and field plots
+***** RMSE at grid level
+****** Combine google earth grid estimates of cover with classified tile estimates of cover
+
+ Create dataframe with structure:
+
+ | %t.img | %g.img | %i.img | %o.img | image      | segmentation | target.cover        | target.type         | model                   | tile                   | cropped.to.n.pts | %t.goog | %g.goog | %i.goog | %o.goog |   |   |   |   |   |   |   |   |
+ |--------+--------+--------+--------+------------+--------------+---------------------+---------------------+-------------------------+------------------------+------------------+---------+---------+---------+---------+---+---+---+---+---+---+---+---|
+ |    0-1 |    0-1 |    0-1 |    0-1 | NAIP       | Pixel        | grass               | binomial (two)      | random forest prob      | mad-size-id (up to 50) |                4 |     0-1 |     0-1 |     0-1 |     0-1 |   |   |   |   |   |   |   |   |
+ |        |        |        |        | panshpSPOT | 30 m2        | tree                | multinomial (three) | random forest resp      |                        |                9 |         |         |         |         |   |   |   |   |   |   |   |   |
+ |        |        |        |        |            | 60 m2        | impervious          |                     | support vector machines |                        |               16 |         |         |         |         |   |   |   |   |   |   |   |   |
+ |        |        |        |        |            |              | NA (if multinomial) |                     |                         |                        |               25 |         |         |         |         |   |   |   |   |   |   |   |   |
+ |        |        |        |        |            | 105 m2       |                     |                     |                         |                        |              ... |         |         |         |         |   |   |   |   |   |   |   |   |
+
+
+
+******* Create DF of % cover from grids cropped to different extents
+ #+BEGIN_SRC R
+        grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
+        grd.df <- grd@data
+
+   n.rows.and.columns.for.subset = c(15)
+
+        out <- foreach(n.rows.and.columns.for.sub = n.rows.and.columns.for.subset) %do% {
+            calc.pct.cvr.for.grid.subset(grd.df, n.rows.and.columns.for.sub)
+        }
+
+        Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- bind_rows(out)
+
+   Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets %>%
+       rename(grid = unq__ID)
+
+     saveRDS(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets, str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
+ #+END_SRC
+
+******* Create DF of % cover from classified rasters cropped to different extents
+
+#+BEGIN_SRC R
+
+    grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
+
+
+    # get path of grid tiles (not interested in fieldplot classified tiles)
+        classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+            str_extract(., pattern = ".*.tif$") %>%
+            str_extract(., pattern = str_c(".*",wau.grid.id.pattern, ".*")) %>%
+              na.omit()
+
+
+  n.rows.and.columns.for.subset = c(15)
+
+
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+
+      out <- foreach(n.rows.and.columns.for.sub = n.rows.and.columns.for.subset) %do% {
+             pct.class.cover <- foreach(tile.path = classified.tile.paths, .packages = c("raster","dplyr","stringr")) %dopar% {
+               calculate.percent.cover.in.classified.tile(pts = grd,
+                                                           tile.pth = tile.path,
+                                                           n.rows.and.columns.subset = n.rows.and.columns.for.sub)
+
+            }
+                saveRDS(pct.class.cover, str_c(derived.dir,"/","Wausau.Percent.Cover.Classified.Tiles.nPoints",n.rows.and.columns.for.sub, ".rds"))
+      }
+
+
+  class.cover.files <- list.files(derived.dir, pattern = "Wausau.Percent.Cover.Classified.Tiles.nPoints*", full.names = T)
+
+  class.cover.dfs <- lapply(class.cover.files, readRDS)
+
+  out <- unlist(class.cover.dfs,recursive = F)
+
+       Percent.Cover.Classified.Tiles.dataframe <- bind_rows(out)
+
+
+
+
+
+  # delete this line if I run it again.
+  ## Percent.Cover.Classified.Tiles.dataframe <-rename(Percent.Cover.Classified.Tiles.dataframe,
+  ##                                                   image = tile,
+  ##                                                   pct_g_pred = pct_g,
+  ##                                                   pct_i_pred = pct_i,
+  ##                                                   pct_t_pred = pct_t,
+  ##                                                   pct_o_pred = pct_o)
+
+    ## saveRDS(Percent.Cover.Classified.Tiles.dataframe, str_c(derived.dir,"/","Percent.Cover.Classified.Tiles.dataframe",".rds"))
+
+#+END_SRC
+
+
+
+
+******* Join Cover from Grids with predicted Cover from images
+#+BEGIN_SRC R
+    Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- readRDS(str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
+
+    str(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets)
+    str(Percent.Cover.Classified.Tiles.dataframe)
+
+  Percent.Cover.Classified.Tiles.dataframe %>%
+      filter(seg.params == "Pixel") %>%
+      data.frame() %>%
+      head()
+
+    Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets %>%
+        filter(n.points == 400)
+
+
+  #Percent.Cover.Classified.Tiles.dataframe <- Percent.Cover.Classified.Tiles.dataframe %>%
+  #    rename(pct_g_pred = pct_g, pct_t_pred = pct_t, pct_i_pred = pct_i, pct_o_pred = pct_o)
+
+
+    grid.master.df <- left_join(Percent.Cover.Classified.Tiles.dataframe, Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets)
+
+    # Should join by Joining by: c("grid", "target.cover", "n.points", "target.type")
+
+    str(grid.master.df)
+
+    grid.master.df %>%
+  #      filter(n.points == 400) %>%
+        data.frame() %>%
+        head(n=40)
+
+
+
+
+#+END_SRC
+
+
+****** Make RMSE plots
+
+#+BEGIN_SRC R :results graphics :file figs/wausauNAIP.100m.RMSE_plot.png :height 800 :width 600
+
+    sub.for.rmse.plot <- grid.master.df %>%
+        filter(target.type == "multinomial",
+               image == "wausauNAIP",
+               n.points == 225)
+
+
+    ggplot(sub.for.rmse.plot, aes( x = pct.t.googleEarth, y = pct_t_pred, color = model)) +
+  geom_point() + geom_smooth() + theme_classic() +
+  geom_line(data = data.frame(pct.t.googleEarth = c(0,1), pct_t_pred = c(0,1), seg.params = "1:1"),
+  color = "black", size = 1) +
+  ggtitle("NAIP, n.pts: 225")
+
+#+END_SRC
+
+
+
+****** Calc RMSE table
+
+ Create dataframe with structure:
+
+ | RMSE | image | segmentation | target | model | cropped.to.n.pts | cover_type |   |   |   |   |   |   |   |
+ |------+-------+--------------+--------+-------+------------------+------------+---+---+---+---+---+---+---|
+ |      |       |              |        |       |                  |            |   |   |   |   |   |   |   |
+
+
+******* Calc Error Column
+
+#+BEGIN_SRC R
+  error_tree <- grid.master.df %>%
+      filter(target.cover == "tree" | target.cover == "all") %>%
+      select(-target.cover) %>%
+      group_by(image, model, n.points, seg.params, target.type) %>%
+      mutate(t_error = (pct_t_pred - pct.t.googleEarth))
+
+  error_tree %>%
+      select(image, model, n.points, seg.params, target.type, grid, t_error) %>%
+      filter(n.points == 225) %>%
+      ungroup() %>%
+      arrange(desc(abs(t_error))) %>%
+      data.frame() %>%
+      head(n=50)
+#+END_SRC
+
+
+
+#+BEGIN_SRC R
+
+    RMSE_tree <- grid.master.df %>%
+        filter(target.cover == "tree" | target.cover == "all") %>%
+        select(-target.cover) %>%
+        group_by(image, model, n.points, seg.params, target.type) %>%
+        summarize(RMSE_t = sqrt( mean( (pct_t_pred - pct.t.googleEarth)^2, na.rm =T ) ) )
+
+  RMSE_tree <- RMSE_tree %>%
+      mutate(segment.size = ifelse(!is.na(str_extract(seg.params, ".*105.*")), 105,
+                            ifelse(!is.na(str_extract(seg.params, ".*60.*")), 60,
+                            ifelse(!is.na(str_extract(seg.params, ".*30.*")), 30,
+                            ifelse(!is.na(str_extract(seg.params, ".*70.*")), 105,
+                            ifelse(!is.na(str_extract(seg.params, ".*40.*")), 60,
+                            ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
+#+END_SRC
+
+****** RMSE analysis
+
+Which combination of image, segmentation, target, model and n.pts
+(spatial scale) minimize error for each cover_type?
+
+#+BEGIN_SRC R :results raw
+options(asciiType = "org")
+options(warn = -1)
+  RMSE_tree %>%
+      ungroup() %>%
+      arrange(RMSE_t) %>%
+      head(n = 30) %>%
+      ascii()
+#+END_SRC
+
+
+
+Plot:
+x = cropped.to.n.pts
+y = RMSE
+color = model
+facet(segmentation~cover_type)
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_n.ptsXRMSE.png :height 800 :width 600
+
+  ggplot(RMSE_tree, aes(x = n.points, y = RMSE_t, color = model)) + geom_point() +
+      facet_grid(segment.size~image)
+
+#+END_SRC
+
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_AreaXRMSE_NAIP_seg60.png
+  RMSE_tree.sub <- RMSE_tree%>%
+      filter(segment.size == 60, image == "madisonNAIP", target.type == "binomial", model == "svm_resp") %>%
+      mutate(area_meters_squared = ((sqrt(n.points) - 1) * 7)^2)
+
+
+  ggplot(RMSE_tree.sub, aes(x = area_meters_squared, y = RMSE_t), color = "blue") + geom_point() +
+      labs(y = "Root Mean Squared Prediction Error \n for Percent Tree Cover") +
+      theme_classic() +
+      theme(axis.title = element_text(size = 24),
+            axis.text =  element_text(size = 22)) +
+      xlim(0,45000)
+
+#+END_SRC
+
+
+#+BEGIN_SRC R :results graphics :file figs/RMSE_tree_compare_seg.sizeXRMSE.png :height 800 :width 600
+
+  ggplot(RMSE_tree, aes(x = segment.size, y = RMSE_t, color = n.points, group = interaction(n.points,target.type))) + geom_line() +
+      facet_grid(model~image)
+
+#+END_SRC
+
+
+#+BEGIN_SRC R :results raw
+
+  m1 <-lm(RMSE_t*100 ~ image * (model +  target.type + n.points * segment.size), data = RMSE_tree)
+  tidy(m1, digits = 2) %>%
+ascii()
+#+END_SRC
+
+
+*** Summarize Accuracy Assessment Results
+
+Comparing classification to other estimates of cover.
+#+begin_src R :results none
+      error.df <- readRDS(str_c(derived.dir, "/Grids.point2pixel.error.df.rds"))
+
+      error.df %>%
+          arrange(overall.error) %>%
+          head()
+
+      error.df %>%
+          arrange(desc(overall.error)) %>%
+          head()
+
+      error.df %>%
+          filter(seg.params != "Pixel") %>%
+          arrange(desc(overall.error)) %>%
+          head()
+
+  error.df <- error.df %>%
+      mutate(segment.size = as.numeric(ifelse(!is.na(str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2]), str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2], 1)),
+             segment.size = ifelse(image == "panshpSPOT", segment.size * 1.5, segment.size),
+             compactness = as.numeric(str_match(seg.params, "N-[0-9]+_C-([0-9]+)")[,2]))
+
+#+end_src
+
+**** Random Points
+
+***** Table showing performance of classifiers
+#+begin_src R
+
+#+end_src
+***** Plots showing how image, segment size, compactness, and model affect accuracy
+
+**** Field Data
+**** Grid of Points
+
+***** load grid.points
+#+begin_src R
+  grid.points <- readOGR(dsn = accuracy.region.imageCRS.dsn,
+                         layer = "madisonNAIP_Grids")
+
+#+end_src
+
+#+results:
+:  OGR data source with driver: ESRI Shapefile
+: Source: "../DD/reprojected.Accuracy.Regions", layer: "madisonNAIP_Grids"
+: with 20209 features
+: It has 15 fields
+
+***** Plots of 20 best classified grids with points superimposed
+For each grid, find the best classification.  Plot best 20 grids.
+#+begin_src R :results raw
+    best.classified.grids <- error.df %>%
+        ungroup() %>%
+        group_by(grid) %>%
+        top_n(1, desc(overall.error)) %>%
+        ungroup() %>%
+        arrange(overall.error) %>%
+        select(overall.error, grid,image, target.cover, model, seg.params) %>%
+        mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+        head(n = 20)
+
+options(warn = -1)
+  best.classified.grids %>% ascii
+options(warn = 1)
+#+end_src
+
+#+results:
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
+|----+---------------+-------------+-------------+--------------+---------+------------+--------------------------------------------------------------------------------------------------|
+|  1 |          0.03 | mad.50m.2   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif   |
+|  2 |          0.04 | mad.100m.23 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_rf_prob.tif |
+|  3 |          0.04 | mad.100m.13 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.13_Pixel_madisonNAIP_all_rf_prob.tif |
+|  4 |          0.04 | mad.50m.5   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_Pixel_madisonNAIP_all_rf_prob.tif   |
+|  5 |          0.05 | mad.100m.12 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_Pixel_madisonNAIP_all_rf_prob.tif |
+|  6 |          0.07 | mad.150m.9  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_rf_prob.tif  |
+|  7 |          0.07 | mad.150m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+|  8 |          0.07 | mad.100m.3  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_rf_prob.tif  |
+|  9 |          0.08 | mad.100m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 10 |          0.10 | mad.100m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 11 |          0.13 | mad.200m.4  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.4_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 12 |          0.14 | mad.100m.27 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.27_Pixel_madisonNAIP_all_rf_prob.tif |
+| 13 |          0.15 | mad.100m.21 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.21_Pixel_madisonNAIP_all_rf_prob.tif |
+| 14 |          0.16 | mad.200m.1  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.1_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 15 |          0.17 | mad.100m.28 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_Pixel_madisonNAIP_all_rf_prob.tif |
+| 16 |          0.17 | mad.100m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 17 |          0.17 | mad.100m.14 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.14_Pixel_madisonNAIP_all_rf_prob.tif |
+| 18 |          0.18 | mad.200m.5  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.5_Pixel_madisonNAIP_all_rf_prob.tif  |
+| 19 |          0.19 | mad.50m.4   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.4_Pixel_madisonNAIP_all_rf_prob.tif   |
+| 20 |          0.19 | mad.100m.11 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.11_Pixel_madisonNAIP_all_rf_prob.tif |
+ Error: object 'ClassifiedTilesDirName' not found
+Error in eval(expr, envir, enclos) :
+  object 'best.classified.grids' not found
+
+
+#+begin_src R :results none
+
+  lapply(1:nrow(best.classified.grids), function(i){
+      pts.on.classified.tile.plot.ErrorinTitle(error = best.classified.grids$overall.error[i],
+                                           grd.pts = grid.points,
+                                           classified.tile.path = best.classified.grids$path[i],
+                                           fig.dir = "figs/bestgrids",
+                                           target = "a")
+  })
+
+  ## plts <- lapply(best.classified.grids$path, function(path) {
+  ##   grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+  ##   points <- grid.points[grid.points@data$unq__ID == grid.name,]
+  ##   points@data <- points@data %>%
+  ##       mutate(x = coordinates(points)[,1],
+  ##              y = coordinates(points)[,2])
+  ##   ras <- raster(path)
+  ##   pts.on.classified.tile.plot(fig.dir = "figs/bestgrids",points, ras, target = "a")
+  ## })
+
+  #+end_src
+
+#+BEGIN_SRC R :results raw :eval no
+
+best.grid.paths <- list.files("figs/bestgrids", full.names = T)
+
+a <- sapply(best.grid.paths, function(x) message("[[file:",x,"]]"))
+
+#+END_SRC
+
+***** NEXT Plots of 20 worst classified grids with points superimposed.  NONE SHOULD BE >50% wrong!
+For each grid, find the worst classification.  Plot worst 20 grids.
+#+begin_src R :results raw
+      worst.classified.grids <- error.df %>%
+          ungroup() %>%
+          group_by(grid) %>%
+          top_n(1, overall.error) %>%
+          ungroup() %>%
+          arrange(desc(overall.error)) %>%
+          select(overall.error, grid,image, target.cover, model, seg.params) %>%
+          mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+          head(n = 20)
+
   options(warn = -1)
     worst.classified.grids %>% ascii
   options(warn = 1)
@@ -1920,6 +2323,7 @@ Error in eval(expr, envir, enclos) :
   #+end_src
 
 #+results:
+
 #+begin_example
  Warning in dir.create(fig.dir) : 'figs/worstgrids' already exists
 Warning: Removed 324 rows containing missing values (geom_raster).
@@ -3032,56 +3436,6 @@ ggplot(error.df, aes(y = overall.error, x = segment.size, color = compactness/se
 #+end_src
 
 #+results:
-|    | grid        | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
-|----+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
-|  1 | mad.100m.1  |          0.52 |                          0.24 |                                    |                         0.55 |
-|  2 | mad.100m.10 |          0.50 |                          0.70 |                               0.33 |                         0.53 |
-|  3 | mad.100m.22 |          0.49 |                          0.57 |                               0.34 |                         0.56 |
-|  4 | mad.150m.8  |          0.48 |                          0.76 |                               0.19 |                         0.72 |
-|  5 | mad.100m.29 |          0.48 |                          0.60 |                               0.47 |                         0.46 |
-|  6 | mad.150m.3  |          0.47 |                          0.68 |                               0.24 |                         0.60 |
-|  7 | mad.150m.6  |          0.46 |                          0.51 |                               0.39 |                         0.50 |
-|  8 | mad.200m.3  |          0.45 |                          0.46 |                               0.24 |                         0.55 |
-|  9 | mad.150m.10 |          0.44 |                          0.44 |                               0.30 |                         0.52 |
-| 10 | mad.100m.3  |          0.44 |                          0.81 |                               0.28 |                         0.45 |
-| 11 | mad.100m.19 |          0.44 |                          0.42 |                               0.40 |                         0.45 |
-| 12 | mad.100m.20 |          0.42 |                          0.38 |                               0.38 |                         0.48 |
-| 13 | mad.100m.24 |          0.42 |                          0.58 |                               0.25 |                         0.51 |
-| 14 | mad.100m.7  |          0.42 |                          0.36 |                               0.45 |                         0.45 |
-| 15 | mad.100m.21 |          0.41 |                          0.62 |                               0.36 |                         0.41 |
-| 16 | mad.100m.14 |          0.40 |                          0.46 |                               0.06 |                         0.49 |
-| 17 | mad.100m.6  |          0.40 |                          0.35 |                               0.35 |                         0.46 |
-| 18 | mad.150m.1  |          0.40 |                          0.34 |                               0.28 |                         0.66 |
-| 19 | mad.100m.17 |          0.40 |                          0.51 |                               0.25 |                         0.57 |
-| 20 | mad.50m.4   |          0.38 |                          0.66 |                               0.23 |                         0.53 |
-| 21 | mad.100m.23 |          0.38 |                          0.12 |                                    |                         0.40 |
-| 22 | mad.150m.7  |          0.37 |                          0.36 |                                    |                         0.43 |
-| 23 | mad.50m.3   |          0.37 |                          0.69 |                               0.25 |                         0.61 |
-| 24 | mad.50m.5   |          0.36 |                          0.34 |                               0.22 |                         0.37 |
-| 25 | mad.150m.2  |          0.35 |                          0.42 |                               0.15 |                         0.52 |
-| 26 | mad.100m.11 |          0.34 |                          0.16 |                               0.40 |                         0.53 |
-| 27 | mad.150m.4  |          0.32 |                          0.36 |                               0.16 |                         0.74 |
-| 28 | mad.100m.18 |          0.31 |                          0.34 |                               0.18 |                         0.60 |
-| 29 | mad.100m.5  |          0.30 |                          0.34 |                               0.13 |                         0.72 |
-| 30 | mad.100m.9  |          0.29 |                          0.27 |                               0.15 |                         0.71 |
-| 31 | mad.100m.16 |          0.28 |                          0.02 |                                    |                         0.66 |
-| 32 | mad.100m.28 |          0.28 |                          0.20 |                                    |                         0.38 |
-| 33 | mad.100m.8  |          0.27 |                          0.68 |                               0.04 |                         0.86 |
-| 34 | mad.100m.30 |          0.25 |                          0.90 |                               0.04 |                         0.93 |
-| 35 | mad.200m.4  |          0.23 |                          0.19 |                               0.06 |                         0.76 |
-| 36 | mad.200m.1  |          0.23 |                          0.19 |                               0.06 |                         0.67 |
-| 37 | mad.50m.1   |          0.23 |                          0.75 |                               0.10 |                         0.88 |
-| 38 | mad.200m.5  |          0.19 |                          0.09 |                               0.97 |                         0.44 |
-| 39 | mad.200m.2  |          0.16 |                          0.13 |                               0.07 |                         0.72 |
-| 40 | mad.150m.5  |          0.15 |                          0.22 |                               0.01 |                         0.61 |
-| 41 | mad.100m.27 |          0.11 |                          0.14 |                               0.08 |                              |
-| 42 | mad.100m.4  |          0.11 |                          0.89 |                               0.01 |                         0.88 |
-| 43 | mad.100m.13 |          0.08 |                          1.00 |                               0.01 |                         0.86 |
-| 44 | mad.100m.12 |          0.06 |                          0.13 |                               0.00 |                              |
-| 45 | mad.150m.9  |          0.05 |                          0.10 |                               0.00 |                         0.74 |
-| 46 | mad.50m.2   |          0.04 |                               |                               0.00 |                         1.00 |
-Error in eval(expr, envir, enclos) :
-  object 'error.df.avg.grids' not found
 
 
 ***** Plots showing how grid characteristics (e.g. heterogeneity) affect accuracy
@@ -3579,9 +3933,12 @@ dir.create(classified.urban.areas.dir)
 #+END_SRC
 
 #+results:
+<<<<<<< HEAD
 : Warning message:
 : In dir.create(classified.urban.areas.dir) :
 :   '../DD/ClassifiedUrbanAreas' already exists
+=======
+>>>>>>> 88a3094d98d17f8e5d5b5473f1d7659c16a2d36b
 *** Segmentation Parameters
 #+BEGIN_SRC R :eval yes
   pixel_size  <- 1 # m^2
@@ -3696,7 +4053,10 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 #+results:
 
 *** For the smaller urban areas
+<<<<<<< HEAD
 I should change the high.q to .95 if I run this again.
+=======
+>>>>>>> 88a3094d98d17f8e5d5b5473f1d7659c16a2d36b
 #+begin_src R
 
   low.q <- .10
@@ -3972,7 +4332,11 @@ message("features created for", tile.urb.path)
        cl <- makeCluster(cores)
        registerDoParallel(cl)
 
+<<<<<<< HEAD
    out <- foreach(i = i_areas_high_quant[23],
+=======
+   out <- foreach(i = i_areas_high_quant,
+>>>>>>> 88a3094d98d17f8e5d5b5473f1d7659c16a2d36b
                  .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr","glcm")) %do% {
 
        urb.poly <- urb.polys[i]
