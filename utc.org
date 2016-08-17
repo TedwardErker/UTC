@@ -4053,10 +4053,9 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 #+results:
 
 *** For the smaller urban areas
-<<<<<<< HEAD
+
 I should change the high.q to .95 if I run this again.
-=======
->>>>>>> 88a3094d98d17f8e5d5b5473f1d7659c16a2d36b
+
 #+begin_src R
 
   low.q <- .10
