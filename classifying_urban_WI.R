@@ -6,6 +6,7 @@ i_areas_high_quant <- which(areas[,1] >= high.quant)
 cl <- makeCluster(cores)
     registerDoParallel(cl)
 
+
 out <- foreach(i = i_areas_high_quant[23],
               .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr","glcm")) %do% {
 
@@ -25,7 +26,7 @@ dir.create(urb.path)
 
 ## [[file:utc.org::*Get%20names%20of%20NAIP%20tiles%20that%20intersect%20with%20Urban%20Area][Get\ names\ of\ NAIP\ tiles\ that\ intersect\ with\ Urban\ Area:1]]
 tiles.in.urban <-  lapply(naip.extents, function(naip.extent) {
-         inter <- raster::intersect(naip.extent, extent(urb.poly))
+         inter <- raster::intersect(naip.extent, urb.poly)
          ifelse(is.null(inter), F, T)
        })
 
@@ -82,6 +83,13 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
                                  segmentation = T,
                                  segment.params.df = segment.params)
 ## Generate\ Feature\ data\ frame:1 ends here
+
+## [[file:utc.org::*Delete%20intermediate%20files][Delete\ intermediate\ files:1]]
+intermediate.work <- list.files(urb.path, full.names = T, recursive = T)
+  ratio.intermediate.work <- str_extract(intermediate.work, ".*_ratio.*")
+  band.intermediate.work <- str_extract(intermediate.work, ".*_(red|blue|green|nir).*")
+unlink(c(ratio.intermediate.work, band.intermediate.work))
+## Delete\ intermediate\ files:1 ends here
 
 ## [[file:utc.org::*Classify][Classify:1]]
 model <- list.files(dd.models.dir) %>%
