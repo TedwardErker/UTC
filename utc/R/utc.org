@@ -1,7 +1,7 @@
 #+TITLE:Functions to Map Urban Tree Canopy
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc:sumac*
+#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc*
 #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
 ------------
 * Functions

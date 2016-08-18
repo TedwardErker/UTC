@@ -26,11 +26,20 @@ dir.create(urb.path)
 
 ## [[file:utc.org::*Get%20names%20of%20NAIP%20tiles%20that%20intersect%20with%20Urban%20Area][Get\ names\ of\ NAIP\ tiles\ that\ intersect\ with\ Urban\ Area:1]]
 tiles.in.urban <-  lapply(naip.extents, function(naip.extent) {
-         inter <- raster::intersect(naip.extent, urb.poly)
-         ifelse(is.null(inter), F, T)
-       })
+    inter <- raster::intersect(naip.extent, urb.poly)
+    ifelse(is.null(inter), F, T)
+})
 
 tile.index <- which(unlist(tiles.in.urban))
+
+
+tiles.inter.urb.poly <- lapply(tile.index, function(i) {
+    naip.extent <- as(naip.extents[[i]], "SpatialPolygons")
+    proj4string(naip.extent) <- wtm
+    inter <- gIntersects(naip.extent, urb.poly)
+})
+
+tile.index <- tile.index[which(unlist(tiles.inter.urb.poly))]
 
 tiles.names.at.urb.poly <- naip.tif.names[tile.index]
 ## Get\ names\ of\ NAIP\ tiles\ that\ intersect\ with\ Urban\ Area:1 ends here
@@ -45,7 +54,7 @@ tile.name <- basename(t.p) %>%
     str_sub(start = 1, end = -5)  # remove .tif
   tile.urb.path <- paste0(urb.path,"/",tile.name)
   dir.create(tile.urb.path)
-paste("make tile output dir", tile.urb.path)
+message("make tile output dir", tile.urb.path)
 ## Make\ output\ dir\ for\ this\ tile:1 ends here
 
 ## [[file:utc.org::*Crop%20to%20intersection%20of%20image%20and%20Urban%20Extent][Crop\ to\ intersection\ of\ image\ and\ Urban\ Extent:1]]
@@ -85,7 +94,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 ## Generate\ Feature\ data\ frame:1 ends here
 
 ## [[file:utc.org::*Delete%20intermediate%20files][Delete\ intermediate\ files:1]]
-intermediate.work <- list.files(urb.path, full.names = T, recursive = T)
+intermediate.work <- list.files(tile.urb.path, full.names = T, recursive = T)
   ratio.intermediate.work <- str_extract(intermediate.work, ".*_ratio.*")
   band.intermediate.work <- str_extract(intermediate.work, ".*_(red|blue|green|nir).*")
 unlink(c(ratio.intermediate.work, band.intermediate.work))
@@ -145,7 +154,7 @@ if(length(rlist) > 1) {
 
 writeRaster(x = out, filename = paste0(urb.path,"_ClassifiedUrbanArea.tif"), overwrite = T, datatype = 'INT1U')
 
-paste0("Wrote ","ClassifiedUrbanArea_",i,".tif")
+message("Wrote ","ClassifiedUrbanArea_",i,".tif")
 
 
 rgbn.tiles <- list.files(urb.path, recursive = T, full.names = T) %>%
@@ -163,7 +172,7 @@ out <- do.call(mosaic, c(rlist,list(fun = mean, tolerance = 0.5)))
 
 
 writeRaster(x = out, filename = paste0(urb.path,"_rgbn.tif"), overwrite = T)
-paste0("Wrote ","RGBN_",i,".tif")
+message("Wrote ","RGBN_",i,".tif")
 ## Merge\ NAIP\ Tiles\ if\ there\ is\ more\ than\ one\ over\ an\ urban\ area\ and\ Save\ Classified\ image\ as\ <UrbanArea>\.tif:1 ends here
 
 ## [[file:utc.org::*Delete%20intermediate%20steps][Delete\ intermediate\ steps:1]]

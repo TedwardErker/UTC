@@ -1,7 +1,7 @@
 #+TITLE: Wisconsin Urban Tree Canopy Mapping
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY:  header-args:R :session *R:utc:sumac* :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link
+#+PROPERTY:  header-args:R :session *R:utc* :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link
 #+STARTUP: indent
 
 * Begin with end in mind
@@ -133,106 +133,6 @@ manual/supervised classification in the Madison Area
 #+END_SRC
 
 #+results:
-#+begin_example
-rgeos version: 0.3-19, (SVN revision 524)
- GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084
- Linking to sp version: 1.2-3
- Polygon checking: TRUE
-Loading required package: BBmisc
-
-Attaching package: 'BBmisc'
-
-The following object is masked from 'package:rgeos':
-
-    symdiff
-
-Loading required package: ggplot2
-Loading required package: ParamHelpers
-Loading required package: stringi
-Loading required package: sp
-rgdal: version: 1.1-10, (SVN revision 622)
- Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 1.11.5, released 2016/07/01
- Path to GDAL shared files: /usr/local/Cellar/gdal/1.11.5/share/gdal
- Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
- Path to PROJ.4 shared files: (autodetected)
- Linking to sp version: 1.2-3
-
-Attaching package: 'raster'
-
-The following object is masked from 'package:mlr':
-
-    resample
-
-The following object is masked from 'package:ParamHelpers':
-
-    getValues
-
-Attaching package: 'dplyr'
-
-The following objects are masked from 'package:plyr':
-
-    arrange, count, desc, failwith, id, mutate, rename, summarise,
-    summarize
-
-The following objects are masked from 'package:raster':
-
-    intersect, select, union
-
-The following objects are masked from 'package:BBmisc':
-
-    coalesce, collapse
-
-The following objects are masked from 'package:rgeos':
-
-    intersect, setdiff, union
-
-The following objects are masked from 'package:stats':
-
-    filter, lag
-
-The following objects are masked from 'package:base':
-
-    intersect, setdiff, setequal, union
-
-Attaching package: 'tidyr'
-
-The following object is masked from 'package:raster':
-
-    extract
-
-The following object is masked from 'package:ascii':
-
-    expand
-foreach: simple, scalable parallel programming from Revolution Analytics
-Use Revolution R for scalability, fault tolerance and more.
-http://www.revolutionanalytics.com
-Loading required package: iterators
-Loading required package: parallel
-randomForest 4.6-12
-Type rfNews() to see new features/changes/bug fixes.
-
-Attaching package: 'randomForest'
-
-The following object is masked from 'package:dplyr':
-
-    combine
-
-The following object is masked from 'package:ggplot2':
-
-    margin
-
-Attaching package: 'kernlab'
-
-The following objects are masked from 'package:raster':
-
-    buffer, rotated
-
-The following object is masked from 'package:ggplot2':
-
-    alpha
-Error in library(FSelector) : there is no package called 'FSelector'
-#+end_example
 
 ** Inputs
 **** Input Directories
@@ -386,7 +286,8 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
 
 #+results:
 #+begin_example
-                                 ../DD                 ../DD/madison_Training
+
+                                ../DD                 ../DD/madison_Training
                                  FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
                                  FALSE                                  FALSE
@@ -1487,6 +1388,21 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
      saveRDS(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets, str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
  #+END_SRC
+
+ #+results:
+ #+begin_example
+ OGR data source with driver: ESRI Shapefile
+ Source: "../RD_Accuracy/Grids", layer: "Grids"
+ with 20209 features
+ It has 15 fields
+  Joining, by = "unq__ID"
+ Error in { : task 1 failed - "argument "mod" is missing, with no default"
+ Error: cannot convert object to a data frame
+  Error in eval(expr, envir, enclos) :
+   object 'Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets' not found
+ Error in saveRDS(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets,  :
+   object 'Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets' not found
+#+end_example
 
 ******* Create DF of % cover from classified rasters cropped to different extents
 
@@ -3847,15 +3763,17 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 
 ** Reproject shapefiles to be wtm, the same as the images
 #+BEGIN_SRC R
-        urban <- readOGR(dsn = urban.areas.dsn, layer = urban.areas.layer)
-  ## wi <- urban[which(!is.na(str_extract(as.character(urban@data$NAME10), ".*WI"))),]
-  ##   urban <- spTransform(wi, utm16)
+           urban <- readOGR(dsn = urban.areas.dsn, layer = urban.areas.layer)
+  urban <- spTransform(urban, wtm)
+
+    ## wi <- urban[which(!is.na(str_extract(as.character(urban@data$NAME10), ".*WI"))),]
+     ##   urban <- spTransform(wi, utm16)
 
 
 
-      #  water <- readOGR(dsn = water.dsn, layer = water.layer)
+         #  water <- readOGR(dsn = water.dsn, layer = water.layer)
 
-        # Both are already in wtm, no need to transform
+           # Both are already in wtm, no need to transform
 #+END_SRC
 
 #+results:
@@ -3863,6 +3781,7 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 : Source: "../RD_merged_WIurbanAreas_and_incorporatedAreas", layer: "Dissolve_Merge_WI_census_inc"
 : with 1 features
 : It has 1 fields
+: There were 44 warnings (use warnings() to see them)
 
 ** Disaggregate Urban Area Polygons
 
@@ -4211,7 +4130,7 @@ rasterOptions(tmpdir=temp_i)
 
 #+results:
 : Warning message:
-: In dir.create(temp_i) : '../R_raster_temp/13' already exists
+: In dir.create(temp_i) : '../R_raster_temp/30' already exists
 
 **** Make output dir for this urban area
 #+BEGIN_SRC R
@@ -4221,16 +4140,26 @@ dir.create(urb.path)
 
 #+results:
 : Warning message:
-: In dir.create(urb.path) : '../DD/ClassifiedUrbanAreas/13' already exists
+: In dir.create(urb.path) : '../DD/ClassifiedUrbanAreas/30' already exists
 
 **** Get names of NAIP tiles that intersect with Urban Area
 #+BEGIN_SRC R
-       tiles.in.urban <-  lapply(naip.extents, function(naip.extent) {
-           inter <- raster::intersect(naip.extent, urb.poly)
-           ifelse(is.null(inter), F, T)
-         })
+
+  tiles.in.urban <-  lapply(naip.extents, function(naip.extent) {
+      inter <- raster::intersect(naip.extent, urb.poly)
+      ifelse(is.null(inter), F, T)
+  })
 
   tile.index <- which(unlist(tiles.in.urban))
+
+
+  tiles.inter.urb.poly <- lapply(tile.index, function(i) {
+      naip.extent <- as(naip.extents[[i]], "SpatialPolygons")
+      proj4string(naip.extent) <- wtm
+      inter <- gIntersects(naip.extent, urb.poly)
+  })
+
+  tile.index <- tile.index[which(unlist(tiles.inter.urb.poly))]
 
   tiles.names.at.urb.poly <- naip.tif.names[tile.index]
 
@@ -4252,11 +4181,11 @@ dir.create(urb.path)
     str_sub(start = 1, end = -5)  # remove .tif
   tile.urb.path <- paste0(urb.path,"/",tile.name)
   dir.create(tile.urb.path)
-paste("make tile output dir", tile.urb.path)
+message("make tile output dir", tile.urb.path)
 #+END_SRC
 
 #+results:
-: [1] "make tile output dir ../DD/ClassifiedUrbanAreas/13/m_4208909_se_16_1_20130705_w"
+: make tile output dir../DD/ClassifiedUrbanAreas/30/m_4208904_ne_16_1_20130704_w
 
 ***** Crop to intersection of image and Urban Extent
 
@@ -4318,7 +4247,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 #+end_src
 ***** Delete intermediate files
 #+begin_src R
-    intermediate.work <- list.files(urb.path, full.names = T, recursive = T)
+    intermediate.work <- list.files(tile.urb.path, full.names = T, recursive = T)
     ratio.intermediate.work <- str_extract(intermediate.work, ".*_ratio.*")
     band.intermediate.work <- str_extract(intermediate.work, ".*_(red|blue|green|nir).*")
   unlink(c(ratio.intermediate.work, band.intermediate.work))
@@ -4385,7 +4314,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 
   writeRaster(x = out, filename = paste0(urb.path,"_ClassifiedUrbanArea.tif"), overwrite = T, datatype = 'INT1U')
 
-  paste0("Wrote ","ClassifiedUrbanArea_",i,".tif")
+  message("Wrote ","ClassifiedUrbanArea_",i,".tif")
 
 
   rgbn.tiles <- list.files(urb.path, recursive = T, full.names = T) %>%
@@ -4403,7 +4332,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 
 
   writeRaster(x = out, filename = paste0(urb.path,"_rgbn.tif"), overwrite = T)
-  paste0("Wrote ","RGBN_",i,".tif")
+  message("Wrote ","RGBN_",i,".tif")
 
 
 
