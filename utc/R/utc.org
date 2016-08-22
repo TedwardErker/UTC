@@ -300,6 +300,7 @@ sample.with.na.rm <- function(x, na.rm = T) {
 #+end_src
 
 #+results:
+: The following `from` values were not present in `x`: 0
 *** Image PCA
 
 #+BEGIN_SRC R
@@ -603,7 +604,7 @@ wrapper for slic.
                                       feature.df.append = feature.df.appendage) {
 
       fea <- stack(list.files(tile.dir, pattern = paste0(tile.name,fea.pattern), full.names = T))
-      names(fea) <- sub(x = names(fea), pattern = "(madisonNAIP|madisonPanshpSPOT).*?_", replacement = "")
+      names(fea) <- sub(x = names(fea), pattern = "(madisonNAIP|madisonPanshpSPOT|urbanExtent).*?_", replacement = "")
 
       seg.path <- paste0(tile.dir,"/",tile.name,segmentation.param.appendage, ".tif")
       seg <- raster(seg.path)
@@ -1162,199 +1163,211 @@ target from the FSelector Package
 ** Calculate Percent Cover in Classified Tiles
 #+BEGIN_SRC R
 
-  get.prcnt.class <- function(points,r) {
-      r <- crop(r,points)  # should I do a mask instead??
-      g <- cellStats(r == 1, stat = sum)
-      im <- cellStats(r == 2, stat = sum)
-      tr <- cellStats(r == 3, stat = sum)
-      o <-  cellStats(r == 4, stat = sum)
-      totC <- ncell(r)
-      return(c(pct_g_pred = g/totC, pct_i_pred = im/totC, pct_t_pred = tr/totC, pct_o_pred = o/totC))
-  }
+    get.prcnt.class <- function(points,r) {
+        r <- crop(r,points)  # should I do a mask instead??
+
+      # get the id and the category associated with raster
+        id <- r@data@attributes[[1]]$ID
+        category <- as.character(r@data@attributes[[1]]$category)
+
+        df <- freq(r) %>% data.frame %>%
+            mutate(cover = mapvalues(value, from = id, to = category))
+
+        totC <- ncell(r)
+
+          return(c(pct_g_pred = df$count[df$cover == "g"]/totC, pct_i_pred = df$count[df$cover=="i"]/totC, pct_t_pred = df$count[df$cover=="t"]/totC))
+    }
 
 
-  get_area_convexHull <- function(points) {
-      ch <- chull(coordinates(points))
-      coords <- coordinates(points)[c(ch,ch[1]),]
-      poly <- SpatialPolygons(list(Polygons(list(Polygon(coords)),ID = 1)))
-      gArea(poly)
-  }
+    get_area_convexHull <- function(points) {
+        ch <- chull(coordinates(points))
+        coords <- coordinates(points)[c(ch,ch[1]),]
+        poly <- SpatialPolygons(list(Polygons(list(Polygon(coords)),ID = 1)))
+        gArea(poly)
+    }
 
 
 
-  calculate.percent.cover.in.classified.tile <- function(pts,
-                                                         tile.dir = dd.accuracy.classified.dir,
-                                                         tile.pth,
-                                                         n.rows.and.columns.subset,
-                                                         mod = 1,
-                                                         mad.grid.id.pattern = "mad-[0-9]+m-[0-9]+",
-                                                         grid.pattern = "[a-zA-Z]{3}-[0-9]+m-[0-9]+_",
-                                                         image.pattern = "[a-zA-Z]{5}[a-zA-Z]+",
-                                                         target.pattern = "all|grass|impervious|tree",
-                                                         model.pattern = "rf_prob|rf_resp|svm_resp",
-                                                         seg.prms = "N-[0-9]+_C-[0-9]+|Pixel"
-                                                         ) {
-      tile.nm <- basename(tile.pth)
+    calculate.percent.cover.in.classified.tile <- function(pts,
+                                                           tile.dir = dd.accuracy.classified.dir,
+                                                           tile.pth,
+                                                           n.rows.and.columns.subset,
+                                                           mod = 1,
+                                                           mad.grid.id.pattern = "mad.[0-9]+m.[0-9]+",
+                                                           grd.pattern = grid.pattern,
+                                                           image.pattern = "[a-zA-Z]{5}[a-zA-Z]+",
+                                                           target.pattern = "all|grass|impervious|tree",
+                                                           model.pattern = "rf_prob|rf_resp|svm_resp",
+                                                           seg.prms = "N-[0-9]+_C-[0-9]+|Pixel") {
+        tile.nm <- basename(tile.pth)
 
+        pts.sub <- pts@data  %>%
+            filter.by.row.and.col(.,n.rows.and.columns.subset, mod = mod)
 
-      pts.sub <- pts@data  %>%
-          filter.by.row.and.col(.,n.rows.and.columns.subset, mod = mod)
+        coordinates(pts.sub) <- ~ crds_x1 + crds_x2
 
-      coordinates(pts.sub) <- ~ crds_x1 + crds_x2
+        proj4string(pts.sub) <- utm16
+        tile.unique.name <- str_extract(tile.pth, mad.grid.id.pattern)
+        pts.at.grid <- pts.sub[which(pts.sub@data$unq__ID == tile.unique.name),]
+        tile <- raster(tile.pth, proj4string = "+init:epsg=32616")
 
-      proj4string(pts.sub) <- utm16
-      tile.unique.name <- str_extract(tile.pth, mad.grid.id.pattern)
-      pts.at.grid <- pts.sub[which(pts.sub@data$unq__ID == tile.unique.name),]
-      tile <- raster(tile.pth, proj4string = "+init:epsg=32616")
+  # pts.at.grid should be empty if the grid doesn't have enough rows and columns
 
-      area.pts <- get_area_convexHull(pts.at.grid)
+  #      if(!is.null(raster::intersect(extent(tile),bbox(pts.at.grid)))) {
+        if(length(pts.at.grid) > 0) {
+        area.pts <- get_area_convexHull(pts.at.grid)
 
-      if(!is.null(raster::intersect(extent(tile),bbox(pts.at.grid)))) {
-
-          get.prcnt.class(pts.at.grid,tile) %>%
-              t() %>%
-              as.data.frame() %>%
-              mutate(grid.tile.target.model = tile.nm,
-                     grid = str_sub(str_extract(grid.tile.target.model, grid.pattern),1,-2),
-                     image =  str_extract(grid.tile.target.model, image.pattern),
-                     target.cover = str_extract(grid.tile.target.model, target.pattern),
-                     model =  str_extract(grid.tile.target.model, model.pattern),
-                     n.points = n.rows.and.columns.subset * n.rows.and.columns.subset,
-                     area = area.pts,
-                     seg.params = str_extract(grid.tile.target.model, seg.prms),
-                     target.type = ifelse(target.cover == "all", "multinomial", "binomial"))
-      }
-  }
+            get.prcnt.class(pts.at.grid,tile) %>%
+                t() %>%
+                as.data.frame() %>%
+                mutate(grid.tile.target.model = tile.nm,
+                       grid = str_match(grid.tile.target.model, str_c(".*(",grd.pattern,").*"))[,2],
+                       image =  str_extract(grid.tile.target.model, image.pattern),
+                       target.cover = str_extract(grid.tile.target.model, target.pattern),
+                       model =  str_extract(grid.tile.target.model, model.pattern),
+                       grid.row.col.num = n.rows.and.columns.subset,
+                       area = area.pts,
+                       seg.params = str_extract(grid.tile.target.model, seg.prms),
+                       target.type = ifelse(target.cover == "all", "multinomial", "binomial"))
+        }
+    }
 
 #+END_SRC
 
 #+RESULTS:
+:  The following `from` values were not present in `x`: 0
 
 ** Calculate Percent Cover of Grids, subsetted
 #+BEGIN_SRC R
-  filter.by.row.and.col <- function(df,nrow.and.col, mod) {
-      nrow <-df %>%
-          group_by(unq__ID) %>%
-          summarize(nrow = max(row))
+    filter.by.row.and.col <- function(df,nrow.and.col, mod) {
+        nrow <-df %>%
+            group_by(unq__ID) %>%
+            summarize(nrow = max(row))
 
-      df <- left_join(df,nrow)
+        df <- left_join(df,nrow)
 
-      df %>%
-          filter(nrow >= nrow.and.col,   # remove grids that have fewer than the number of rows & columns
-                 row <= nrow.and.col,    # remove rows greater than the number we are interested in
-                 col <=nrow.and.col,   # same for columns as rows
-                 row %% mod == 0,
-                 col %% mod == 0)
-  }
+        df %>%
+            filter(nrow >= nrow.and.col,   # remove grids that have fewer than the number of rows & columns
+                   row <= nrow.and.col,    # remove rows greater than the number we are interested in
+                   col <=nrow.and.col,   # same for columns as rows
+                   row %% mod == 0,
+                   col %% mod == 0)
+    }
 
-  add.n.pts.per.grid <- function(df){
-      n.pts<-df %>%
-          group_by(unq__ID) %>%
-          summarize(n.points = n())
+    add.n.pts.per.grid <- function(df){
+        n.pts<-df %>%
+            group_by(unq__ID) %>%
+            summarize(n.points = n())
 
-      left_join(df,n.pts)
-  }
-
-
-  get.pct.cvr.typ <- function(df) {
-      df %>%
-          group_by(unq__ID, cvr_typ,n.points, area) %>%
-          summarize(number = n()) %>%
-          ungroup() %>%
-          mutate(google.truth.pct.cover = number/n.points) %>%
-          dplyr::select(-number)
-  }
-
-  combine.classes.to.g.i.t.o <- function(df) {
-
-      df %>%
-          mutate(cvr_typ = as.character(cvr_typ),
-                 cvr_typ = ifelse(cvr_typ == "s",
-                                  "i",
-                                  cvr_typ),
-                 cvr_typ = ifelse(cvr_typ != "g" &
-                                  cvr_typ != "i" &
-                                  cvr_typ != "t", "o", cvr_typ)) %>%
-          group_by(unq__ID, cvr_typ, n.points, area) %>%
-          summarize(google.truth.pct.cover = sum(google.truth.pct.cover))
-
-  }
+        left_join(df,n.pts)
+    }
 
 
-  calc.binomial.pct.cvrs <- function(df) {
+    get.pct.cvr.typ <- function(df) {
+        df %>%
+            group_by(unq__ID, cvr_typ,n.points, area) %>%
+            summarize(number = n()) %>%
+            ungroup() %>%
+            mutate(google.truth.pct.cover = number/n.points) %>%
+            dplyr::select(-number)
+    }
 
-      out <- foreach(target.cvr.type = c("g","i","t")) %do%{
-          df %>%
-              mutate(cvr_typ = ifelse(cvr_typ == target.cvr.type, cvr_typ, "o")) %>%
-              group_by(unq__ID, n.points, cvr_typ) %>%
-              summarize(pct.cover = sum(pct.cover)) %>%
-              mutate(target.type = "binomial",
-                     target.cover = target.cvr.type,
-                     target.cover = ifelse(target.cover == "g", "grass",
-                                    ifelse(target.cover == "t", "tree",
-                                           "impervious"))) %>%
-              spread(key = cvr_typ, value = pct.cover)
-      }
-      out <- bind_rows(out)
-      out %>%
-          rename(pct.g.googleEarth = g, pct.i.googleEarth = i, pct.t.googleEarth = t, pct.o.googleEarth = o)
-  }
+    combine.classes.to.g.i.t.o <- function(df) {
+
+        df %>%
+            mutate(cvr_typ = as.character(cvr_typ),
+                   cvr_typ = ifelse(cvr_typ == "s",
+                                    "i",
+                                    cvr_typ),
+                   cvr_typ = ifelse(cvr_typ != "g" &
+                                    cvr_typ != "i" &
+                                    cvr_typ != "t", "o", cvr_typ)) %>%
+            group_by(unq__ID, cvr_typ, n.points, area) %>%
+            summarize(google.truth.pct.cover = sum(google.truth.pct.cover))
+
+    }
 
 
+    calc.binomial.pct.cvrs <- function(df) {
 
-  get.area.convexHull <- function(x_coord, y_coord) {
-      m <- matrix(c(x_coord, y_coord), ncol = 2)
-      ch <- chull(m)
-      coords <- m[c(ch,ch[1]),]
-      poly <- SpatialPolygons(list(Polygons(list(Polygon(coords)),ID = 1)))
-      gArea(poly)
-  }
+        out <- foreach(target.cvr.type = c("g","i","t")) %do%{
+            df %>%
+                mutate(cvr_typ = ifelse(cvr_typ == target.cvr.type, cvr_typ, "o")) %>%
+                group_by(unq__ID, n.points, cvr_typ) %>%
+                summarize(pct.cover = sum(pct.cover)) %>%
+                mutate(target.type = "binomial",
+                       target.cover = target.cvr.type,
+                       target.cover = ifelse(target.cover == "g", "grass",
+                                      ifelse(target.cover == "t", "tree",
+                                             "impervious"))) %>%
+                spread(key = cvr_typ, value = pct.cover)
+        }
+        out <- bind_rows(out)
+        out %>%
+            rename(pct.g.googleEarth = g, pct.i.googleEarth = i, pct.t.googleEarth = t, pct.o.googleEarth = o)
+    }
 
 
 
-  calc.pct.cvr.for.grid.subset <- function(df,
-                                           n.rows.and.columns.for.subset=20,
-                                           mod,
-                                           gridID = "unq__ID") {
+    get.area.convexHull <- function(x_coord, y_coord) {
+        m <- matrix(c(x_coord, y_coord), ncol = 2)
+        ch <- chull(m)
+        coords <- m[c(ch,ch[1]),]
+        poly <- SpatialPolygons(list(Polygons(list(Polygon(coords)),ID = 1)))
+        round(signif(gArea(poly), 3))
+    }
 
 
-      df <- filter.by.row.and.col(df, n.rows.and.columns.for.subset, mod) %>%
-          add.n.pts.per.grid() %>%
-          group_by_(gridID)
+
+    calc.pct.cvr.for.grid.subset <- function(df,
+                                             n.rows.and.columns.for.subset,
+                                             mod,
+                                             gridID = "unq__ID") {
 
 
-      area.df <- df %>%
-          summarize(area = get.area.convexHull(crds_x1, crds_x2))
-
-      df <- left_join(df, area.df)
-
-
-      df <- df %>%
-          get.pct.cvr.typ() %>%
-          combine.classes.to.g.i.t.o() %>%
-                                          #               ungroup() %>%
-                                          #               dplyr::select(-n.points) %>%
-          spread(., key = cvr_typ, value = google.truth.pct.cover, fill = 0)
-
-                                          #         df[is.na(df)] <- 0
-
-      df.multnm <- df %>%
-          mutate(target.type = "multinomial") %>%
-          rename(pct.g.googleEarth = g, pct.i.googleEarth = i, pct.t.googleEarth = t) %>%
-          mutate(target.cover = "all")
-
-      if(!is.null(df.multnm$o)) { df.multnm <- rename(df.multnm, pct.o.googleEarth = o)}
-
-      df <- df %>%
-          gather(key = cvr_typ, value = pct.cover, -unq__ID, -n.points)
-
-      df.binm <- df %>%
-          calc.binomial.pct.cvrs()
+        df <- filter.by.row.and.col(df, n.rows.and.columns.for.subset, mod) %>%
+            add.n.pts.per.grid() %>%
+            group_by_(gridID)
 
 
-      df.out <- bind_rows(df.binm, df.multnm)
-      return(df.out)
-  }
+        area.df <- df %>%
+            summarize(area = get.area.convexHull(crds_x1, crds_x2))
+
+        df <- left_join(df, area.df)
+
+
+        df <- df %>%
+            get.pct.cvr.typ() %>%
+            combine.classes.to.g.i.t.o() %>%
+                                            #               ungroup() %>%
+                                            #               dplyr::select(-n.points) %>%
+            spread(., key = cvr_typ, value = google.truth.pct.cover, fill = 0)
+
+                                            #         df[is.na(df)] <- 0
+
+        df.multnm <- df %>%
+            mutate(target.type = "multinomial") %>%
+            rename(pct.g.googleEarth = g, pct.i.googleEarth = i, pct.t.googleEarth = t) %>%
+            mutate(target.cover = "all")
+
+        if(!is.null(df.multnm$o)) { df.multnm <- rename(df.multnm, pct.o.googleEarth = o)}
+
+        df <- df %>%
+            gather(key = cvr_typ, value = pct.cover, -unq__ID, -n.points)
+
+       # df.binm <- df %>%
+        #    calc.binomial.pct.cvrs()
+
+
+  #      df.out <- bind_rows(df.binm, df.multnm)
+        df.out <- df.multnm
+
+        df.out <- df.out %>%
+            mutate(grid.row.col.num = n.rows.and.columns.for.subset) %>%
+            rename(grid = unq__ID)
+
+       return(df.out)
+    }
 
 
 
@@ -1488,6 +1501,7 @@ target from the FSelector Package
   }
 #+END_SRC
 #+RESULTS:
+:  Joining, by = "unq__ID"
 
 ** Plot points on classifed tile
 #+BEGIN_SRC R
