@@ -1,7 +1,7 @@
 #+TITLE: Wisconsin Urban Tree Canopy Mapping
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY:  header-args:R :session *R:utc* :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link
+#+PROPERTY:  header-args:R :session *R:utc:sumac* :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link
 #+STARTUP: indent
 
 * Begin with end in mind
@@ -133,120 +133,7 @@ manual/supervised classification in the Madison Area
 #+END_SRC
 
 #+results:
-#+begin_example
-The following `from` values were not present in `x`: 0, 2
-Joining, by = "unq__ID"
-The following `from` values were not present in `x`: 0, 2
-Joining, by = "unq__ID"
-The following `from` values were not present in `x`: 0, 2
-Joining, by = "unq__ID"
-rgeos version: 0.3-19, (SVN revision 524)
- GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084
- Linking to sp version: 1.2-3
- Polygon checking: TRUE
-Loading required package: BBmisc
-
-Attaching package: ‘BBmisc’
-
-The following object is masked from ‘package:rgeos’:
-
-    symdiff
-
-Loading required package: ggplot2
-Loading required package: ParamHelpers
-The following `from` values were not present in `x`: 0, 2
-Joining, by = "unq__ID"
-The following `from` values were not present in `x`: 0, 2
-Joining, by = "unq__ID"
-Loading required package: sp
-rgdal: version: 1.1-10, (SVN revision 622)
- Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
- Path to GDAL shared files: /usr/share/gdal/1.11
- Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
- Path to PROJ.4 shared files: (autodetected)
- Linking to sp version: 1.2-3
-
-Attaching package: ‘raster’
-
-The following object is masked from ‘package:mlr’:
-
-    resample
-
-The following object is masked from ‘package:ParamHelpers’:
-
-    getValues
-
-Attaching package: ‘dplyr’
-
-The following objects are masked from ‘package:plyr’:
-
-    arrange, count, desc, failwith, id, mutate, rename, summarise,
-    summarize
-
-The following objects are masked from ‘package:raster’:
-
-    intersect, select, union
-
-The following objects are masked from ‘package:BBmisc’:
-
-    coalesce, collapse
-
-The following objects are masked from ‘package:rgeos’:
-
-    intersect, setdiff, union
-
-The following objects are masked from ‘package:stats’:
-
-    filter, lag
-
-The following objects are masked from ‘package:base’:
-
-    intersect, setdiff, setequal, union
-
-Attaching package: ‘tidyr’
-
-The following object is masked from ‘package:raster’:
-
-    extract
-
-The following object is masked from ‘package:ascii’:
-
-    expand
-foreach: simple, scalable parallel programming from Revolution Analytics
-Use Revolution R for scalability, fault tolerance and more.
-http://www.revolutionanalytics.com
-Loading required package: iterators
-Loading required package: parallel
-randomForest 4.6-12
-Type rfNews() to see new features/changes/bug fixes.
-
-Attaching package: ‘randomForest’
-
-The following object is masked from ‘package:dplyr’:
-
-    combine
-
-The following object is masked from ‘package:ggplot2’:
-
-    margin
-The following `from` values were not present in `x`: 0, 2
-Joining, by = "unq__ID"
-
-Attaching package: ‘kernlab’
-
-The following objects are masked from ‘package:raster’:
-
-    buffer, rotated
-
-The following object is masked from ‘package:ggplot2’:
-
-    alpha
-The following `from` values were not present in `x`: 0, 2
-Joining, by = "unq__ID"
-The following `from` values were not present in `x`: 0, 2
-Joining, by = "unq__ID"
-#+end_example
+: Error in library(FSelector) : there is no package called 'FSelector'
 
 ** Inputs
 **** Input Directories
@@ -390,7 +277,6 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
 #+END_SRC
 
 #+results:
-: [1] "org_babel_R_eoe"
 
 **** Make Derived Directories
 #+BEGIN_SRC R
@@ -401,6 +287,19 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
 
 #+results:
 #+begin_example
+Warning in dir.create(x) : '../DD' already exists
+Warning in dir.create(x) : '../DD/madison_Training' already exists
+Warning in dir.create(x) : '../DD/wausau_Training' already exists
+Warning in dir.create(x) : '../DD/madison_pca' already exists
+Warning in dir.create(x) : '../DD/wausau_pca' already exists
+Warning in dir.create(x) : '../DD/madison_Accuracy' already exists
+Warning in dir.create(x) : '../DD/wausau_Accuracy' already exists
+Warning in dir.create(x) : '../DD/madison_Models' already exists
+Warning in dir.create(x) : '../DD/wausau_Models' already exists
+Warning in dir.create(x) :
+  '../DD/madison_Accuracy/ClassifiedTiles' already exists
+Warning in dir.create(x) :
+  '../DD/wausau_Accuracy/ClassifiedTiles' already exists
                                  ../DD                 ../DD/madison_Training
                                  FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
@@ -413,7 +312,6 @@ derived.dirs <- c(derived.dir, dd.training.dirs, dd.pca.dirs, dd.accuracy.dirs, 
                                  FALSE                                  FALSE
  ../DD/wausau_Accuracy/ClassifiedTiles
                                  FALSE
-There were 11 warnings (use warnings() to see them)
 #+end_example
 
 **** Define Derived Shapefile DSNs and Layers
@@ -432,21 +330,18 @@ There were 11 warnings (use warnings() to see them)
 
 #+results:
 #+begin_example
+Warning in dir.create(x) :
+  '../DD/reprojected.Training_Regions' already exists
 [[1]]
 [1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/reprojected.Training_Regions' already exists
+Warning in dir.create(x) :
+  '../DD/reprojected.PCA_Regions' already exists
 [[1]]
 [1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/reprojected.PCA_Regions' already exists
+Warning in dir.create(x) :
+  '../DD/reprojected.Accuracy.Regions' already exists
 [[1]]
 [1] FALSE
-
-Warning message:
-In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
 #+end_example
 
 **** number of cores
@@ -1586,7 +1481,7 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 : It has 15 fields
 
 
-#+begin_src R
+#+begin_src R :eval no
     n.rows.and.columns.for.subset = c(2,3,4,5,10,15,20,25)
 
        ## cl <- makeCluster(cores)
@@ -1626,19 +1521,19 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 #+results:
 #+begin_example
-'data.frame':	286 obs. of  12 variables:
- $ pct_g_pred            : num  0.22378 0.0932 0.41865 0.60445 0.00117 ...
- $ pct_t_pred            : num  0.776 0.795 0.49 NA 0.048 ...
- $ grid.tile.target.model: chr  "madisonNAIP.mad.100m.1_N-30_C-15_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.10_N-30_C-15_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.11_N-30_C-15_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.12_N-30_C-15_madisonNAIP_all_Untuned_rf_prob.tif" ...
- $ grid                  : chr  "mad.100m.1" "mad.100m.10" "mad.100m.11" "mad.100m.12" ...
+'data.frame':	10868 obs. of  12 variables:
+ $ pct_g_pred            : num  0.147 0.158 0.228 0.127 0.225 ...
+ $ pct_t_pred            : num  0.853 0.842 0.772 0.873 0.775 ...
+ $ grid.tile.target.model: chr  "madisonNAIP.mad.100m.1_N-100_C-30_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.1_N-100_C-30_madisonNAIP_all_Untuned_svm_resp.tif" "madisonNAIP.mad.100m.1_N-100_C-50_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.1_N-100_C-50_madisonNAIP_all_Untuned_svm_resp.tif" ...
+ $ grid                  : chr  "mad.100m.1" "mad.100m.1" "mad.100m.1" "mad.100m.1" ...
  $ image                 : chr  "madisonNAIP" "madisonNAIP" "madisonNAIP" "madisonNAIP" ...
  $ target.cover          : chr  "all" "all" "all" "all" ...
- $ model                 : chr  "rf_prob" "rf_prob" "rf_prob" "rf_prob" ...
+ $ model                 : chr  "rf_prob" "svm_resp" "rf_prob" "svm_resp" ...
  $ grid.row.col.num      : num  10 10 10 10 10 10 10 10 10 10 ...
  $ area                  : num  4054 4054 4054 4054 4054 ...
- $ seg.params            : chr  "N-30_C-15" "N-30_C-15" "N-30_C-15" "N-30_C-15" ...
+ $ seg.params            : chr  "N-100_C-30" "N-100_C-30" "N-100_C-50" "N-100_C-50" ...
  $ target.type           : chr  "multinomial" "multinomial" "multinomial" "multinomial" ...
- $ pct_i_pred            : num  NA 0.1123 0.0916 0.3955 0.9508 ...
+ $ pct_i_pred            : num  NA NA NA NA NA ...
 #+end_example
 
 ******** Grid points df
@@ -1677,31 +1572,31 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 #+results:
 #+begin_example
-'data.frame':	286 obs. of  20 variables:
- $ pct_g_pred            : num  0.22378 0.0932 0.41865 0.60445 0.00117 ...
- $ pct_t_pred            : num  0.776 0.795 0.49 NA 0.048 ...
- $ grid.tile.target.model: chr  "madisonNAIP.mad.100m.1_N-30_C-15_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.10_N-30_C-15_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.11_N-30_C-15_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.12_N-30_C-15_madisonNAIP_all_Untuned_rf_prob.tif" ...
- $ grid                  : chr  "mad.100m.1" "mad.100m.10" "mad.100m.11" "mad.100m.12" ...
+'data.frame':	10868 obs. of  20 variables:
+ $ pct_g_pred            : num  0.147 0.158 0.228 0.127 0.225 ...
+ $ pct_t_pred            : num  0.853 0.842 0.772 0.873 0.775 ...
+ $ grid.tile.target.model: chr  "madisonNAIP.mad.100m.1_N-100_C-30_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.1_N-100_C-30_madisonNAIP_all_Untuned_svm_resp.tif" "madisonNAIP.mad.100m.1_N-100_C-50_madisonNAIP_all_Untuned_rf_prob.tif" "madisonNAIP.mad.100m.1_N-100_C-50_madisonNAIP_all_Untuned_svm_resp.tif" ...
+ $ grid                  : chr  "mad.100m.1" "mad.100m.1" "mad.100m.1" "mad.100m.1" ...
  $ image                 : chr  "madisonNAIP" "madisonNAIP" "madisonNAIP" "madisonNAIP" ...
  $ target.cover.x        : chr  "all" "all" "all" "all" ...
- $ model                 : chr  "rf_prob" "rf_prob" "rf_prob" "rf_prob" ...
+ $ model                 : chr  "rf_prob" "svm_resp" "rf_prob" "svm_resp" ...
  $ grid.row.col.num      : num  10 10 10 10 10 10 10 10 10 10 ...
  $ area.x                : num  4054 4054 4054 4054 4054 ...
- $ seg.params            : chr  "N-30_C-15" "N-30_C-15" "N-30_C-15" "N-30_C-15" ...
+ $ seg.params            : chr  "N-100_C-30" "N-100_C-30" "N-100_C-50" "N-100_C-50" ...
  $ target.type.x         : chr  "multinomial" "multinomial" "multinomial" "multinomial" ...
- $ pct_i_pred            : num  NA 0.1123 0.0916 0.3955 0.9508 ...
+ $ pct_i_pred            : num  NA NA NA NA NA ...
  $ n.points              : int  100 100 100 100 100 100 100 100 100 100 ...
  $ area.y                : num  4050 4050 4050 4050 4050 4050 4050 4050 4050 4050 ...
- $ pct.g.googleEarth     : num  0.23 0.14 0.55 0.58 0 0.37 0.97 0.15 0.65 0.24 ...
- $ pct.i.googleEarth     : num  0 0.18 0.08 0.42 0.92 0.03 0 0.58 0.21 0.27 ...
- $ pct.t.googleEarth     : num  0.71 0.68 0.37 0 0.08 0.6 0.03 0.27 0.14 0.49 ...
+ $ pct.g.googleEarth     : num  0.23 0.23 0.23 0.23 0.23 0.23 0.23 0.23 0.23 0.23 ...
+ $ pct.i.googleEarth     : num  0 0 0 0 0 0 0 0 0 0 ...
+ $ pct.t.googleEarth     : num  0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 0.71 ...
  $ target.type.y         : chr  "multinomial" "multinomial" "multinomial" "multinomial" ...
  $ target.cover.y        : chr  "all" "all" "all" "all" ...
- $ pct.o.googleEarth     : num  0.06 0 0 0 0 0 0 0 0 0 ...
+ $ pct.o.googleEarth     : num  0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 0.06 ...
 #+end_example
 
 
-****** Make RMSE plots
+****** Make MAE plots
 
 #+BEGIN_SRC R :results graphics :file figs/RMSE_plot.png :height 400 :width 400
 
@@ -1720,6 +1615,20 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 #+results:
 [[file:figs/RMSE_plot.png]]
 
+******* Multiple MAE plots
+#+begin_src R :exports results :results graphics :file ./figs/raes.png :width 800 :height 1000
+  grid.master.df <- grid.master.df %>%
+          mutate(segment.size = ifelse(seg.params == "Pixel",1,as.numeric(str_match(seg.params, "N-([0-9]*)_.*")[,2])))
+
+    ggplot(grid.master.df, aes(x = pct.t.googleEarth, y = pct_t_pred, color = model)) + geom_point() +
+      geom_smooth() +
+  facet_grid(grid.row.col.num~segment.size) + coord_equal() +
+      geom_line(data = data.frame(pct.t.googleEarth = c(0,1), pct_t_pred = c(0,1), seg.params = "1:1"),      color = "black", size = 1)
+#+end_src
+
+#+results:
+[[file:./figs/raes.png]]
+
 
 
 ****** Calc RMSE table
@@ -1734,43 +1643,43 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 ******* Calc Error Column
 
 #+BEGIN_SRC R
-  error_tree <- grid.master.df %>%
-      group_by(image, model, seg.params, grid.row.col.num) %>%
-      mutate(t_error = (pct_t_pred - pct.t.googleEarth)) %>%
-      mutate(segment.size = ifelse(seg.params == "Pixel",1,seg.params),
-             segment.size = as.numeric(str_match(seg.params, "N-([0-9]*)_.*")[,2]))
+    error_tree <- grid.master.df %>%
+        group_by(image, model, seg.params, grid.row.col.num) %>%
+        mutate(t_error = (pct_t_pred - pct.t.googleEarth)) %>%
+        mutate(segment.size = ifelse(seg.params == "Pixel",1,as.numeric(str_match(seg.params, "N-([0-9]*)_.*")[,2])))
 
 
-  error_tree %>%
-      select(image, model, n.points, seg.params, grid, t_error, grid.row.col.num, segment.size) %>%
-      filter(n.points == 225) %>%
-      ungroup() %>%
-      arrange(desc(abs(t_error))) %>%
-      data.frame() %>%
-      head()
+    error_tree %>%
+        select(image, model, n.points, seg.params, grid, t_error, grid.row.col.num, segment.size) %>%
+        filter(n.points == 225) %>%
+        ungroup() %>%
+        arrange(desc(abs(t_error))) %>%
+        data.frame() %>%
+        head()
 #+END_SRC
 
 #+results:
 #+begin_example
-        image   model n.points seg.params        grid   t_error
-1 madisonNAIP rf_prob      225  N-30_C-15  mad.150m.7 0.3079507
-2 madisonNAIP rf_prob      225  N-30_C-15 mad.100m.20 0.2133701
-3 madisonNAIP rf_prob      225  N-30_C-15  mad.150m.6 0.1853430
-4 madisonNAIP rf_prob      225  N-30_C-15  mad.100m.6 0.1567663
-5 madisonNAIP rf_prob      225  N-30_C-15  mad.100m.7 0.1351723
-6 madisonNAIP rf_prob      225  N-30_C-15 mad.100m.19 0.1019457
+        image    model n.points seg.params       grid   t_error
+1 madisonNAIP svm_resp      225  N-20_C-10 mad.100m.9 0.5643061
+2 madisonNAIP svm_resp      225  N-45_C-14 mad.100m.9 0.5632591
+3 madisonNAIP svm_resp      225   N-15_C-4 mad.100m.9 0.5630687
+4 madisonNAIP svm_resp      225   N-15_C-9 mad.100m.9 0.5516467
+5 madisonNAIP svm_resp      225   N-30_C-9 mad.100m.9 0.5383210
+6 madisonNAIP svm_resp      225  N-20_C-12 mad.100m.9 0.5302303
   grid.row.col.num segment.size
-1               15           30
-2               15           30
-3               15           30
-4               15           30
+1               15           20
+2               15           45
+3               15           15
+4               15           15
 5               15           30
-6               15           30
+6               15           20
 #+end_example
+
 
 ******* Plot distributions of errors
 ******** errors
-#+begin_src R :exports results :results graphics :file ./figs/error_distributions.png :width 200
+#+begin_src R :exports results :results graphics :file ./figs/error_distributions.png :width 600
 ggplot(error_tree, aes(x = t_error)) + geom_histogram() + facet_grid(grid.row.col.num ~ segment.size)
 #+end_src
 
@@ -1779,7 +1688,7 @@ ggplot(error_tree, aes(x = t_error)) + geom_histogram() + facet_grid(grid.row.co
 
 
 ******** absolute errors
-#+begin_src R :exports results :results graphics :file ./figs/abs_error_distributions.png :width 200
+#+begin_src R :exports results :results graphics :file ./figs/abs_error_distributions.png :width 600
 ggplot(error_tree, aes(x = abs(t_error))) + geom_histogram() + facet_grid(grid.row.col.num ~ segment.size)
 #+end_src
 
@@ -1796,48 +1705,19 @@ ggplot(error_tree, aes(x = abs(t_error))) + geom_histogram() + facet_grid(grid.r
                       n.points = mean(n.points))
 
       MAE_tree <- MAE_tree %>%
-      mutate(segment.size = ifelse(seg.params == "Pixel",1,seg.params),
-             segment.size = as.numeric(str_match(seg.params, "N-([0-9]*)_.*")[,2]))
+      mutate(segment.size = ifelse(seg.params == "Pixel",1,as.numeric(str_match(seg.params, "N-([0-9]*)_.*")[,2])))
 
 
-  ## ifelse(!is.na(str_extract(seg.params, ".*105.*")), 105,
-  ##                               ifelse(!is.na(str_extract(seg.params, ".*60.*")), 60,
-  ##                               ifelse(!is.na(str_extract(seg.params, ".*30.*")), 30,
-  ##                               ifelse(!is.na(str_extract(seg.params, ".*70.*")), 105,
-  ##                               ifelse(!is.na(str_extract(seg.params, ".*40.*")), 60,
-  ##                               ifelse(!is.na(str_extract(seg.params, ".*20.*")), 30,1)))))))
-
-    MAE_tree %>% data.frame()
 #+END_SRC
 
 #+results:
-#+begin_example
-        image   model grid.row.col.num seg.params      MAE_t   sd_MAE_t
-1 madisonNAIP rf_prob                2  N-30_C-15 0.23256276 0.31975161
-2 madisonNAIP rf_prob                3  N-30_C-15 0.14957574 0.18125608
-3 madisonNAIP rf_prob                4  N-30_C-15 0.10584939 0.12563883
-4 madisonNAIP rf_prob                5  N-30_C-15 0.14341725 0.16637486
-5 madisonNAIP rf_prob               10  N-30_C-15 0.07244346 0.09530333
-6 madisonNAIP rf_prob               15  N-30_C-15 0.06155936 0.07615797
-7 madisonNAIP rf_prob               20  N-30_C-15        NaN         NA
-8 madisonNAIP rf_prob               25  N-30_C-15        NaN         NA
-  n.points segment.size
-1       25           30
-2       25           30
-3       49           30
-4       25           30
-5      100           30
-6      225           30
-7       NA           30
-8       NA           30
-#+end_example
 
 
 
 ****** MAE analysis
 
 Which combination of image, segmentation, target, model and n.pts
-(spatial scale) minimize error for each cover_type?
+(spatial scale) minimize error?
 
 #+BEGIN_SRC R :results raw
 options(asciiType = "org")
@@ -1850,16 +1730,38 @@ options(warn = -1)
 #+END_SRC
 
 #+results:
- |   | image       | model   | grid.row.col.num | seg.params | MAE_t | sd_MAE_t | n.points | segment.size |
- |---+-------------+---------+------------------+------------+-------+----------+----------+--------------|
- | 1 | madisonNAIP | rf_prob |            15.00 | N-30_C-15  |  0.06 |     0.08 |   225.00 |        30.00 |
- | 2 | madisonNAIP | rf_prob |            10.00 | N-30_C-15  |  0.07 |     0.10 |   100.00 |        30.00 |
- | 3 | madisonNAIP | rf_prob |             4.00 | N-30_C-15  |  0.11 |     0.13 |    49.00 |        30.00 |
- | 4 | madisonNAIP | rf_prob |             5.00 | N-30_C-15  |  0.14 |     0.17 |    25.00 |        30.00 |
- | 5 | madisonNAIP | rf_prob |             3.00 | N-30_C-15  |  0.15 |     0.18 |    25.00 |        30.00 |
- | 6 | madisonNAIP | rf_prob |             2.00 | N-30_C-15  |  0.23 |     0.32 |    25.00 |        30.00 |
- | 7 | madisonNAIP | rf_prob |            20.00 | N-30_C-15  |       |          |          |        30.00 |
- | 8 | madisonNAIP | rf_prob |            25.00 | N-30_C-15  |       |          |          |        30.00 |
+ |    | image       | model    | grid.row.col.num | seg.params | MAE_t | sd_MAE_t | n.points | segment.size |
+ |----+-------------+----------+------------------+------------+-------+----------+----------+--------------|
+ |  1 | madisonNAIP | svm_resp |            15.00 | N-20_C-6   |  0.05 |     0.08 |   225.00 |        20.00 |
+ |  2 | madisonNAIP | svm_resp |            15.00 | N-30_C-18  |  0.06 |     0.08 |   225.00 |        30.00 |
+ |  3 | madisonNAIP | rf_prob  |            15.00 | N-15_C-9   |  0.06 |     0.07 |   225.00 |        15.00 |
+ |  4 | madisonNAIP | rf_prob  |            15.00 | N-30_C-15  |  0.06 |     0.08 |   225.00 |        30.00 |
+ |  5 | madisonNAIP | rf_prob  |            15.00 | N-100_C-60 |  0.06 |     0.08 |   225.00 |       100.00 |
+ |  6 | madisonNAIP | rf_prob  |            15.00 | N-30_C-18  |  0.06 |     0.08 |   225.00 |        30.00 |
+ |  7 | madisonNAIP | svm_resp |            10.00 | N-20_C-6   |  0.06 |     0.09 |   100.00 |        20.00 |
+ |  8 | madisonNAIP | svm_resp |            15.00 | Pixel      |  0.06 |     0.08 |   225.00 |         1.00 |
+ |  9 | madisonNAIP | rf_prob  |            15.00 | N-20_C-10  |  0.07 |     0.07 |   225.00 |        20.00 |
+ | 10 | madisonNAIP | rf_prob  |            15.00 | N-100_C-50 |  0.07 |     0.08 |   225.00 |       100.00 |
+ | 11 | madisonNAIP | svm_resp |            10.00 | N-30_C-18  |  0.07 |     0.09 |   100.00 |        30.00 |
+ | 12 | madisonNAIP | rf_prob  |            15.00 | N-20_C-6   |  0.07 |     0.08 |   225.00 |        20.00 |
+ | 13 | madisonNAIP | svm_resp |            15.00 | N-60_C-18  |  0.07 |     0.08 |   225.00 |        60.00 |
+ | 14 | madisonNAIP | rf_prob  |            15.00 | N-15_C-4   |  0.07 |     0.08 |   225.00 |        15.00 |
+ | 15 | madisonNAIP | rf_prob  |            15.00 | N-45_C-22  |  0.07 |     0.08 |   225.00 |        45.00 |
+ | 16 | madisonNAIP | rf_prob  |            10.00 | N-15_C-9   |  0.07 |     0.10 |   100.00 |        15.00 |
+ | 17 | madisonNAIP | rf_prob  |            15.00 | N-60_C-36  |  0.07 |     0.08 |   225.00 |        60.00 |
+ | 18 | madisonNAIP | rf_prob  |            10.00 | N-30_C-15  |  0.07 |     0.10 |   100.00 |        30.00 |
+ | 19 | madisonNAIP | rf_prob  |            15.00 | N-20_C-12  |  0.07 |     0.08 |   225.00 |        20.00 |
+ | 20 | madisonNAIP | rf_prob  |            10.00 | N-20_C-10  |  0.08 |     0.09 |   100.00 |        20.00 |
+ | 21 | madisonNAIP | rf_prob  |            10.00 | N-100_C-60 |  0.08 |     0.09 |   100.00 |       100.00 |
+ | 22 | madisonNAIP | rf_prob  |            10.00 | N-30_C-18  |  0.08 |     0.10 |   100.00 |        30.00 |
+ | 23 | madisonNAIP | rf_prob  |            15.00 | N-15_C-8   |  0.08 |     0.08 |   225.00 |        15.00 |
+ | 24 | madisonNAIP | rf_prob  |            15.00 | N-45_C-27  |  0.08 |     0.08 |   225.00 |        45.00 |
+ | 25 | madisonNAIP | rf_prob  |            10.00 | N-15_C-4   |  0.08 |     0.09 |   100.00 |        15.00 |
+ | 26 | madisonNAIP | svm_resp |            10.00 | Pixel      |  0.08 |     0.10 |   100.00 |         1.00 |
+ | 27 | madisonNAIP | rf_prob  |            10.00 | N-60_C-36  |  0.08 |     0.09 |   100.00 |        60.00 |
+ | 28 | madisonNAIP | rf_prob  |            15.00 | N-30_C-9   |  0.08 |     0.08 |   225.00 |        30.00 |
+ | 29 | madisonNAIP | svm_resp |            15.00 | N-60_C-30  |  0.08 |     0.08 |   225.00 |        60.00 |
+ | 30 | madisonNAIP | svm_resp |            15.00 | N-100_C-60 |  0.08 |     0.08 |   225.00 |       100.00 |
 Joining, by = "unq__ID"
  |   | image       | model   | grid.row.col.num | seg.params | MAE_t | sd_MAE_t | n.points | segment.size |
 |---+-------------+---------+------------------+------------+-------+----------+----------+--------------|
@@ -1873,7 +1775,79 @@ Joining, by = "unq__ID"
 | 8 | madisonNAIP | rf_prob | 25.00            | N-30_C-15  |       |          |          | 30.00        |
 
 
+******* What's the best average model using minimum MAE as criteria?
+#+begin_src R
+options(warn = -1)
+MAE_tree %>%
+group_by(seg.params, model, image, grid.row.col.num) %>%
+summarize(mean_error_across_grids = mean(MAE_t, na.rm = T)) %>%
+group_by(grid.row.col.num) %>%
+top_n(-1, wt = mean_error_across_grids) %>%
+arrange(grid.row.col.num, mean_error_across_grids) %>%
+data.frame %>%
+ascii
+options(warn = 1)
+#+end_src
 
+#+results:
+:  |   | seg.params | model    | image       | grid.row.col.num | mean_error_across_grids |
+: |---+------------+----------+-------------+------------------+-------------------------|
+: | 1 | N-20_C-10  | rf_prob  | madisonNAIP | 2.00             | 0.18                    |
+: | 2 | N-15_C-9   | rf_prob  | madisonNAIP | 3.00             | 0.13                    |
+: | 3 | N-15_C-9   | rf_prob  | madisonNAIP | 4.00             | 0.09                    |
+: | 4 | N-15_C-8   | svm_resp | madisonNAIP | 5.00             | 0.12                    |
+: | 5 | N-20_C-6   | svm_resp | madisonNAIP | 10.00            | 0.06                    |
+: | 6 | N-20_C-6   | svm_resp | madisonNAIP | 15.00            | 0.05                    |
+
+******* What are the top 5 models at each scale?
+#+begin_src R
+options(warn = -1)
+MAE_tree %>%
+group_by(seg.params, model, image, grid.row.col.num) %>%
+summarize(mean_error_across_grids = mean(MAE_t, na.rm = T)) %>%
+group_by(grid.row.col.num) %>%
+top_n(-5, wt = mean_error_across_grids) %>%
+arrange(grid.row.col.num, mean_error_across_grids) %>%
+data.frame %>%
+ascii
+options(warn = 1)
+#+end_src
+
+#+results:
+#+begin_example
+ |    | seg.params | model    | image       | grid.row.col.num | mean_error_across_grids |
+|----+------------+----------+-------------+------------------+-------------------------|
+| 1  | N-20_C-10  | rf_prob  | madisonNAIP | 2.00             | 0.18                    |
+| 2  | N-30_C-9   | rf_prob  | madisonNAIP | 2.00             | 0.19                    |
+| 3  | Pixel      | svm_resp | madisonNAIP | 2.00             | 0.20                    |
+| 4  | N-60_C-30  | svm_resp | madisonNAIP | 2.00             | 0.20                    |
+| 5  | N-15_C-4   | rf_prob  | madisonNAIP | 2.00             | 0.21                    |
+| 6  | N-15_C-9   | rf_prob  | madisonNAIP | 3.00             | 0.13                    |
+| 7  | Pixel      | svm_resp | madisonNAIP | 3.00             | 0.13                    |
+| 8  | N-45_C-14  | rf_prob  | madisonNAIP | 3.00             | 0.13                    |
+| 9  | N-20_C-6   | svm_resp | madisonNAIP | 3.00             | 0.14                    |
+| 10 | N-30_C-9   | rf_prob  | madisonNAIP | 3.00             | 0.14                    |
+| 11 | N-15_C-9   | rf_prob  | madisonNAIP | 4.00             | 0.09                    |
+| 12 | N-20_C-6   | rf_prob  | madisonNAIP | 4.00             | 0.10                    |
+| 13 | N-15_C-4   | rf_prob  | madisonNAIP | 4.00             | 0.10                    |
+| 14 | N-20_C-6   | svm_resp | madisonNAIP | 4.00             | 0.10                    |
+| 15 | N-30_C-18  | rf_prob  | madisonNAIP | 4.00             | 0.11                    |
+| 16 | N-15_C-8   | svm_resp | madisonNAIP | 5.00             | 0.12                    |
+| 17 | N-30_C-18  | svm_resp | madisonNAIP | 5.00             | 0.12                    |
+| 18 | Pixel      | svm_resp | madisonNAIP | 5.00             | 0.12                    |
+| 19 | N-20_C-6   | svm_resp | madisonNAIP | 5.00             | 0.13                    |
+| 20 | N-60_C-30  | svm_resp | madisonNAIP | 5.00             | 0.13                    |
+| 21 | N-20_C-6   | svm_resp | madisonNAIP | 10.00            | 0.06                    |
+| 22 | N-30_C-18  | svm_resp | madisonNAIP | 10.00            | 0.07                    |
+| 23 | N-15_C-9   | rf_prob  | madisonNAIP | 10.00            | 0.07                    |
+| 24 | N-30_C-15  | rf_prob  | madisonNAIP | 10.00            | 0.07                    |
+| 25 | N-20_C-10  | rf_prob  | madisonNAIP | 10.00            | 0.08                    |
+| 26 | N-20_C-6   | svm_resp | madisonNAIP | 15.00            | 0.05                    |
+| 27 | N-30_C-18  | svm_resp | madisonNAIP | 15.00            | 0.06                    |
+| 28 | N-15_C-9   | rf_prob  | madisonNAIP | 15.00            | 0.06                    |
+| 29 | N-30_C-15  | rf_prob  | madisonNAIP | 15.00            | 0.06                    |
+| 30 | N-100_C-60 | rf_prob  | madisonNAIP | 15.00            | 0.06                    |
+#+end_example
 
 Plot:
 x = cropped.to.n.pts
@@ -1881,37 +1855,19 @@ y = RMSE
 color = model
 facet(segmentation~cover_type)
 
-#+BEGIN_SRC R :results graphics :file figs/MAE_tree_compare_n.ptsXMAE.png :height 400 :width 400
-  ggplot(MAE_tree, aes(x = grid.row.col.num, y = MAE_t, color = model, size = n.points)) + geom_point() +
-      facet_grid(segment.size~image)
+#+BEGIN_SRC R :results graphics :file figs/MAE_tree_compare_n.ptsXMAE.png :height 200 :width 700
+  ggplot(MAE_tree, aes(x = grid.row.col.num, y = MAE_t, color = model)) + geom_point() +
+      facet_grid(image~segment.size)
 #+END_SRC
 
 #+results:
 [[file:figs/MAE_tree_compare_n.ptsXMAE.png]]
 
 
-#+BEGIN_SRC R :results graphics :file figs/MAE_tree_compare_AreaXMAE_NAIP_seg60.png
-  MAE_tree.sub <- MAE_tree%>%
-      filter(segment.size == 60, image == "madisonNAIP", target.type == "binomial", model == "svm_resp") %>%
-      mutate(area_meters_squared = ((sqrt(n.points) - 1) * 7)^2)
-
-
-  ggplot(MAE_tree.sub, aes(x = area_meters_squared, y = MAE_t), color = "blue") + geom_point() +
-      labs(y = "Root Mean Squared Prediction Error \n for Percent Tree Cover") +
-      theme_classic() +
-      theme(axis.title = element_text(size = 24),
-            axis.text =  element_text(size = 22)) +
-      xlim(0,45000)
-
-#+END_SRC
-
-#+results:
-[[file:figs/MAE_tree_compare_AreaXMAE_NAIP_seg60.png]]
-
 
 #+BEGIN_SRC R :results graphics :file figs/MAE_tree_compare_seg.sizeXMAE.png :height 800 :width 600
 
-  ggplot(MAE_tree, aes(x = segment.size, y = MAE_t, color = n.points, group = interaction(n.points,target.type))) + geom_line() +
+  ggplot(MAE_tree, aes(x = segment.size, y = MAE_t, color = n.points, group = interaction(n.points)) + geom_line() +
       facet_grid(model~image)
 
 #+END_SRC
@@ -3891,8 +3847,8 @@ rasterOptions(tmpdir=R_raster_temp)
 #+END_SRC
 
 #+results:
-: Warning message:
-: In dir.create(R_raster_temp) : '../R_raster_temp' already exists
+: Warning in dir.create(R_raster_temp) :
+:   '../R_raster_temp' already exists
 
 *** Projections
 #+BEGIN_SRC R
@@ -3956,15 +3912,9 @@ dir.create(classified.urban.areas.dir)
 #+END_SRC
 
 #+results:
-: Warning message:
-: In dir.create(classified.urban.areas.dir) :
+: Warning in dir.create(classified.urban.areas.dir) :
 :   '../DD/ClassifiedUrbanAreas' already exists
-<<<<<<< HEAD
-: Warning message:
-: In dir.create(classified.urban.areas.dir) :
-:   '../DD/ClassifiedUrbanAreas' already exists
-=======
->>>>>>> 88a3094d98d17f8e5d5b5473f1d7659c16a2d36b
+
 *** Segmentation Parameters
 #+BEGIN_SRC R :eval yes
   pixel_size  <- 1 # m^2
@@ -4684,3 +4634,76 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 ***** Mask Out Wetlands Post Processing
 ***** Mask out water
 ***** Mask out croplands
+
+* Test Accuracy of Model in NE Wisconsin cities using itree canopy assessments as reference
+
+** Questions:
+1) What is the error rate of the classifier?
+2) How does the estimate of canopy cover differ?
+
+** inputs, also evaluate inputs for Classifying every urban area in WI
+#+begin_src R
+itree.dir <- "NE_WI_itree"
+#+end_src
+
+#+results:{{{results(==)}}}
+** prep itree data, load, clean up, make spatial points
+*** load data
+#+begin_src R
+it.files <- list.files(str_c(accuracy.dir, "/",itree.dir), full.names = T)
+#+end_src
+
+#+results:
+
+*** combine csvs
+#+begin_src R
+      it.dat <- lapply(it.files, function(csv) {
+          d <- read.csv(csv, stringsAsFactors = F)
+          name <- str_match(csv, ".*itree/(.*)_canopy.*")[,2]
+          d$city <- name
+          return(d)
+})
+      it.dat <- bind_rows(it.dat)
+#+end_src
+
+#+results:
+
+*** make cover "g", "i", "t", etc
+#+begin_src R
+fm <- unique(it.dat$Cover.Class)
+to <- c("t","g","i","i","w","a","w","i","i","g","t","i","w","g","g","o","i","a","i","i","i","a","i","i","i")
+
+  it.dat <- it.dat %>%
+   mutate(itree.cover = mapvalues(Cover.Class, from = fm, to = to))
+#str(it.dat)
+#+end_src
+
+#+results:
+
+*** filter non "g", "i", "t" points
+#+begin_src R
+it.dat <- filter(it.dat, itree.cover == "g" |itree.cover == "i" | itree.cover == "t")
+#+end_src
+
+#+results:
+
+*** make it.dat shapefile
+#+begin_src R
+it.sp <- it.dat
+coordinates(it.sp) <- ~ Latitude + Longitude
+#+end_src
+
+#+results:
+
+** Find the Classified Urban Areas that intersect with the points
+*** load files
+#+begin_src R
+cl.files <- list.files(classified.urban.areas.dir, full.names = T)
+#+end_src
+
+#+results:
+*** filter just classified.tifs
+#+begin_src R
+cl.files <-
+#+end_src
+
