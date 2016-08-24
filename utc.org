@@ -1,7 +1,7 @@
 #+TITLE: Wisconsin Urban Tree Canopy Mapping
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY:  header-args:R :session *R:utc:sumac* :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link
+#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc*
 #+STARTUP: indent
 
 * Begin with end in mind
@@ -4039,12 +4039,9 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 #+results:
 
 *** For the smaller urban areas
-
-I should change the high.q to .95 if I run this again.
-
 #+begin_src R
 
-  low.q <- .8
+  low.q <- .85
   high.q <- .95
 
     areas <- foreach(i = 1:length(urb.polys), .combine = "rbind") %do% gArea(urb.polys[i])
@@ -4055,10 +4052,6 @@ I should change the high.q to .95 if I run this again.
 #+end_src
 
 #+results:
-: The following `from` values were not present in `x`: 0
-: Joining, by = "unq__ID"
-: The following `from` values were not present in `x`: 0
-: Joining, by = "unq__ID"
 
  #+BEGIN_SRC R
        cl <- makeCluster(cores)
@@ -4313,13 +4306,14 @@ message("features created for", tile.urb.path)
 *** For the larger urban areas
 
 #+begin_src R
+#    higher.quant <- quantile(areas[,1],probs = .96)
     i_areas_high_quant <- which(areas[,1] >= high.quant)
 #+end_src
 
 #+results:
 
  #+BEGIN_SRC R
-   out <- foreach(i = i_areas_high_quant[1],
+   out <- foreach(i = i_areas_high_quant,
                  .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr","glcm")) %do% {
 
        urb.poly <- urb.polys[i]
