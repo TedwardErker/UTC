@@ -6,7 +6,7 @@
 #+OPTIONS: reveal_center:t reveal_progress:t reveal_history:nil reveal_control:t
 #+OPTIONS: reveal_mathjax:t reveal_rolling_links:t reveal_keyboard:t reveal_overview:t num:nil
 #+OPTIONS: reveal_width:1200 reveal_height:850
-#+OPTIONS: toc:nil
+#+OPTIONS: toc:t
 #+REVEAL_TRANS:fade
 #+REVEAL_MARGIN: 0.01
 #+REVEAL_MIN_SCALE: 0.5
@@ -19,18 +19,24 @@
 #+PROPERTY: exports both
 #+PROPERTY: tangle yes
 -----
-* UTC presentation
-
-* What should be done
-
-I need to get Madison Classified!!
-
-I should get pansharpened SPOT numbers, but not that necessary at this
-moment.
-
-I need to tune the models maybe...
-
 * Quality of NAIP and Google imagery
+** What percent of Madison imagery is covered in shadow?
+
+|                  | NAIP        | Google        |
+|------------------+-------------+---------------|
+| Percent Shadowed | 7.7 (+/- 2) | 3.6 (+/- 1.3) |
+
+#+BEGIN_NOTES
+How might this affect our estimates of cover?
+
+plus or minus is 95% CI
+
+#+END_NOTES
+** Human disagreement in classification
+
+- Robi and I agreed 96.6% of time when classifying 610 points.
+- Disagreement due to the difficulty of classifying 1m^2 pixels,
+  especially mixed or border pixels.
 
 ** Comparing NAIP and Google Earth imagery over Madison, WI.
 
@@ -54,7 +60,8 @@ Do the errors cancel out? Pretty much.
 [[file:figs/CI_NAIP_Google_Cover.png]]
 
 #+BEGIN_NOTES
-
+Even though agreement at any one point is only expected to be 90%,
+estimates of cover are within about 1.5%.
 
 I was surprised that naip didn't overestimate tree cover.  I thought
 because of paralax it would.
@@ -76,17 +83,31 @@ standard error for these estimates with 584 points is about 2% (sqrt(.35*.65/584
 #+END_NOTES
 
 
-** what percent of Madison imagery is covered in shadow?
+* Best Classifiers
+** Random Points
+[[file:./figs/ClassifAcc_randomPoint_Googleref.png]]
 
-|                  | NAIP        | Google        |
-|------------------+-------------+---------------|
-| Percent Shadowed | 7.7 (+/- 2) | 3.6 (+/- 1.3) |
+** Grids, areawise
+*** many segment sizes
+[[file:figs/Grids_MAE_areaVSerror.png]]
 
-#+BEGIN_NOTES
-plus or minus is 95% CI
-#+END_NOTES
-** NAIP versus NAIP
+*** segment size 30
+[[file:./figs/MAE_areaVSerror_N-30_C-15.png]]
 
 
 *
-* Best Classifiers
+** Grids, pointwise
+[[file:./figs/grid_pointwise_avgacrossgrids.png]]
+
+* Performance of best classifier in other cities
+
+** wausau
+
+** Marinette
+
+Overall Accuracy: 66%
+
+|                       | iTree | madison classifier |
+|-----------------------+-------+--------------------|
+| % tree cover estimate | 33.3% | 17.1%              |
+

@@ -4,7 +4,7 @@
 ## For\ the\ larger\ urban\ areas:1 ends here
 
 ## [[file:utc.org::*For%20the%20larger%20urban%20areas][For\ the\ larger\ urban\ areas:2]]
-out <- foreach(i = i_areas_high_quant,
+out <- foreach(i = i_areas_high_quant[8:length(i_areas_high_quant)],
               .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr","glcm")) %do% {
 
     urb.poly <- urb.polys[i]
@@ -108,9 +108,11 @@ if (area.intersection > area.tile/2) {
 }
 ## Crop\ to\ intersection\ of\ image\ and\ Urban\ Extent:1 ends here
 
-## [[file:utc.org::*close%20foreach%20loop][close\ foreach\ loop:1]]
+## [[file:utc.org::*close%20foreach%20loop%20and%20close%20Connections][close\ foreach\ loop\ and\ close\ Connections:1]]
 }
-## close\ foreach\ loop:1 ends here
+
+closeAllConnections()
+## close\ foreach\ loop\ and\ close\ Connections:1 ends here
 
 ## [[file:utc.org::*For%20each%20tile%20or%20half%20tile%20intersection%20in%20the%20urban%20area][For\ each\ tile\ or\ half\ tile\ intersection\ in\ the\ urban\ area:1]]
 tile.urb.paths <- list.files(urb.path, full.names = T)
