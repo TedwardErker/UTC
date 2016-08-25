@@ -99,6 +99,17 @@ standard error for these estimates with 584 points is about 2% (sqrt(.35*.65/584
 ** Grids, pointwise
 [[file:./figs/grid_pointwise_avgacrossgrids.png]]
 
+* Images from other cities
+
+** Madison
+[[file:figs/madison.150m.6.png]]
+
+** Wausau
+[[file:./figs/wausau.100m.6.png]]
+
+** Marinette
+[[file:./figs/marinette.png]]
+
 * Performance of best classifier in other cities
 
 ** wausau
@@ -111,3 +122,6 @@ Overall Accuracy: 66%
 |-----------------------+-------+--------------------|
 | % tree cover estimate | 33.3% | 17.1%              |
 
+* How to proceed with other cities
+1) Make the classifier more general
+2) Make specific classifiers for categories of images (e.g. times of day)

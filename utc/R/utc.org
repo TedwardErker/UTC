@@ -1,7 +1,7 @@
 #+TITLE:Functions to Map Urban Tree Canopy
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc*
+#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc:wausau*
 #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
 ------------
 * Functions
@@ -300,7 +300,6 @@ sample.with.na.rm <- function(x, na.rm = T) {
 #+end_src
 
 #+results:
-: The following `from` values were not present in `x`: 0
 *** Image PCA
 
 #+BEGIN_SRC R
@@ -1235,7 +1234,6 @@ target from the FSelector Package
 #+END_SRC
 
 #+RESULTS:
-:  The following `from` values were not present in `x`: 0
 
 ** Calculate Percent Cover of Grids, subsetted
 #+BEGIN_SRC R
@@ -1501,7 +1499,6 @@ target from the FSelector Package
   }
 #+END_SRC
 #+RESULTS:
-:  Joining, by = "unq__ID"
 
 ** Plot points on classifed tile
 #+BEGIN_SRC R
