@@ -49,7 +49,7 @@ foreach(t.p = tiles.names.at.urb.poly,
                 .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr","glcm")) %dopar% {
 ## For\ each\ NAIP\ tile\ that\ intersects\ with\ Urban\ Area:1 ends here
 
-## [[file:utc.org::*Make%20output%20dir%20for%20this%20tile.%20If%20intersection%20between%20urban%20area%20and%20naip%20tile%20is%20large%20make%20two][Make\ output\ dir\ for\ this\ tile\.\ \ If\ intersection\ between\ urban\ area\ and\ naip\ tile\ is\ large\ make\ two:1]]
+## [[file:utc.org::*Make%20output%20dir%20for%20this%20tile.%20If%20intersection%20between%20urban%20area%20and%20naip%20tile%20is%20large,%20divide%20into%204][Make\ output\ dir\ for\ this\ tile\.\ \ If\ intersection\ between\ urban\ area\ and\ naip\ tile\ is\ large\,\ divide\ into\ 4:1]]
 eu <- extent(urb.poly)
     ei <- extent(raster(t.p))
     e <- raster::intersect(ei,eu)
@@ -61,37 +61,41 @@ area.tile <- (xmax(ei)-xmin(ei))*(ymax(ei)-ymin(ei))/2
 tile.name <- basename(t.p) %>%
     str_sub(start = 1, end = -5)  # remove .tif
 
-if (area.intersection > area.tile/2) {
-
+if (area.intersection > area.tile/3) {
     tile.urb.path.a <- paste0(urb.path,"/",tile.name,"_a")
     tile.urb.path.b <- paste0(urb.path,"/",tile.name,"_b")
+    tile.urb.path.c <- paste0(urb.path,"/",tile.name,"_c")
     dir.create(tile.urb.path.a)
         dir.create(tile.urb.path.b)
-      message("make tile output dir", tile.urb.path.a, " and ", tile.urb.path.b)
+        dir.create(tile.urb.path.c)
+      message("make tile output dir", tile.urb.path.a, " and ", tile.urb.path.b, " and ", tile.urb.path.c)
   } else {
-
     tile.urb.path <- paste0(urb.path,"/",tile.name)
     dir.create(tile.urb.path)
       message("make tile output dir", tile.urb.path)
   }
-## Make\ output\ dir\ for\ this\ tile\.\ \ If\ intersection\ between\ urban\ area\ and\ naip\ tile\ is\ large\ make\ two:1 ends here
+## Make\ output\ dir\ for\ this\ tile\.\ \ If\ intersection\ between\ urban\ area\ and\ naip\ tile\ is\ large\,\ divide\ into\ 4:1 ends here
 
 ## [[file:utc.org::*Crop%20to%20intersection%20of%20image%20and%20Urban%20Extent][Crop\ to\ intersection\ of\ image\ and\ Urban\ Extent:1]]
 # Crop image
 overlap <- 20
-half.height <- ((ymax(e)-ymin(e))/2)
+third.height <- ((ymax(e)-ymin(e))/3)
 
-if (area.intersection > area.tile/2) {
+if (area.intersection > area.tile/3) {
   inFile <- t.p
   outFile <- str_c(tile.urb.path.a,"/urbanExtent.tif")
 
   gdal_translate(inFile, outFile,
-                 projwin = c(xmin(e), ymax(e)-half.height-overlap, xmax(e), ymin(e)))
+                 projwin = c(xmin(e), ymax(e)-2*third.height+overlap, xmax(e), ymin(e)))
 
 
   outFile <- str_c(tile.urb.path.b,"/urbanExtent.tif")
   gdal_translate(inFile, outFile,
-                 projwin = c(xmin(e), ymax(e), xmax(e), ymin(e)+half.height+overlap))
+                 projwin = c(xmin(e), ymax(e)-third.height+overlap, xmax(e), ymin(e)+third.height-overlap))
+
+  outFile <- str_c(tile.urb.path.c,"/urbanExtent.tif")
+  gdal_translate(inFile, outFile,
+                 projwin = c(xmin(e), ymax(e), xmax(e), ymin(e)+2*third.height-overlap))
 
 
 

@@ -98,7 +98,16 @@ standard error for these estimates with 584 points is about 2% (sqrt(.35*.65/584
 *
 ** Grids, pointwise
 [[file:./figs/grid_pointwise_avgacrossgrids.png]]
-
+** Scale dependent Accuracy
+*** SVM
+[[file:figs/mad.200m.3_N-20_C-6_svm.png]]
+*** Random Forest
+[[file:figs/mad.200m.3_N-30_C-15_rf.png]]
+*** Pointwise Accuracy and Bias
+Consider:
+1) 85% accurate classifier that overestimates trees by 3%
+2) 75% accurate classifier that doesn't over or underestimate any
+   cover type
 * Images from other cities
 
 ** Madison
@@ -114,6 +123,8 @@ standard error for these estimates with 584 points is about 2% (sqrt(.35*.65/584
 
 ** wausau
 
+Accuracy is about 82% pointwise for grids
+
 ** Marinette
 
 Overall Accuracy: 66%
@@ -124,4 +135,7 @@ Overall Accuracy: 66%
 
 * How to proceed with other cities
 1) Make the classifier more general
-2) Make specific classifiers for categories of images (e.g. times of day)
+2) Make specific classifiers for categories of images (e.g. times of
+   day)
+
+

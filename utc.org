@@ -1,7 +1,7 @@
 #+TITLE: Wisconsin Urban Tree Canopy Mapping
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc:wausau*
+#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc*
 #+STARTUP: indent
 
 * Begin with end in mind
@@ -133,104 +133,6 @@ manual/supervised classification in the Madison Area
 #+END_SRC
 
 #+results:
-#+begin_example
-rgeos version: 0.3-19, (SVN revision 524)
- GEOS runtime version: 3.5.0-CAPI-1.9.0 r4084
- Linking to sp version: 1.2-3
- Polygon checking: TRUE
-Loading required package: BBmisc
-
-Attaching package: ‘BBmisc’
-
-The following object is masked from ‘package:rgeos’:
-
-    symdiff
-
-Loading required package: ggplot2
-Loading required package: ParamHelpers
-Loading required package: sp
-rgdal: version: 1.1-10, (SVN revision 622)
- Geospatial Data Abstraction Library extensions to R successfully loaded
- Loaded GDAL runtime: GDAL 1.11.3, released 2015/09/16
- Path to GDAL shared files: /usr/share/gdal/1.11
- Loaded PROJ.4 runtime: Rel. 4.9.2, 08 September 2015, [PJ_VERSION: 492]
- Path to PROJ.4 shared files: (autodetected)
- Linking to sp version: 1.2-3
-
-Attaching package: ‘raster’
-
-The following object is masked from ‘package:mlr’:
-
-    resample
-
-The following object is masked from ‘package:ParamHelpers’:
-
-    getValues
-
-Attaching package: ‘dplyr’
-
-The following objects are masked from ‘package:plyr’:
-
-    arrange, count, desc, failwith, id, mutate, rename, summarise,
-    summarize
-
-The following objects are masked from ‘package:raster’:
-
-    intersect, select, union
-
-The following objects are masked from ‘package:BBmisc’:
-
-    coalesce, collapse
-
-The following objects are masked from ‘package:rgeos’:
-
-    intersect, setdiff, union
-
-The following objects are masked from ‘package:stats’:
-
-    filter, lag
-
-The following objects are masked from ‘package:base’:
-
-    intersect, setdiff, setequal, union
-
-Attaching package: ‘tidyr’
-
-The following object is masked from ‘package:raster’:
-
-    extract
-
-The following object is masked from ‘package:ascii’:
-
-    expand
-foreach: simple, scalable parallel programming from Revolution Analytics
-Use Revolution R for scalability, fault tolerance and more.
-http://www.revolutionanalytics.com
-Loading required package: iterators
-Loading required package: parallel
-randomForest 4.6-12
-Type rfNews() to see new features/changes/bug fixes.
-
-Attaching package: ‘randomForest’
-
-The following object is masked from ‘package:dplyr’:
-
-    combine
-
-The following object is masked from ‘package:ggplot2’:
-
-    margin
-
-Attaching package: ‘kernlab’
-
-The following objects are masked from ‘package:raster’:
-
-    buffer, rotated
-
-The following object is masked from ‘package:ggplot2’:
-
-    alpha
-#+end_example
 
 ** Inputs
 **** Input Directories
@@ -384,7 +286,8 @@ Especially segments between 30 and 60 m2 which seems to be performing best.
 
 #+results:
 #+begin_example
-                                 ../DD                 ../DD/madison_Training
+
+                                ../DD                 ../DD/madison_Training
                                  FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
                                  FALSE                                  FALSE
@@ -3422,6 +3325,9 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 *** Make Feature data frames, for each Accuracy Region tile; "madison" is pca location
 
  #+begin_src R :results silent
+
+segment.params <- segment.params %>% filter(compactness == 15, segment.size == 30)
+
       cl <- makeCluster(cores)
       registerDoParallel(cl)
 
@@ -3446,7 +3352,7 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
                                                       ndvi = T,
                                                       ratio.bands = c("blue","green","red","nir"),
                                                       texture.params.df = texture.params,
-                                                      pixel.df = T,
+                                                      pixel.df = F,
                                                       pca.location = pca.location,
                                                       segmentation = T,
                                                       segment.params.df = segment.params,
@@ -3459,63 +3365,61 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 *** Classify Tiles at accuracy regions using "best model"
 #+BEGIN_SRC R :results none
-     cl <- makeCluster(cores)
-     registerDoParallel(cl)
+   cl <- makeCluster(cores)
+   registerDoParallel(cl)
 
 
-     classified.grid.tiles <-
-         foreach(img.nm = image.names) %do% {
 
-             best.model <- list.files(dd.models.dir) %>%
-                 str_extract(., "best_mad_model_.*") %>%
-                 na.omit()
+   classified.grid.tiles <-
+       foreach(img.nm = image.names) %do% {
 
-             tile.names <- list.files(dd.accuracy.dir) %>%
-                 str_match(., pattern = str_c("(",location,img.nm,".*?)_.*\\.tif$"))
+           best.model <- list.files(dd.models.dir) %>%
+               str_extract(., "best_mad_model_.*") %>%
+               na.omit()
 
-             tile.names <- tile.names[,2] %>% na.omit() %>% unique()
+           tile.names <- list.files(dd.accuracy.dir) %>%
+               str_match(., pattern = str_c("(",location,img.nm,".*?)_.*\\.tif$"))
+
+           tile.names <- tile.names[,2] %>% na.omit() %>% unique()
 
 
-             foreach(tile.nm = tile.names,
-                     .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %do% {
+           foreach(tile.nm = tile.names,
+                   .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %do% {
 
-                 foreach(model = best.model) %do% {
+               foreach(model = best.model) %do% {
 
-                     seg.p <- str_extract(model, segmentation.pattern)
+                   seg.p <- str_extract(model, segmentation.pattern)
 
-                     if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
-                            segment.tile.name.append <- paste0("_",seg.p,".tif")
-                            segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
+                   if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
+                          segment.tile.name.append <- paste0("_",seg.p,".tif")
+                          segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
 
-                            classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
-                                            model.dir = dd.models.dir,
-                                            segment.dir = dd.accuracy.dir,
-                                            classify.out.dir = dd.accuracy.dir,
-                                            tile.name = tile.nm,
-                                            segmentation.appendage = segment.tile.name.append,
-                                            model.name.rds = model,
-                                            segment.feature.appendage = segment.feature.df.name.append,
-                                            segmentation.prms = seg.p)
+                          classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
+                                          model.dir = dd.models.dir,
+                                          segment.dir = dd.accuracy.dir,
+                                          classify.out.dir = dd.accuracy.classified.dir,
+                                          tile.name = tile.nm,
+                                          segmentation.appendage = segment.tile.name.append,
+                                          model.name.rds = model,
+                                          segment.feature.appendage = segment.feature.df.name.append,
+                                          segmentation.prms = seg.p)
 
-                     } else {
-                         classify.pixel.raster(tile.dir = dd.accuracy.dir,
-                                               tile.name = tile.nm,
-                                               pixelFeatureDF.appendage = feature.df.appendage,
-                                               model.dir = dd.models.dir,
-                                               model.rds = model,
-                                               seg.prms = seg.p)
-                     }
-                 }
-             }
-         }
+                   } else {
+                       classify.pixel.raster(tile.dir = dd.accuracy.dir,
+                                             tile.name = tile.nm,
+                                             pixelFeatureDF.appendage = feature.df.appendage,
+                                             model.dir = dd.models.dir,
+                                             model.rds = model,
+                                             seg.prms = seg.p)
+                   }
+               }
+           }
+       }
 
-         out <- foreach(i = i_areas_less_quant) %do% {
-              urb.poly <- urb.polys[i]
+  stopCluster(cl)
 
-    stopCluster(cl)
-
-         ## out <- foreach(i = 1:length(urb.polys),
-         ##               .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr")) %dopar% {
+       ## out <- foreach(i = 1:length(urb.polys),
+       ##               .packages = c("sp","raster","rgdal","rgeos", "stringr","doParallel","gdalUtils","plyr","dplyr","mlr")) %dopar% {
 
 #+END_SRC
 
@@ -3621,6 +3525,53 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 : with 20209 features
 : It has 15 fields
 
+#+begin_src R
+  df <- readRDS(str_c(derived.dir, "/",location,"_point2pixel.error.df.rds")) %>%
+      summarize(mean.overall.error = mean(overall.error))
+  df
+
+  df <- readRDS(str_c(derived.dir, "/",location,"_point2pixel.error.df.rds"))
+df
+#+end_src
+
+#+results:
+#+begin_example
+  mean.overall.error
+1              0.188
+   overall.error pct.grass.classified.as.other
+1    0.142222222                     0.2142857
+2    0.000000000                           NaN
+3    0.044444444                     0.5000000
+4    0.008888889                           NaN
+5    0.173333333                     0.3269231
+6    0.262222222                     0.3148148
+7    0.266666667                     0.5479452
+8    0.151111111                     0.1349693
+9    0.373333333                     0.2179487
+10   0.457777778                     0.8666667
+   pct.impervious.classified.as.other pct.tree.classified.as.other        grid
+1                          0.04545455                  0.888888889 wau.100m.10
+2                                 NaN                  0.000000000  wau.100m.1
+3                          0.28571429                  0.014423077  wau.100m.2
+4                                 NaN                  0.008888889  wau.100m.3
+5                          0.03311258                  0.772727273  wau.100m.4
+6                          0.07407407                  0.288135593  wau.100m.5
+7                          0.07627119                  0.281250000  wau.100m.6
+8                          0.10638298                  0.384615385  wau.100m.7
+9                          0.20754717                  0.547619048  wau.100m.8
+10                         0.40625000                  0.388059701  wau.100m.9
+        image target.cover   model seg.params
+1  wausauNAIP          all rf_prob  N-30_C-15
+2  wausauNAIP          all rf_prob  N-30_C-15
+3  wausauNAIP          all rf_prob  N-30_C-15
+4  wausauNAIP          all rf_prob  N-30_C-15
+5  wausauNAIP          all rf_prob  N-30_C-15
+6  wausauNAIP          all rf_prob  N-30_C-15
+7  wausauNAIP          all rf_prob  N-30_C-15
+8  wausauNAIP          all rf_prob  N-30_C-15
+9  wausauNAIP          all rf_prob  N-30_C-15
+10 wausauNAIP          all rf_prob  N-30_C-15
+#+end_example
 
 *** RMSE at grid level
 **** Combine google earth grid estimates of cover with classified tile estimates of cover
@@ -3646,35 +3597,33 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
       n.rows.and.columns.for.subset = c(15)
 
            out <- foreach(n.rows.and.columns.for.sub = n.rows.and.columns.for.subset) %do% {
-               calc.pct.cvr.for.grid.subset(grd.df, n.rows.and.columns.for.sub)
+               calc.pct.cvr.for.grid.subset(grd.df, n.rows.and.columns.for.sub, mod = 1)
            }
 
            Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- bind_rows(out)
 
-      Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets %>%
-          rename(grid = unq__ID)
+      Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets <- Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets
+#%>%
+ #         rename(grid = unq__ID)
 
         saveRDS(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets, str_c(derived.dir,"/","Wausau.Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets.dataframe",".rds"))
  #+END_SRC
 
  #+results:
- #+begin_example
- OGR data source with driver: ESRI Shapefile
- Source: "../RD_Accuracy/Grids", layer: "Grids"
- with 20209 features
- It has 15 fields
-  Joining, by = "unq__ID"
- Error in { : task 1 failed - "argument "mod" is missing, with no default"
- Error: cannot convert object to a data frame
-  Error in eval(expr, envir, enclos) :
-   object 'Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets' not found
- Error in saveRDS(Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets,  :
-   object 'Percent.Cover.Grids.with.diff.targettypes.and.diff.subsets' not found
-#+end_example
+ : OGR data source with driver: ESRI Shapefile
+ : Source: "../RD_Accuracy/Grids", layer: "Grids"
+ : with 20209 features
+ : It has 15 fields
+ : Warning message:
+ : closing unused connection 4 (<-localhost:11537)
+ :  Joining, by = "unq__ID"
+ : Joining, by = "unq__ID"
+ : Joining, by = "unq__ID"
 
 ***** Create DF of % cover from classified rasters cropped to different extents
 
 #+BEGIN_SRC R
+way.grid.id.pattern <- ".*wau.*"
 
     grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer)
 
@@ -3728,6 +3677,14 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 #+END_SRC
 
+#+results:
+: OGR data source with driver: ESRI Shapefile
+: Source: "../RD_Accuracy/Grids", layer: "Grids"
+: with 20209 features
+: It has 15 fields
+:  Error in stri_c(..., sep = sep, collapse = collapse, ignore_null = TRUE) :
+:   object 'wau.grid.id.pattern' not found
+
 
 
 
@@ -3766,6 +3723,24 @@ make this i = 1:2 (or 1:3) to do all the accuracy regions
 
 
 #+END_SRC
+
+#+results:
+#+begin_example
+ ..$ : symbol grid
+  .. ..$ : symbol n.points
+Classes ‘tbl_df’, ‘tbl’ and 'data.frame':	0 obs. of  0 variables
+ data frame with 0 columns and 0 rows
+ Source: local data frame [0 x 10]
+Groups: grid, n.points [0]
+
+# ... with 10 variables: grid <fctr>, n.points <int>, area <dbl>,
+#   pct.g.googleEarth <dbl>, pct.i.googleEarth <dbl>, pct.o.googleEarth <dbl>,
+#   pct.t.googleEarth <dbl>, target.type <chr>, target.cover <chr>,
+#   grid.row.col.num <dbl>
+Error: No common variables. Please specify `by` param.
+Error in str(grid.master.df) : object 'grid.master.df' not found
+ Error in eval(expr, envir, enclos) : object 'grid.master.df' not found
+#+end_example
 
 
 **** Make RMSE plots
@@ -4037,8 +4012,8 @@ rasterOptions(tmpdir=R_raster_temp)
 #+END_SRC
 
 #+results:
-: Warning in dir.create(R_raster_temp) :
-:   '../R_raster_temp' already exists
+: Warning message:
+: In dir.create(R_raster_temp) : '../R_raster_temp' already exists
 
 *** Projections
 #+BEGIN_SRC R
@@ -4102,7 +4077,8 @@ dir.create(classified.urban.areas.dir)
 #+END_SRC
 
 #+results:
-: Warning in dir.create(classified.urban.areas.dir) :
+: Warning message:
+: In dir.create(classified.urban.areas.dir) :
 :   '../DD/ClassifiedUrbanAreas' already exists
 
 *** Segmentation Parameters
@@ -4173,8 +4149,7 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 : Source: "../RD_merged_WIurbanAreas_and_incorporatedAreas", layer: "Dissolve_Merge_WI_census_inc"
 : with 1 features
 : It has 1 fields
-: The following `from` values were not present in `x`: 0, 1, 3
-: Joining, by = "unq__ID"
+: There were 18 warnings (use warnings() to see them)
 
 ** Disaggregate Urban Area Polygons
 
@@ -4183,8 +4158,6 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 #+END_SRC
 
 #+results:
-: The following `from` values were not present in `x`: 0, 1, 3
-: Joining, by = "unq__ID"
 
 ** Load NAIP tifs
 #+BEGIN_SRC R
@@ -4194,10 +4167,6 @@ dd.models.dir <- str_extract(dd.models.dirs, paste0(".*",location,".*")) %>% na.
 #+END_SRC
 
 #+results:
-:  The following `from` values were not present in `x`: 0, 1, 3
-: Joining, by = "unq__ID"
-: The following `from` values were not present in `x`: 0, 1, 3
-: Joining, by = "unq__ID"
 
 #+BEGIN_SRC R
   cl <- makeCluster(cores)
@@ -4568,8 +4537,7 @@ dir.create(urb.path)
 
 #+END_SRC
 
-***** Make output dir for this tile.  If intersection between urban area and naip tile is large make two
-
+***** Make output dir for this tile.  If intersection between urban area and naip tile is large, divide into 4
 #+BEGIN_SRC R
       eu <- extent(urb.poly)
       ei <- extent(raster(t.p))
@@ -4582,24 +4550,21 @@ dir.create(urb.path)
   tile.name <- basename(t.p) %>%
       str_sub(start = 1, end = -5)  # remove .tif
 
-  if (area.intersection > area.tile/2) {
-
+  if (area.intersection > area.tile/3) {
       tile.urb.path.a <- paste0(urb.path,"/",tile.name,"_a")
       tile.urb.path.b <- paste0(urb.path,"/",tile.name,"_b")
+      tile.urb.path.c <- paste0(urb.path,"/",tile.name,"_c")
       dir.create(tile.urb.path.a)
           dir.create(tile.urb.path.b)
-        message("make tile output dir", tile.urb.path.a, " and ", tile.urb.path.b)
+          dir.create(tile.urb.path.c)
+        message("make tile output dir", tile.urb.path.a, " and ", tile.urb.path.b, " and ", tile.urb.path.c)
     } else {
-
       tile.urb.path <- paste0(urb.path,"/",tile.name)
       dir.create(tile.urb.path)
         message("make tile output dir", tile.urb.path)
     }
 
 #+END_SRC
-
-#+results:
-: make tile output dir../DD/ClassifiedUrbanAreas/30/m_4208904_ne_16_1_20130704_w
 
 ***** Crop to intersection of image and Urban Extent
 
@@ -4617,19 +4582,23 @@ that are empty.
 #+BEGIN_SRC R
                                           # Crop image
 overlap <- 20
-half.height <- ((ymax(e)-ymin(e))/2)
+third.height <- ((ymax(e)-ymin(e))/3)
 
-if (area.intersection > area.tile/2) {
+if (area.intersection > area.tile/3) {
   inFile <- t.p
   outFile <- str_c(tile.urb.path.a,"/urbanExtent.tif")
 
   gdal_translate(inFile, outFile,
-                 projwin = c(xmin(e), ymax(e)-half.height-overlap, xmax(e), ymin(e)))
+                 projwin = c(xmin(e), ymax(e)-2*third.height+overlap, xmax(e), ymin(e)))
 
 
   outFile <- str_c(tile.urb.path.b,"/urbanExtent.tif")
   gdal_translate(inFile, outFile,
-                 projwin = c(xmin(e), ymax(e), xmax(e), ymin(e)+half.height+overlap))
+                 projwin = c(xmin(e), ymax(e)-third.height+overlap, xmax(e), ymin(e)+third.height-overlap))
+
+  outFile <- str_c(tile.urb.path.c,"/urbanExtent.tif")
+  gdal_translate(inFile, outFile,
+                 projwin = c(xmin(e), ymax(e), xmax(e), ymin(e)+2*third.height-overlap))
 
 
 

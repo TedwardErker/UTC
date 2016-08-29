@@ -1,7 +1,7 @@
 #+TITLE:Functions to Map Urban Tree Canopy
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc:wausau*
+#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc*
 #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
 ------------
 * Functions
@@ -603,7 +603,7 @@ wrapper for slic.
                                       feature.df.append = feature.df.appendage) {
 
       fea <- stack(list.files(tile.dir, pattern = paste0(tile.name,fea.pattern), full.names = T))
-      names(fea) <- sub(x = names(fea), pattern = "(madisonNAIP|madisonPanshpSPOT|urbanExtent).*?_", replacement = "")
+      names(fea) <- sub(x = names(fea), pattern = "(madisonNAIP|madisonPanshpSPOT|urbanExtent|wausauNAIP).*?_", replacement = "")
 
       seg.path <- paste0(tile.dir,"/",tile.name,segmentation.param.appendage, ".tif")
       seg <- raster(seg.path)
