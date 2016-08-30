@@ -106,9 +106,9 @@ manual/supervised classification in the Madison Area
    1) [ ] add bagging to svm
    2) [ ] test feature selection (removing directional texture variables)
    3) [ ] test gbm classifier
-   4) [ ] add Training data from other cities. Identify which cities.
+   4) [ ] add Training data from other cities. Starting [2016-09-08 Thu]
 4) [ ] Assess Accuracy Across State (Madison, Wausau, NE WI, perhaps
-   Eau Claire)
+   Eau Claire and others)
 5) [ ] Classify whole state
    1) [ ] add buffers to urban areas to allow for growth (10% diameter
       of urban area)
@@ -158,6 +158,15 @@ This is 64 days from now.
 ** Create NAIP images for largest city imaged at each hour of day.
 ** Create a PCA transformation for each hour of day (maybe not necessary, but easy enough)
 ** Create State-wide classifiers
+
+- Inputs:
+  - images
+    - file pattern: "locationImage", e.g. madisonNAIP, wausauNAIP
+  - training polygons:
+    - file pattern:
+
+
+
 *** testing if stretching the pca is worthwhile
 #+begin_src R
   pca <- stack(str_c(dd.training.dir, "/madisonNAIP.2_pca.tif"))
