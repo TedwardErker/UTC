@@ -3,6 +3,7 @@
 #+email: erker@wisc.edu
 #+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc*
 #+STARTUP: indent
+#+FILETAGS: work utc
 
 * Begin with end in mind
 ** End Product:
@@ -21,7 +22,6 @@ easily add in
    possibly more moments than mean and sd in segments.)
 3) new classifiers (more than just svm and rf)
 4) new classes?
-
 
 ** Best Classifer
 To make this map I need to find the best classifier to apply to the
@@ -71,7 +71,6 @@ Pointwise - confusion matrix
 
 
 
-
 ** Directory Structure
 *** Pjt_UTC
 **** code
@@ -98,7 +97,98 @@ manual/supervised classification in the Madison Area
 **** RD_NAIP
 **** RD_SPOT
 
-* Workflow
+** Plan [2016-08-29 Mon]
+
+*** TODO UTC Tasks [0/6]
+1) [ ] Make NAIP images cropped to extent of other large WI cities
+2) [ ] Select cities that have imagery from each hour of day (8am - 1pm)
+3) [ ] Improve model
+   1) [ ] add bagging to svm
+   2) [ ] test feature selection (removing directional texture variables)
+   3) [ ] test gbm classifier
+   4) [ ] add Training data from other cities. Identify which cities.
+4) [ ] Assess Accuracy Across State (Madison, Wausau, NE WI, perhaps
+   Eau Claire)
+5) [ ] Classify whole state
+   1) [ ] add buffers to urban areas to allow for growth (10% diameter
+      of urban area)
+   2) [ ] relabel water, crops, and wetland
+6) [ ] Merge classifications into giant raster
+
+*** TODO Complete utc classification but not write up
+DEADLINE: <2016-10-07 Fri -40d>
+*** TODO Complete UTC project, classification and write up
+DEADLINE: <2016-11-01 Tue -80d>
+
+This is 64 days from now.
+
+* Workflow [2016-08-29 Mon]
+** Libraries
+#+BEGIN_SRC R
+  ##  install.packages(c("gdalUtils","ascii","rgeos","mlr","broom","rgdal","raster","plyr","ggplot2","dplyr","tidyr","stringr","foreach","doParallel","glcm","randomForest","kernlab","irace","parallelMap"))
+  ## install.packages("e1071")
+  ##   install.packages("FSelector")
+  ##install.packages("gdalUtils")
+  ##install.packages("rgeos")
+
+  library(gdalUtils)
+  library(ascii)
+  library(rgeos)
+  library(mlr)
+  library(broom)
+  library(rgdal)
+  library(raster)
+  library(plyr)
+  library(ggplot2)
+  library(dplyr)
+  library(tidyr)
+  library(stringr)
+  library(foreach)
+  library(doParallel)
+  library(glcm)
+  library(randomForest)
+  library(kernlab)
+  library(irace)
+  library(parallelMap)
+  library(FSelector)
+
+#+END_SRC
+** Inputs/Variables etc
+** Functions
+** Create NAIP images for largest city imaged at each hour of day.
+** Create a PCA transformation for each hour of day (maybe not necessary, but easy enough)
+** Create State-wide classifiers
+*** testing if stretching the pca is worthwhile
+#+begin_src R
+  pca <- stack(str_c(dd.training.dir, "/madisonNAIP.2_pca.tif"))
+  pca.stretch <- rescale.0.b(pca,254, each.band = T)
+  pca.stretch
+#+end_src
+
+#+results:
+: class       : RasterBrick
+: dimensions  : 212, 445, 94340, 3  (nrow, ncol, ncell, nlayers)
+: resolution  : 1, 1  (x, y)
+: extent      : 297402, 297847, 4767284, 4767496  (xmin, xmax, ymin, ymax)
+: coord. ref. : +proj=utm +zone=16 +ellps=GRS80 +towgs84=0,0,0,0,0,0,0 +units=m +no_defs
+: data source : in memory
+: names       : madisonNAIP.2_pca.1, madisonNAIP.2_pca.2, madisonNAIP.2_pca.3
+: min values  :                   0,                   0,                   0
+: max values  :                 254,                 254,                 254
+
+#+results:
+: [1] 0
+
+** Assess Accuracy of classifiers
+
+
+
+
+
+
+
+
+* Workflow prior to [2016-08-29 Mon]
 ** Libraries
 #+BEGIN_SRC R
   ##  install.packages(c("gdalUtils","ascii","rgeos","mlr","broom","rgdal","raster","plyr","ggplot2","dplyr","tidyr","stringr","foreach","doParallel","glcm","randomForest","kernlab","irace","parallelMap"))
@@ -372,7 +462,7 @@ In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
 ** Functions
 Load functions from utc/R/utc.org
 [[file:utc/R/utc.org::*Functions]]
-** Determine how to make best classifier for Madison : image, segmentation, model, n.classes, target, and def truth
+** Determine how to make best classifier for Madison : image, segmentation, model, and def truth
 *** Set location to Madison
 #+begin_src R
   location <- "madison"
@@ -4581,7 +4671,7 @@ that are empty.
 
 #+BEGIN_SRC R
                                           # Crop image
-overlap <- 20
+overlap <- 3
 third.height <- ((ymax(e)-ymin(e))/3)
 
 if (area.intersection > area.tile/3) {
@@ -4720,6 +4810,11 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 
 
 **** Merge NAIP Tiles if there is more than one over an urban area and Save Classified image as <UrbanArea>.tif
+
+***** TODO make the overlap between tiles very small.  Maybe just use "merge" Test on smaller cities first
+Maybe I can get away with one tile simply taking over another, no
+voting or random sampling.
+
 #+BEGIN_SRC R
   image.name <- "NAIP"
 
@@ -4765,6 +4860,7 @@ feature.dfs <- make.feature.df(tile.dir = tile.urb.path,
 #+results:
 : [1] "Wrote ClassifiedUrbanArea_803.tif"
 : [1] "Wrote RGBN_803.tif"
+
 
 **** Delete intermediate steps
 #+BEGIN_SRC R

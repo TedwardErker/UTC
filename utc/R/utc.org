@@ -343,6 +343,18 @@ sample.with.na.rm <- function(x, na.rm = T) {
                                 (raster - min)/(max-min) * 254
   }
 
+  rescale.0.b <- function(raster, b, each.band = T) {
+      if (each.band == T) {
+          min <- cellStats(raster, stat = "min")
+          max <- cellStats(raster, stat = "max")
+      } else {
+          min <- getRasterMin(raster)
+          max <- getRasterMax(raster)
+      }
+      (raster - min)/(max-min) * b
+  }
+
+
   ## image.pca <- function(image.name,
   ##                       pca.model.name.append = pca.model.name.appendage,
   ##                       tile.dir,
@@ -394,7 +406,7 @@ sample.with.na.rm <- function(x, na.rm = T) {
           colnames(samp) <- names(tile)
           samp
       }
-  closeAllConnections()
+      closeAllConnections()
 
                                           # Perform PCA on sample
       pca <- prcomp(sr, scale = T)
@@ -489,14 +501,14 @@ sample.with.na.rm <- function(x, na.rm = T) {
 
 
                                           # Function takes raster stack, samples data, performs pca and returns stack of first n_pcomp bands
-                                          ## predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
-                                          ##     sr <- sampleRandom(stack,sampleNumber)
-                                          ##     pca <- prcomp(sr, scale=T)
-                                          ##     beginCluster()
-                                          ##     r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
-                                          ##     endCluster()
-                                          ##     return(r)
-                                          ## }
+  ## predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
+  ##     sr <- sampleRandom(stack,sampleNumber)
+  ##     pca <- prcomp(sr, scale=T)
+  ##     beginCluster()
+  ##     r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
+  ##     endCluster()
+  ##     return(r)
+  ## }
 #+END_SRC
 
 #+RESULTS:
