@@ -135,21 +135,22 @@ This is 64 days from now.
 ** Inputs/Variables etc
 *** Input Directories
 #+BEGIN_SRC R
-    image.names <- c("NAIP","PanshpSPOT")
-    image.dirs <- paste0("../RD_",image.names)
-    naip.dir <- str_extract(image.dirs, ".*NAIP.*") %>% na.omit()
-    naip.seamlines.dir <- str_c(naip.dir, "/SeamLines")
-    pca.dir <- "../RD_PCA_Regions"
-    training.dir <- "../RD_Training_Regions"
-    accuracy.dir <- "../RD_Accuracy"
-    grids.accuracy.dir <- str_c(accuracy.dir, "/Grids")
-    fieldplots.accuracy.dir<- str_c(accuracy.dir, "/FieldData")
-    points.accuracy.dir<- str_c(accuracy.dir, "/PointsByRobi")
+      image.names <- c("NAIP","PanshpSPOT")
+      image.dirs <- paste0("../RD_",image.names)
+      naip.dir <- str_extract(image.dirs, ".*NAIP.*") %>% na.omit()
+  naip.tile.dir <- "/home/erker/NAIP_mount/NAIP13_WTM_TIFs"
+      naip.seamlines.dir <- str_c(naip.dir, "/SeamLines")
+      pca.dir <- "../RD_PCA_Regions"
+      training.dir <- "../RD_Training_Regions"
+      accuracy.dir <- "../RD_Accuracy"
+      grids.accuracy.dir <- str_c(accuracy.dir, "/Grids")
+      fieldplots.accuracy.dir<- str_c(accuracy.dir, "/FieldData")
+      points.accuracy.dir<- str_c(accuracy.dir, "/PointsByRobi")
 
-    crop.dir <- "../RD_CroplandDataLayer"
-    water.dir <- "../RD_WI-waterbody-24k"
-    urban.dir <- "../RD_US_UrbanAreasShapefile"
-    urban.and.incorporated.dir <- "../RD_merged_WIurbanAreas_and_incorporatedAreas"
+      crop.dir <- "../RD_CroplandDataLayer"
+      water.dir <- "../RD_WI-waterbody-24k"
+      urban.dir <- "../RD_US_UrbanAreasShapefile"
+      urban.and.incorporated.dir <- "../RD_merged_WIurbanAreas_and_incorporatedAreas"
 #+END_SRC
 
 #+results:
@@ -195,6 +196,16 @@ googCRS <- CRS("+init=epsg:4326")
 #+end_src
 
 #+results:
+
+*** number of cores
+#+BEGIN_SRC R
+    all.cores <- detectCores()
+    cores <- ifelse(all.cores > 4, all.cores - 2, all.cores)
+
+#+END_SRC
+
+#+results:
+
 
 ** Inputs old
 
@@ -363,14 +374,6 @@ Warning message:
 In dir.create(x) : '../DD/reprojected.Accuracy.Regions' already exists
 #+end_example
 
-**** number of cores
-#+BEGIN_SRC R
-  cores <- detectCores()
-  cores <- 44
-#+END_SRC
-
-#+results:
-
 
 
 **** delete?
@@ -420,19 +423,33 @@ seamlines@data <-     seamlines@data %>%
 
 #+end_src
 
-#+results:
+#+results:{{{results(==)}}}
 *** Urban areas
 #+begin_src R
+  ua <- readOGR(dsn = urban.dir, layer = urban.layer)
+  ua_wi <- subset(ua, grepl(".*WI",as.character(ua@data$NAME10)))
 
-  ua_wi <- readOGR(dsn = urban.dir, layer = urban.layer) %>%
-      subset(grepl(".*WI",as.character(ua_wi@data$NAME10)))
-
-    factpal <- colorFactor(topo.colors(50), ua_wi$NAME10)
-    ua_map <- ua_wi %>% leaflet() %>% addTiles() %>% addPolygons(color = ~factpal(NAME10), popup = ~NAME10)
-    ua_map
-
-  #  ua_map %>% saveWidget(file = "WisconsinUrbanAreas.html", selfcontained = FALSE)
 #+end_src
+#+results:
+#+begin_example
+OGR data source with driver: ESRI Shapefile
+Source: "../RD_US_UrbanAreasShapefile", layer: "cb_2013_us_ua10_500k"
+with 3601 features
+It has 8 fields
+Warning messages:
+1: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 57 is invalid in this locale
+2: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 58 is invalid in this locale
+3: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 509 is invalid in this locale
+4: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 512 is invalid in this locale
+5: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 3194 is invalid in this locale
+#+end_example
+
+
 *** Crop Seamlines by urban area
 #+begin_src R
     #crop seams by urban areas
@@ -445,8 +462,16 @@ seamlines@data <-     seamlines@data %>%
   seamlines_by_ua@data$area <- gArea(seamlines_by_ua, byid = T)
 
 #+end_src
+
+#+results:
+: Warning messages:
+: 1: In RGEOSUnaryPredFunc(spgeom, byid, "rgeos_isvalid") :
+:   Self-intersection at or near point -89.830529428331886 44.408498591753428
+: 2: In RGEOSUnaryPredFunc(spgeom, byid, "rgeos_isvalid") :
+:   Too few points in geometry component at or near point -91.873062270000005 45.399226169999999
+
 **** leaflet plot
-#+begin_src R
+#+begin_src R :eval no
       #seams_html <- seamlines %>% leaflet %>% addTiles() %>% addPolygons()
       ## wd <- getwd()
       ## setwd("leaflet")
@@ -472,6 +497,12 @@ seamlines@data <-     seamlines@data %>%
 #+end_src
 
 #+results:
+:  Error in colorNumeric(palette = "Spectral", domain = seamlines_by_ua$hour) :
+:   object 'seamlines_by_ua' not found
+:  Error in eval(expr, envir, enclos) : object 'seamlines_by_ua' not found
+: Error: object 'seamlines_by_ua_html' not found
+: Error in eval(expr, envir, enclos) :
+:   object 'seamlines_by_ua_html' not found
 
 *** What are largest cities at every hour in every month?
 #+begin_src R
@@ -515,9 +546,9 @@ selected_seamlines_by_ua <- subset(seamlines_by_ua, selected == T)
 #+end_src
 
 #+results:
-: Joining, by = c("hour", "month", "NAME10", "area")
+: Joining, by = c("hour", "month", "NAME10", "area", "selected")
 **** leaflet plot
-#+begin_src R
+#+begin_src R :eval no
 
      numpal <- colorNumeric(palette = "Spectral",
                             domain = selected_seamlines_by_ua$hour)
@@ -545,9 +576,112 @@ selected_seamlines_by_ua <- subset(seamlines_by_ua, selected == T)
 #+end_src
 
 #+results:
-***
-*** Crop NAIP imagery to these polygons
+:  Error in colorNumeric(palette = "Spectral", domain = selected_seamlines_by_ua$hour) :
+:   object 'selected_seamlines_by_ua' not found
+:  Error in getLevels(domain, NULL, levels, ordered) :
+:   object 'selected_seamlines_by_ua' not found
+:  Error in eval(expr, envir, enclos) :
+:   object 'selected_seamlines_by_ua' not found
+: Error: object 'selected_seamlines_by_ua_html' not found
+: Error in eval(expr, envir, enclos) :
+:   object 'selected_seamlines_by_ua_html' not found
 
+*** Crop NAIP imagery to these polygons
+#+begin_src R
+
+  naip.tif.names <- list.files(naip.tile.dir, recursive = T, full.names = T) %>%
+      str_extract(pattern = ".*tif$") %>%
+      na.omit()
+
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+  naip.stacks <- foreach(naip.tif.name = naip.tif.names, .packages = "raster") %dopar% {
+      stack(naip.tif.name)
+  }
+
+  naip.extents <- foreach(naip.stack = naip.stacks, .packages = "raster") %dopar% {
+      extent(naip.stack)
+  }
+
+  closeAllConnections()
+
+
+  #city-XXX_month-XX_hour-X_NAIP.tif"
+  selected_seamlines_by_ua.df <- selected_seamlines_by_ua %>%
+      data.frame() %>%
+      mutate(city = str_extract(NAME10, "[A-Za-z ]*")) %>%
+      mutate(file.names = str_c("../RD_NAIP/city-",city,"_month-",month,"_hour-",hour,"_NAIP.tif")) %>%
+      mutate(file.names = str_replace(file.names, " ", ""))
+
+
+#+end_src
+
+
+#+begin_src R
+                                           #loop through polygons
+   cl <- makeCluster(cores)
+   registerDoParallel(cl)
+
+   naip.at.urb <- foreach(i = 1:length(selected_seamlines_by_ua), .packages = c("raster","rgeos","foreach")) %dopar% {
+
+       u <- selected_seamlines_by_ua[i,]
+
+       tiles.in.urban <-  lapply(naip.extents, function(naip.extent) {
+           inter <- raster::intersect(naip.extent, u)
+           ifelse(is.null(inter), F, T)
+       })
+
+       tile.index <- which(unlist(tiles.in.urban))
+
+       tiles.inter.u <- lapply(tile.index, function(i) {
+           naip.extent <- as(naip.extents[[i]], "SpatialPolygons")
+           proj4string(naip.extent) <- wtm
+           inter <- gIntersects(naip.extent, u)
+       })
+
+       tile.index <- tile.index[which(unlist(tiles.inter.u))]
+
+       tiles.at.u <- naip.stacks[tile.index]
+
+
+                                         # loop through tiles at each polygon
+       crp.tiles.at.u <- foreach(t.at.u = tiles.at.u) %do% {
+
+           eu <- extent(u)
+           ei <- extent(t.at.u)
+           e <- raster::intersect(ei,eu)
+
+           t.int.u <- crop(t.at.u, e)
+
+           if (sum(!is.na(values(t.int.u))) < 500) {t.int.u <- NULL}
+
+           t.int.u
+       }
+
+       if(length(crp.tiles.at.u) > 1) {
+           out <- do.call(mosaic, c(crp.tiles.at.u,list(fun = mean, tolerance = 0.5)))
+       } else {
+           out <- crp.tiles.at.u[[1]]
+           }
+
+       writeRaster(x = out, filename = selected_seamlines_by_ua.df$file.names[i], overwrite = T)
+       out
+   }
+
+
+  # closeAllConnections()
+
+#+end_src
+
+#+results:
+
+#+begin_src R :exports results :results graphics :file ./figs/test.png
+plotRGB(naip.at.urb[[1]],4,3,2)
+#+end_src
+
+#+results:
+[[file:./figs/test.png]]
 
 ** Create a PCA transformation for each hour of day (maybe not necessary, but easy enough)
 ** Create State-wide classifiers
