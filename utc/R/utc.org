@@ -60,6 +60,29 @@ sample.with.na.rm <- function(x, na.rm = T) {
 #+end_src
 
 #+results:
+*** save leaflet to leaflet dir
+#+begin_src R
+  saveLeaflet <- function(map, filename,...) {
+    wd <- getwd()
+    setwd("leaflet")
+    saveWidget(widget = map, file = filename, libdir = "lib")
+    setwd(wd)
+    }
+#+end_src
+
+#+results:
+*** ascii no warn print
+#+begin_src R
+    ascii.nowarn.print <- function(x) {
+      #op <- options(warn = -1)
+#      on.exit(options(op))
+
+      suppressWarnings(print(ascii(x)))
+
+    }
+#+end_src
+
+#+results:
 
 ** Crop Image
 
