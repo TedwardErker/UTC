@@ -1,7 +1,7 @@
 #+TITLE:Functions to Map Urban Tree Canopy
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc*
+#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc:krusty*
 #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
 ------------
 * Functions
@@ -83,34 +83,202 @@ sample.with.na.rm <- function(x, na.rm = T) {
 #+end_src
 
 #+results:
+*** Solar Position
+#+begin_src R
+    astronomersAlmanacTime <- function(x)
+    {
+      # Astronomer's almanach time is the number of
+      # days since (noon, 1 January 2000)
+      origin <- as.POSIXct("2000-01-01 12:00:00")
+      as.numeric(difftime(x, origin, units = "days"))
+    }
+
+    hourOfDay <- function(x)
+    {
+      x <- as.POSIXlt(x)
+      with(x, hour + min / 60 + sec / 3600)
+    }
+
+    degreesToRadians <- function(degrees)
+    {
+      degrees * pi / 180
+    }
+
+    radiansToDegrees <- function(radians)
+    {
+      radians * 180 / pi
+    }
+
+    meanLongitudeDegrees <- function(time)
+    {
+      (280.460 + 0.9856474 * time) %% 360
+    }
+
+    meanAnomalyRadians <- function(time)
+    {
+      degreesToRadians((357.528 + 0.9856003 * time) %% 360)
+    }
+
+    eclipticLongitudeRadians <- function(mnlong, mnanom)
+    {
+      degreesToRadians(
+          (mnlong + 1.915 * sin(mnanom) + 0.020 * sin(2 * mnanom)) %% 360
+      )
+    }
+
+    eclipticObliquityRadians <- function(time)
+    {
+      degreesToRadians(23.439 - 0.0000004 * time)
+    }
+
+    rightAscensionRadians <- function(oblqec, eclong)
+    {
+      num <- cos(oblqec) * sin(eclong)
+      den <- cos(eclong)
+      ra <- atan(num / den)
+      ra[den < 0] <- ra[den < 0] + pi
+      ra[den >= 0 & num < 0] <- ra[den >= 0 & num < 0] + 2 * pi
+      ra
+    }
+
+    rightDeclinationRadians <- function(oblqec, eclong)
+    {
+      asin(sin(oblqec) * sin(eclong))
+    }
+
+    greenwichMeanSiderealTimeHours <- function(time, hour)
+    {
+      (6.697375 + 0.0657098242 * time + hour) %% 24
+    }
+
+    localMeanSiderealTimeRadians <- function(gmst, long)
+    {
+      degreesToRadians(15 * ((gmst + long / 15) %% 24))
+    }
+
+    hourAngleRadians <- function(lmst, ra)
+    {
+      ((lmst - ra + pi) %% (2 * pi)) - pi
+    }
+
+    elevationRadians <- function(lat, dec, ha)
+    {
+      asin(sin(dec) * sin(lat) + cos(dec) * cos(lat) * cos(ha))
+    }
+
+    solarAzimuthRadiansJosh <- function(lat, dec, ha, el)
+    {
+      az <- asin(-cos(dec) * sin(ha) / cos(el))
+      cosAzPos <- (0 <= sin(dec) - sin(el) * sin(lat))
+      sinAzNeg <- (sin(az) < 0)
+      az[cosAzPos & sinAzNeg] <- az[cosAzPos & sinAzNeg] + 2 * pi
+      az[!cosAzPos] <- pi - az[!cosAzPos]
+      az
+    }
+
+    solarAzimuthRadiansCharlie <- function(lat, dec, ha)
+    {
+      zenithAngle <- acos(sin(lat) * sin(dec) + cos(lat) * cos(dec) * cos(ha))
+      az <- acos((sin(lat) * cos(zenithAngle) - sin(dec)) / (cos(lat) * sin(zenithAngle)))
+      ifelse(ha > 0, az + pi, 3 * pi - az) %% (2 * pi)
+    }
+
+    sunPosition <- function(when = Sys.time(), format, lat = 46.5, long = 6.5)
+    {
+      if(is.character(when)) when <- strptime(when, format)
+      time <- astronomersAlmanacTime(when)
+      hour <- hourOfDay(when)
+
+      # Ecliptic coordinates
+      mnlong <- meanLongitudeDegrees(time)
+      mnanom <- meanAnomalyRadians(time)
+      eclong <- eclipticLongitudeRadians(mnlong, mnanom)
+      oblqec <- eclipticObliquityRadians(time)
+
+      # Celestial coordinates
+      ra <- rightAscensionRadians(oblqec, eclong)
+      dec <- rightDeclinationRadians(oblqec, eclong)
+
+      # Local coordinates
+      gmst <- greenwichMeanSiderealTimeHours(time, hour)
+      lmst <- localMeanSiderealTimeRadians(gmst, long)
+
+      # Hour angle
+      ha <- hourAngleRadians(lmst, ra)
+
+      # Latitude to radians
+      lat <- degreesToRadians(lat)
+
+      # Azimuth and elevation
+      el <- elevationRadians(lat, dec, ha)
+      azJ <- solarAzimuthRadiansJosh(lat, dec, ha, el)
+      azC <- solarAzimuthRadiansCharlie(lat, dec, ha)
+
+      list(
+          elevation = radiansToDegrees(el),
+          azimuthJ  = radiansToDegrees(azJ),
+          azimuthC  = radiansToDegrees(azC)
+      )
+    }
+#+end_src
+
+#+results:
 
 ** Crop Image
-
 *** Crop image to each Shapefile polygon
 #+BEGIN_SRC R
-  Crop_image_to_each_Shapefile_polygon <- function(shapefile.dsn,
-                                                   shapefile.layer,
-                                                   image.path,
-                                                   cores,
-                                                   output.dir)  {
-      image.name <- extract.name.from.path(image.path)
-      shape <- readOGR(shapefile.dsn, str_c(image.name,"_",shapefile.layer))
-      polygons <- as(shape, "SpatialPolygons")
+    #old
+      Crop_image_to_each_Shapefile_polygon <- function(shapefile.dsn,
+                                                       shapefile.layer,
+                                                       image.path,
+                                                       cores,
+                                                       output.dir)  {
+          image.name <- extract.name.from.path(image.path)
+          shape <- readOGR(shapefile.dsn, str_c(image.name,"_",shapefile.layer))
+          polygons <- as(shape, "SpatialPolygons")
 
-      image <- stack(image.path)
+          image <- stack(image.path)
 
-      cl <- makeCluster(cores)
-      registerDoParallel(cl)
+          cl <- makeCluster(cores)
+          registerDoParallel(cl)
 
-      foreach (i = seq_along(polygons),
-               .packages = c("raster")) %dopar% {
-                   r <- image
-                   r <- crop(r, polygons[i])
-                   writeRaster(r, paste0(output.dir,"/",image.name,".",i,".tif"),
-                               overwrite = T)
-               }
-  closeAllConnections()
-  }
+          foreach (i = seq_along(polygons),
+                   .packages = c("raster")) %dopar% {
+                       r <- image
+                       r <- crop(r, polygons[i])
+                       writeRaster(r, paste0(output.dir,"/",image.name,".",i,".tif"),
+                                   overwrite = T)
+                   }
+      closeAllConnections()
+      }
+
+    #new [2016-09-06 Tue]
+      Crop_image_to_each_Shapefile_polygon <- function(shapefile.dsn,
+                                                       shapefile.layer,
+                                                       image.path,
+                                                       image.name,
+                                                       cores,
+                                                       output.dir,
+                                                       output.tile.prepend = "t")  {
+          shape <- readOGR(shapefile.dsn, shapefile.layer)
+          polygons <- as(shape, "SpatialPolygons")
+
+          image <- stack(image.path)
+
+          cl <- makeCluster(cores)
+          registerDoParallel(cl)
+
+          foreach (i = seq_along(polygons),
+                   .packages = c("raster","rgeos")) %dopar% {
+                       r <- image
+                       poly.wBuff <- gBuffer(polygons[i],width = 10)
+                       r <- crop(r, poly.wBuff)
+                       dir.create(paste0(output.dir,"/",image.name))
+                       writeRaster(r, paste0(output.dir,"/",image.name,"/",output.tile.prepend,i,".tif"),
+                                   overwrite = T)
+                   }
+      closeAllConnections()
+      }
 
 #+END_SRC
 
@@ -326,194 +494,229 @@ sample.with.na.rm <- function(x, na.rm = T) {
 *** Image PCA
 
 #+BEGIN_SRC R
-  pca.transformation <- function(tile.dir,
-                                 image.name,
-                                 tile.name,
-                                 loc,
-                                 feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
-                                 pca.append = pca.appendage,
-                                 out.image.appendage = pca.appendage,
-                                 comps.to.use = c(1,2,3),
-                                 pca.dir = dd.pca.dir) {
 
-      s <- stack(list.files(tile.dir, pattern = paste0(tile.name,feature.pattern), full.names = T))
-      names(s) <- sub(x = names(s), pattern = ".*_", replacement = "")
+    pca.transformation <- function(tile.dir,
+                                   image.name,
+                                   tile.name,
+                                   loc,
+                                   feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
+                                   pca.append = pca.appendage,
+                                   out.image.appendage = pca.appendage,
+                                   comps.to.use = c(1,2,3),
+                                   pca.dir = dd.pca.dir) {
 
-      pca.model <- readRDS(str_c(pca.dir,"/",loc,image.name,pca.append,".rds"))
+        s <- stack(list.files(tile.dir, pattern = paste0(tile.name,feature.pattern), full.names = T))
+        names(s) <- sub(x = names(s), pattern = ".*_", replacement = "")
 
-      r <- predict(s, pca.model, index = comps.to.use)
+        pca.model <- readRDS(str_c(pca.dir,"/",loc,image.name,pca.append,".rds"))
 
-      min.r <- getRasterMin(r)
-      max.r <- getRasterMax(r)
-      rescaled.r <- rescale.0.254(r, min.r, max.r)
+        r <- predict(s, pca.model, index = comps.to.use)
 
-      out.path <- str_c(tile.dir, "/", tile.name, out.image.appendage, ".tif")
-      writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U', bylayer = F)
-  }
+        min.r <- getRasterMin(r)
+        max.r <- getRasterMax(r)
+        rescaled.r <- rescale.0.254(r, min.r, max.r)
 
-
-  getRasterMin <- function(t) {
-      return(min(cellStats(t, stat = "min")))
-  }
-
-  getRasterMax <- function(t) {
-      return(max(cellStats(t, stat = "max")))
-  }
-
-  rescale.0.254 <- function(raster,
-                            min,
-                            max) {
-                                (raster - min)/(max-min) * 254
-  }
-
-  rescale.0.b <- function(raster, b, each.band = T) {
-      if (each.band == T) {
-          min <- cellStats(raster, stat = "min")
-          max <- cellStats(raster, stat = "max")
-      } else {
-          min <- getRasterMin(raster)
-          max <- getRasterMax(raster)
-      }
-      (raster - min)/(max-min) * b
-  }
+        out.path <- str_c(tile.dir, "/", tile.name, out.image.appendage, ".tif")
+        writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U', bylayer = F)
+    }
 
 
-  ## image.pca <- function(image.name,
-  ##                       pca.model.name.append = pca.model.name.appendage,
-  ##                       tile.dir,
-  ##                       tile.name,
-  ##                       in.image.appendage = ratio.tile.name.append,
-  ##                       out.image.appendage = pca.tile.name.append,
-  ##                       band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
-  ##                       comps.to.use = c(1,2,3),
-  ##                       pca.dir = dd.pca.dir) {
+    getRasterMin <- function(t) {
+        return(min(cellStats(t, stat = "min")))
+    }
+
+    getRasterMax <- function(t) {
+        return(max(cellStats(t, stat = "max")))
+    }
+
+    rescale.0.254 <- function(raster,
+                              min,
+                              max) {
+                                  (raster - min)/(max-min) * 254
+    }
+
+    rescale.0.b <- function(raster, b, each.band = T) {
+        if (each.band == T) {
+            min <- cellStats(raster, stat = "min")
+            max <- cellStats(raster, stat = "max")
+        } else {
+            min <- getRasterMin(raster)
+            max <- getRasterMax(raster)
+        }
+        (raster - min)/(max-min) * b
+    }
 
 
-  ##     out.path <- str_c(tile.dir, "/", tile.name, out.image.appendage, ".tif")
-
-  ##     s <- stack(str_c(tile.dir, "/", tile.name, in.image.appendage,".tif"))
-  ##     names(s) <- band.names
-
-  ##     pca.model <- readRDS(str_c(pca.dir,"/",image.name,pca.model.name.append))
-
-  ##     r <- predict(s, pca.model, index = comps.to.use)
-
-  ##     min.r <- getRasterMin(r)
-  ##     max.r <- getRasterMax(r)
-  ##     rescaled.r <- rescale.0.255(r, min.r, max.r)
-  ##     writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U')
-  ## }
+    ## image.pca <- function(image.name,
+    ##                       pca.model.name.append = pca.model.name.appendage,
+    ##                       tile.dir,
+    ##                       tile.name,
+    ##                       in.image.appendage = ratio.tile.name.append,
+    ##                       out.image.appendage = pca.tile.name.append,
+    ##                       band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
+    ##                       comps.to.use = c(1,2,3),
+    ##                       pca.dir = dd.pca.dir) {
 
 
-  make.and.save.pca.transformation <- function(image.dir,
-                                               image.name,
-                                               location,
-                                               pca.append = pca.appendage,
-                                               max.sample.size = 10000,
-                                               core.num = cores,
-                                               feature.pattern = ".*_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
-                                               ratio.appendage = ratio.tile.name.append) {
+    ##     out.path <- str_c(tile.dir, "/", tile.name, out.image.appendage, ".tif")
 
-      tile.paths <- list.files(image.dir, pattern = paste0(image.name,feature.pattern), full.names = T)
+    ##     s <- stack(str_c(tile.dir, "/", tile.name, in.image.appendage,".tif"))
+    ##     names(s) <- band.names
 
-      tile.names <- str_match(tile.paths,"(.*\\.[0-9]+)_.*")[,2] %>%  unique() # get the image names of pca regions
+    ##     pca.model <- readRDS(str_c(pca.dir,"/",image.name,pca.model.name.append))
 
-      cl <- makeCluster(cores)
-      registerDoParallel(cl)
+    ##     r <- predict(s, pca.model, index = comps.to.use)
 
-      sr <- foreach (tile.name = tile.names, .packages = c("stringr","raster"), .combine ="rbind") %dopar% {
-          t.names <- str_extract(tile.paths, paste0(".*",tile.name,".*")) %>% na.omit()
-          tile <- stack(t.names)
-          names(tile) <- sub(x = names(tile), pattern = ".*_", replacement = "")
-          samp <- sampleRandom(tile, ifelse(ncell(tile) > max.sample.size ,max.sample.size, ncell(tile)))
-          colnames(samp) <- names(tile)
-          samp
-      }
-      closeAllConnections()
-
-                                          # Perform PCA on sample
-      pca <- prcomp(sr, scale = T)
-      saveRDS(pca,paste0(image.dir,"/",location,image.name,pca.append,".rds"))
-      return(pca)
-  }
+    ##     min.r <- getRasterMin(r)
+    ##     max.r <- getRasterMax(r)
+    ##     rescaled.r <- rescale.0.255(r, min.r, max.r)
+    ##     writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U')
+    ## }
 
 
-  ## make.and.save.pca.transformation <- function(image.dir,
-  ##                                              image.name,
-  ##                                              pca.model.name.append = "_pca.rds",
-  ##                                              max.sample.size = 10000,
-  ##                                              core.num = cores,
-  ##                                              band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
-  ##                                              ratio.appendage = ratio.tile.name.append) {
-  ##     tile.paths <- list.files(str_c(image.dir), pattern = paste0("*",ratio.appendage), full.names = T)
+    make.and.save.pca.transformation <- function(image.dir,
+                                                 image.name,
+                                                 location,
+                                                 pca.append = pca.appendage,
+                                                 max.sample.size = 10000,
+                                                 core.num = cores,
+                                                 feature.pattern = ".*_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
+                                                 ratio.appendage = ratio.tile.name.append) {
 
-  ##     tile.names <- basename(tile.paths)
+        tile.paths <- list.files(image.dir, pattern = paste0(image.name,feature.pattern), full.names = T)
 
-  ##     cl <- makeCluster(core.num)
-  ##     registerDoParallel(cl)
+        tile.names <- str_match(tile.paths,"(.*\\.[0-9]+)_.*")[,2] %>%  unique() # get the image names of pca regions
 
-  ##     sr <- foreach (i = seq_along(tile.names), .packages = c("raster"), .combine ="rbind") %dopar% {
-  ##         tile <- stack(tile.paths[i])
-  ##         s <- sampleRandom(tile, ifelse(ncell(tile) > max.sample.size ,max.sample.size, ncell(tile)))
-  ##     }
+        cl <- makeCluster(cores)
+        registerDoParallel(cl)
 
-  ##     colnames(sr) <- band.names
+        sr <- foreach (tile.name = tile.names, .packages = c("stringr","raster"), .combine ="rbind") %dopar% {
+            t.names <- str_extract(tile.paths, paste0(".*",tile.name,".*")) %>% na.omit()
+            tile <- stack(t.names)
+            names(tile) <- sub(x = names(tile), pattern = ".*_", replacement = "")
+            samp <- sampleRandom(tile, ifelse(ncell(tile) > max.sample.size ,max.sample.size, ncell(tile)))
+            colnames(samp) <- names(tile)
+            samp
+        }
+        closeAllConnections()
 
-  ##                                         # Perform PCA on sample
-  ##     pca <- prcomp(sr, scale = T)
-  ##     saveRDS(pca,paste0(image.dir,"/",image.name,pca.model.name.append))
-
-  ##     return(pca)
-  ## }
-
-
-  image.pca.forWholeState <- function(pca.model.name.append = pca.model.name.appendage,
-                                      tile.dir,
-                                      tile.name,
-                                      in.image.appendage = ratio.tile.name.append,
-                                      out.image.appendage = pca.tile.name.append,
-                                      band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
-                                      comps.to.use = c(1,2,3),
-                                      pca.transform) {
-
-
-      out.path <- str_c(tile.dir, "/", tile.name, out.image.appendage, ".tif")
-
-      s <- stack(str_c(tile.dir, "/", tile.name, in.image.appendage,".tif"))
-      names(s) <- band.names
-
-      r <- predict(s, pca.transform, index = comps.to.use)
-
-      min.r <- getRasterMin(r)
-      max.r <- getRasterMax(r)
-      rescaled.r <- rescale.0.254(r, min.r, max.r)
-      writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U')
-  }
+                                            # Perform PCA on sample
+        pca <- prcomp(sr, scale = T)
+        saveRDS(pca,paste0(image.dir,"/",location,image.name,pca.append,".rds"))
+        return(pca)
+    }
 
 
 
-  ## image.dir <- image.cropped.to.training.dir
-  ## image.name <- 9
-  ##                         in.image.appendage = ratio.tile.name.append
-  ##                         out.image.appendage = pca.tile.name.append
-  ##                         band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
-  ##                         max.sample.size = 10000
-  ##                         comps.to.use = c(1,2,3)
+    make.and.save.pca.transformation.wholestate <- function(image.dir,
+                                                 image.name,
+                                                 location,
+                                                 pca.append = pca.appendage,
+                                                 max.sample.size = 10000,
+                                                 core.num = cores,
+                                                 feature.pattern = ".*_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif") {
+  #                                               ratio.append = ratio.appendage) {
 
-  ##       out.path <- str_c(image.dir, "/", image.name, out.image.appendage, ".tif")
+        tile.paths <- list.files(image.dir, pattern = feature.pattern, full.names = T)
 
-  ##       s <- stack(str_c(image.dir, "/", image.name, in.image.appendage,".tif"))
-  ##       names(s) <- band.names
+        tile.names <- str_match(tile.paths,"(.*)_.*")[,2] %>%  unique() # get the image names of pca regions
 
-  ##       sr <- sampleRandom(s, ifelse(ncell(s) > max.sample.size, max.sample.size, ncell(s)))
-  ##       pca <- prcomp(sr, scale = T)
+        cl <- makeCluster(cores)
+        registerDoParallel(cl)
 
-  ##       r <- predict(s, pca, index = comps.to.use)
+        sr <- foreach (tile.name = tile.names, .packages = c("stringr","raster"), .combine ="rbind") %dopar% {
+            t.names <- str_extract(tile.paths, paste0(".*",tile.name,".*")) %>% na.omit()
+            tile <- stack(t.names)
+            names(tile) <- sub(x = names(tile), pattern = ".*_", replacement = "")
+            samp <- sampleRandom(tile, ifelse(ncell(tile) > max.sample.size ,max.sample.size, ncell(tile)))
+            colnames(samp) <- names(tile)
+            samp
+        }
+        closeAllConnections()
 
-  ##       min.r <- getRasterMin(r)
-  ##       max.r <- getRasterMax(r)
-  ##       rescaled.r <- rescale.0.255(r, min.r, max.r)
-  ##       writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U')
+                                            # Perform PCA on sample
+        pca <- prcomp(sr, scale = T)
+        saveRDS(pca,paste0(image.dir,"/",location,image.name,pca.append,".rds"))
+        return(pca)
+    }
+
+
+    ## make.and.save.pca.transformation <- function(image.dir,
+    ##                                              image.name,
+    ##                                              pca.model.name.append = "_pca.rds",
+    ##                                              max.sample.size = 10000,
+    ##                                              core.num = cores,
+    ##                                              band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
+    ##                                              ratio.appendage = ratio.tile.name.append) {
+    ##     tile.paths <- list.files(str_c(image.dir), pattern = paste0("*",ratio.appendage), full.names = T)
+
+    ##     tile.names <- basename(tile.paths)
+
+    ##     cl <- makeCluster(core.num)
+    ##     registerDoParallel(cl)
+
+    ##     sr <- foreach (i = seq_along(tile.names), .packages = c("raster"), .combine ="rbind") %dopar% {
+    ##         tile <- stack(tile.paths[i])
+    ##         s <- sampleRandom(tile, ifelse(ncell(tile) > max.sample.size ,max.sample.size, ncell(tile)))
+    ##     }
+
+    ##     colnames(sr) <- band.names
+
+    ##                                         # Perform PCA on sample
+    ##     pca <- prcomp(sr, scale = T)
+    ##     saveRDS(pca,paste0(image.dir,"/",image.name,pca.model.name.append))
+
+    ##     return(pca)
+    ## }
+
+
+    image.pca.forWholeState <- function(pca.model.name.append = pca.model.name.appendage,
+                                        tile.dir,
+                                        tile.name,
+                                        in.image.appendage = ratio.tile.name.append,
+                                        out.image.appendage = pca.tile.name.append,
+                                        band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi"),
+                                        comps.to.use = c(1,2,3),
+                                        pca.transform) {
+
+
+        out.path <- str_c(tile.dir, "/", tile.name, out.image.appendage, ".tif")
+
+        s <- stack(str_c(tile.dir, "/", tile.name, in.image.appendage,".tif"))
+        names(s) <- band.names
+
+        r <- predict(s, pca.transform, index = comps.to.use)
+
+        min.r <- getRasterMin(r)
+        max.r <- getRasterMax(r)
+        rescaled.r <- rescale.0.254(r, min.r, max.r)
+        writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U')
+    }
+
+
+
+    ## image.dir <- image.cropped.to.training.dir
+    ## image.name <- 9
+    ##                         in.image.appendage = ratio.tile.name.append
+    ##                         out.image.appendage = pca.tile.name.append
+    ##                         band.names = c("blue","green","red","nir","b_ratio","g_ratio","r_ratio","n_ratio","ndvi")
+    ##                         max.sample.size = 10000
+    ##                         comps.to.use = c(1,2,3)
+
+    ##       out.path <- str_c(image.dir, "/", image.name, out.image.appendage, ".tif")
+
+    ##       s <- stack(str_c(image.dir, "/", image.name, in.image.appendage,".tif"))
+    ##       names(s) <- band.names
+
+    ##       sr <- sampleRandom(s, ifelse(ncell(s) > max.sample.size, max.sample.size, ncell(s)))
+    ##       pca <- prcomp(sr, scale = T)
+
+    ##       r <- predict(s, pca, index = comps.to.use)
+
+    ##       min.r <- getRasterMin(r)
+    ##       max.r <- getRasterMax(r)
+    ##       rescaled.r <- rescale.0.255(r, min.r, max.r)
+    ##       writeRaster(rescaled.r, filename = out.path, overwrite=TRUE, datatype = 'INT1U')
 
 
 
@@ -523,15 +726,15 @@ sample.with.na.rm <- function(x, na.rm = T) {
 
 
 
-                                          # Function takes raster stack, samples data, performs pca and returns stack of first n_pcomp bands
-  ## predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
-  ##     sr <- sampleRandom(stack,sampleNumber)
-  ##     pca <- prcomp(sr, scale=T)
-  ##     beginCluster()
-  ##     r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
-  ##     endCluster()
-  ##     return(r)
-  ## }
+                                            # Function takes raster stack, samples data, performs pca and returns stack of first n_pcomp bands
+    ## predict_pca_wSampling_parallel <- function(stack, sampleNumber, n_pcomp, nCores = detectCores()-1) {
+    ##     sr <- sampleRandom(stack,sampleNumber)
+    ##     pca <- prcomp(sr, scale=T)
+    ##     beginCluster()
+    ##     r <- clusterR(stack, predict, args = list(pca, index = 1:n_pcomp))
+    ##     endCluster()
+    ##     return(r)
+    ## }
 #+END_SRC
 
 #+RESULTS:
@@ -638,8 +841,8 @@ wrapper for slic.
                                       feature.df.append = feature.df.appendage) {
 
       fea <- stack(list.files(tile.dir, pattern = paste0(tile.name,fea.pattern), full.names = T))
-      names(fea) <- sub(x = names(fea), pattern = "(madisonNAIP|madisonPanshpSPOT|urbanExtent|wausauNAIP).*?_", replacement = "")
-
+#      names(fea) <- sub(x = names(fea), pattern = "(madisonNAIP|madisonPanshpSPOT|urbanExtent|wausauNAIP).*?_", replacement = "")
+      names(fea) <- sub(x = names(fea), pattern = "(.*?)_", replacement = "")
       seg.path <- paste0(tile.dir,"/",tile.name,segmentation.param.appendage, ".tif")
       seg <- raster(seg.path)
 
@@ -850,12 +1053,26 @@ wrapper for slic.
               mutate(segment = segment.id)
 
 
-          n.pixels$tile.name <- str_match(n.pixels$image.name, "(.*?\\.[0-9]+).*")[,2]
+  #        n.pixels$tile.name <- str_match(n.pixels$image.name, "(.*?\\.[0-9]+).*")[,2]
+          n.pixels$tile.name <- str_match(n.pixels$image.name, "(.*?)_.*")[,2] # changed [2016-09-07 Wed]
+
+          ## out <- left_join(n.pixels, SegmentFeatureDF)        %>%
+          ##     distinct() %>%
+          ##     dplyr::select(-id,
+          ##                   -segment,
+          ##                   -segment.id,
+          ##                   -image.name,
+          ##                   -image.name,
+          ##                   -tile.name,
+          ##                   -polygon.id,
+          ##                   -n.pixels.per.seg,
+          ##                   -n.pixels.per.seg.in.polygon,
+          ##                   -pct.seg.in.polygon)        %>%
+          ##     filter(complete.cases(.))
 
           out <- left_join(n.pixels, SegmentFeatureDF)        %>%
               distinct() %>%
-              dplyr::select(-id,
-                            -segment,
+              dplyr::select(-segment,
                             -segment.id,
                             -image.name,
                             -image.name,
@@ -865,6 +1082,7 @@ wrapper for slic.
                             -n.pixels.per.seg.in.polygon,
                             -pct.seg.in.polygon)        %>%
               filter(complete.cases(.))
+
 
           out
       }
