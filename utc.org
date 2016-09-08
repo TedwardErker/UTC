@@ -4585,7 +4585,7 @@ df %>% ascii.nowarn.print
   superior_seamlines_by_ua.df <- superior_seamlines_by_ua %>%
       data.frame() %>%
       mutate(city = str_extract(NAME10, "[A-Za-z ]*")) %>%
-      mutate(file.names = str_c(whole.state.dd.naip,"city-",city,"_month-",month,"_hour-",hour,"_NAIP.tif")) %>%
+      mutate(file.names = str_c(whole.state.dd.naip,"/city-",city,"_month-",month,"_hour-",hour,"_NAIP.tif")) %>%
       mutate(file.names = str_replace(file.names, " ", ""))
 
 
