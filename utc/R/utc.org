@@ -85,141 +85,144 @@ sample.with.na.rm <- function(x, na.rm = T) {
 #+results:
 *** Solar Position
 #+begin_src R
-    astronomersAlmanacTime <- function(x)
-    {
-      # Astronomer's almanach time is the number of
-      # days since (noon, 1 January 2000)
-      origin <- as.POSIXct("2000-01-01 12:00:00")
-      as.numeric(difftime(x, origin, units = "days"))
-    }
+  astronomersAlmanacTime <- function(x)
+  {
+    # Astronomer's almanach time is the number of
+    # days since (noon, 1 January 2000)
+    origin <- as.POSIXct("2000-01-01 12:00:00")
+    as.numeric(difftime(x, origin, units = "days"))
+  }
 
-    hourOfDay <- function(x)
-    {
-      x <- as.POSIXlt(x)
-      with(x, hour + min / 60 + sec / 3600)
-    }
+  hourOfDay <- function(x)
+  {
+    x <- as.POSIXlt(x)
+    with(x, hour + min / 60 + sec / 3600)
+  }
 
-    degreesToRadians <- function(degrees)
-    {
-      degrees * pi / 180
-    }
+  degreesToRadians <- function(degrees)
+  {
+    degrees * pi / 180
+  }
 
-    radiansToDegrees <- function(radians)
-    {
-      radians * 180 / pi
-    }
+  radiansToDegrees <- function(radians)
+  {
+    radians * 180 / pi
+  }
 
-    meanLongitudeDegrees <- function(time)
-    {
-      (280.460 + 0.9856474 * time) %% 360
-    }
+  meanLongitudeDegrees <- function(time)
+  {
+    (280.460 + 0.9856474 * time) %% 360
+  }
 
-    meanAnomalyRadians <- function(time)
-    {
-      degreesToRadians((357.528 + 0.9856003 * time) %% 360)
-    }
+  meanAnomalyRadians <- function(time)
+  {
+    degreesToRadians((357.528 + 0.9856003 * time) %% 360)
+  }
 
-    eclipticLongitudeRadians <- function(mnlong, mnanom)
-    {
-      degreesToRadians(
-          (mnlong + 1.915 * sin(mnanom) + 0.020 * sin(2 * mnanom)) %% 360
-      )
-    }
+  eclipticLongitudeRadians <- function(mnlong, mnanom)
+  {
+    degreesToRadians(
+        (mnlong + 1.915 * sin(mnanom) + 0.020 * sin(2 * mnanom)) %% 360
+    )
+  }
 
-    eclipticObliquityRadians <- function(time)
-    {
-      degreesToRadians(23.439 - 0.0000004 * time)
-    }
+  eclipticObliquityRadians <- function(time)
+  {
+    degreesToRadians(23.439 - 0.0000004 * time)
+  }
 
-    rightAscensionRadians <- function(oblqec, eclong)
-    {
-      num <- cos(oblqec) * sin(eclong)
-      den <- cos(eclong)
-      ra <- atan(num / den)
-      ra[den < 0] <- ra[den < 0] + pi
-      ra[den >= 0 & num < 0] <- ra[den >= 0 & num < 0] + 2 * pi
-      ra
-    }
+  rightAscensionRadians <- function(oblqec, eclong)
+  {
+    num <- cos(oblqec) * sin(eclong)
+    den <- cos(eclong)
+    ra <- atan(num / den)
+    ra[den < 0] <- ra[den < 0] + pi
+    ra[den >= 0 & num < 0] <- ra[den >= 0 & num < 0] + 2 * pi
+    ra
+  }
 
-    rightDeclinationRadians <- function(oblqec, eclong)
-    {
-      asin(sin(oblqec) * sin(eclong))
-    }
+  rightDeclinationRadians <- function(oblqec, eclong)
+  {
+    asin(sin(oblqec) * sin(eclong))
+  }
 
-    greenwichMeanSiderealTimeHours <- function(time, hour)
-    {
-      (6.697375 + 0.0657098242 * time + hour) %% 24
-    }
+  greenwichMeanSiderealTimeHours <- function(time, hour)
+  {
+    (6.697375 + 0.0657098242 * time + hour) %% 24
+  }
 
-    localMeanSiderealTimeRadians <- function(gmst, long)
-    {
-      degreesToRadians(15 * ((gmst + long / 15) %% 24))
-    }
+  localMeanSiderealTimeRadians <- function(gmst, long)
+  {
+    degreesToRadians(15 * ((gmst + long / 15) %% 24))
+  }
 
-    hourAngleRadians <- function(lmst, ra)
-    {
-      ((lmst - ra + pi) %% (2 * pi)) - pi
-    }
+  hourAngleRadians <- function(lmst, ra)
+  {
+    ((lmst - ra + pi) %% (2 * pi)) - pi
+  }
 
-    elevationRadians <- function(lat, dec, ha)
-    {
-      asin(sin(dec) * sin(lat) + cos(dec) * cos(lat) * cos(ha))
-    }
+  elevationRadians <- function(lat, dec, ha)
+  {
+    asin(sin(dec) * sin(lat) + cos(dec) * cos(lat) * cos(ha))
+  }
 
-    solarAzimuthRadiansJosh <- function(lat, dec, ha, el)
-    {
-      az <- asin(-cos(dec) * sin(ha) / cos(el))
-      cosAzPos <- (0 <= sin(dec) - sin(el) * sin(lat))
-      sinAzNeg <- (sin(az) < 0)
-      az[cosAzPos & sinAzNeg] <- az[cosAzPos & sinAzNeg] + 2 * pi
-      az[!cosAzPos] <- pi - az[!cosAzPos]
-      az
-    }
+  solarAzimuthRadiansJosh <- function(lat, dec, ha, el)
+  {
+    az <- asin(-cos(dec) * sin(ha) / cos(el))
+    cosAzPos <- (0 <= sin(dec) - sin(el) * sin(lat))
+    sinAzNeg <- (sin(az) < 0)
+    az[cosAzPos & sinAzNeg] <- az[cosAzPos & sinAzNeg] + 2 * pi
+    az[!cosAzPos] <- pi - az[!cosAzPos]
+    az
+  }
 
-    solarAzimuthRadiansCharlie <- function(lat, dec, ha)
-    {
-      zenithAngle <- acos(sin(lat) * sin(dec) + cos(lat) * cos(dec) * cos(ha))
-      az <- acos((sin(lat) * cos(zenithAngle) - sin(dec)) / (cos(lat) * sin(zenithAngle)))
-      ifelse(ha > 0, az + pi, 3 * pi - az) %% (2 * pi)
-    }
+  solarAzimuthRadiansCharlie <- function(lat, dec, ha)
+  {
+    zenithAngle <- acos(sin(lat) * sin(dec) + cos(lat) * cos(dec) * cos(ha))
+    az <- acos((sin(lat) * cos(zenithAngle) - sin(dec)) / (cos(lat) * sin(zenithAngle)))
+    ifelse(ha > 0, az + pi, 3 * pi - az) %% (2 * pi)
+  }
 
-    sunPosition <- function(when = Sys.time(), format, lat = 46.5, long = 6.5)
-    {
-      if(is.character(when)) when <- strptime(when, format)
-      time <- astronomersAlmanacTime(when)
-      hour <- hourOfDay(when)
+  sunPosition <- function(when = Sys.time(), format, lat = 46.5, long = 6.5)
+  {
 
-      # Ecliptic coordinates
-      mnlong <- meanLongitudeDegrees(time)
-      mnanom <- meanAnomalyRadians(time)
-      eclong <- eclipticLongitudeRadians(mnlong, mnanom)
-      oblqec <- eclipticObliquityRadians(time)
+      if(is.character(when))
+          when <- strptime(when, format, tz="UTC")
+      else
+         when <- as.POSIXlt(when, tz="UTC")
 
-      # Celestial coordinates
-      ra <- rightAscensionRadians(oblqec, eclong)
-      dec <- rightDeclinationRadians(oblqec, eclong)
+    time <- astronomersAlmanacTime(when)
+    hour <- hourOfDay(when)
 
-      # Local coordinates
-      gmst <- greenwichMeanSiderealTimeHours(time, hour)
-      lmst <- localMeanSiderealTimeRadians(gmst, long)
+    # Ecliptic coordinates
+    mnlong <- meanLongitudeDegrees(time)
+    mnanom <- meanAnomalyRadians(time)
+    eclong <- eclipticLongitudeRadians(mnlong, mnanom)
+    oblqec <- eclipticObliquityRadians(time)
 
-      # Hour angle
-      ha <- hourAngleRadians(lmst, ra)
+    # Celestial coordinates
+    ra <- rightAscensionRadians(oblqec, eclong)
+    dec <- rightDeclinationRadians(oblqec, eclong)
 
-      # Latitude to radians
-      lat <- degreesToRadians(lat)
+    # Local coordinates
+    gmst <- greenwichMeanSiderealTimeHours(time, hour)
+    lmst <- localMeanSiderealTimeRadians(gmst, long)
 
-      # Azimuth and elevation
-      el <- elevationRadians(lat, dec, ha)
-      azJ <- solarAzimuthRadiansJosh(lat, dec, ha, el)
-      azC <- solarAzimuthRadiansCharlie(lat, dec, ha)
+    # Hour angle
+    ha <- hourAngleRadians(lmst, ra)
 
-      list(
-          elevation = radiansToDegrees(el),
-          azimuthJ  = radiansToDegrees(azJ),
-          azimuthC  = radiansToDegrees(azC)
-      )
-    }
+    # Latitude to radians
+    lat <- degreesToRadians(lat)
+
+    # Azimuth and elevation
+    el <- elevationRadians(lat, dec, ha)
+    azJ <- solarAzimuthRadiansJosh(lat, dec, ha, el)
+
+    data.frame(
+        solarElevation = radiansToDegrees(el),
+        azimuth  = radiansToDegrees(azJ)
+     )
+  }
 #+end_src
 
 #+results:

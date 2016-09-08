@@ -89,13 +89,15 @@ Pointwise - confusion matrix
    2) [ ] test feature selection (removing directional texture variables)
    3) [ ] test gbm classifier
    4) [ ] add Training data from other cities. Starting [2016-09-08 Thu]
-5) [ ] Assess Accuracy Across State (Madison, Wausau, NE WI, perhaps
+5) [ ] make random points for accuracy assessment in cities that we
+   didn't collect training data in.  maybe 50 points in each of 10 cities?
+6) [ ] Assess Accuracy Across State (Madison, Wausau, NE WI, perhaps
    Eau Claire and others)
-6) [ ] Classify whole state
+7) [ ] Classify whole state
    1) [ ] add buffers to urban areas to allow for growth (10% diameter
       of urban area)
    2) [ ] relabel water, crops, and wetland
-7) [ ] Merge classifications into giant raster
+8) [ ] Merge classifications into giant raster
 
 *** TODO Complete utc classification but not write up
 DEADLINE: <2016-10-07 Fri -40d>
@@ -1697,16 +1699,16 @@ Create dataframe with structure:
 ******* Calc MAE, mean absolute error
 #+BEGIN_SRC R
 
-      MAE_tree <- grid.master.df %>%
-          group_by(image, model, grid.row.col.num, seg.params) %>%
-          summarize(MAE_t = mean(abs(pct_t_pred - pct.t.googleEarth), na.rm =T ),
-                    sd_MAE_t = sd((pct_t_pred - pct.t.googleEarth), na.rm =T ),
-                    n.points = mean(n.points))
+  MAE_tree <- grid.master.df %>%
+      group_by(image, model, grid.row.col.num, seg.params) %>%
+      summarize(MAE_t = mean(abs(pct_t_pred - pct.t.googleEarth), na.rm =T ),
+                sd_MAE_t = sd((pct_t_pred - pct.t.googleEarth), na.rm =T ),
+                n.points = mean(n.points))
 
-      MAE_tree <- MAE_tree %>%
-          mutate(segment.size = ifelse(seg.params == "Pixel",1,as.numeric(str_match(seg.params, "N-([0-9]*)_.*")[,2])),
-                 compactness =  ifelse(seg.params == "Pixel",1,as.numeric(str_match(seg.params, "N-[0-9]*_C-([0-9]*).*")[,2])),
-                 area = (7 *(grid.row.col.num-1)^2))
+  MAE_tree <- MAE_tree %>%
+      mutate(segment.size = ifelse(seg.params == "Pixel",1,as.numeric(str_match(seg.params, "N-([0-9]*)_.*")[,2])),
+             compactness =  ifelse(seg.params == "Pixel",1,as.numeric(str_match(seg.params, "N-[0-9]*_C-([0-9]*).*")[,2])),
+             area = (7 *(grid.row.col.num-1)^2))
 
 
 #+END_SRC
@@ -1731,38 +1733,38 @@ Which combination of image, segmentation, target, model and n.pts
 #+END_SRC
 
 #+results:
- |    | image       | model    | grid.row.col.num | seg.params | MAE_t | sd_MAE_t | n.points | segment.size | compactness |
- |----+-------------+----------+------------------+------------+-------+----------+----------+--------------+-------------|
- |  1 | madisonNAIP | svm_resp |            15.00 | N-20_C-6   |  0.05 |     0.08 |   225.00 |        20.00 |        6.00 |
- |  2 | madisonNAIP | svm_resp |            15.00 | N-30_C-18  |  0.06 |     0.08 |   225.00 |        30.00 |       18.00 |
- |  3 | madisonNAIP | rf_prob  |            15.00 | N-15_C-9   |  0.06 |     0.07 |   225.00 |        15.00 |        9.00 |
- |  4 | madisonNAIP | rf_prob  |            15.00 | N-30_C-15  |  0.06 |     0.08 |   225.00 |        30.00 |       15.00 |
- |  5 | madisonNAIP | rf_prob  |            15.00 | N-100_C-60 |  0.06 |     0.08 |   225.00 |       100.00 |       60.00 |
- |  6 | madisonNAIP | rf_prob  |            15.00 | N-30_C-18  |  0.06 |     0.08 |   225.00 |        30.00 |       18.00 |
- |  7 | madisonNAIP | svm_resp |            10.00 | N-20_C-6   |  0.06 |     0.09 |   100.00 |        20.00 |        6.00 |
- |  8 | madisonNAIP | svm_resp |            15.00 | Pixel      |  0.06 |     0.08 |   225.00 |         1.00 |        1.00 |
- |  9 | madisonNAIP | rf_prob  |            15.00 | N-20_C-10  |  0.07 |     0.07 |   225.00 |        20.00 |       10.00 |
- | 10 | madisonNAIP | rf_prob  |            15.00 | N-100_C-50 |  0.07 |     0.08 |   225.00 |       100.00 |       50.00 |
- | 11 | madisonNAIP | svm_resp |            10.00 | N-30_C-18  |  0.07 |     0.09 |   100.00 |        30.00 |       18.00 |
- | 12 | madisonNAIP | rf_prob  |            15.00 | N-20_C-6   |  0.07 |     0.08 |   225.00 |        20.00 |        6.00 |
- | 13 | madisonNAIP | svm_resp |            15.00 | N-60_C-18  |  0.07 |     0.08 |   225.00 |        60.00 |       18.00 |
- | 14 | madisonNAIP | rf_prob  |            15.00 | N-15_C-4   |  0.07 |     0.08 |   225.00 |        15.00 |        4.00 |
- | 15 | madisonNAIP | rf_prob  |            15.00 | N-45_C-22  |  0.07 |     0.08 |   225.00 |        45.00 |       22.00 |
- | 16 | madisonNAIP | rf_prob  |            10.00 | N-15_C-9   |  0.07 |     0.10 |   100.00 |        15.00 |        9.00 |
- | 17 | madisonNAIP | rf_prob  |            15.00 | N-60_C-36  |  0.07 |     0.08 |   225.00 |        60.00 |       36.00 |
- | 18 | madisonNAIP | rf_prob  |            10.00 | N-30_C-15  |  0.07 |     0.10 |   100.00 |        30.00 |       15.00 |
- | 19 | madisonNAIP | rf_prob  |            15.00 | N-20_C-12  |  0.07 |     0.08 |   225.00 |        20.00 |       12.00 |
- | 20 | madisonNAIP | rf_prob  |            10.00 | N-20_C-10  |  0.08 |     0.09 |   100.00 |        20.00 |       10.00 |
- | 21 | madisonNAIP | rf_prob  |            10.00 | N-100_C-60 |  0.08 |     0.09 |   100.00 |       100.00 |       60.00 |
- | 22 | madisonNAIP | rf_prob  |            10.00 | N-30_C-18  |  0.08 |     0.10 |   100.00 |        30.00 |       18.00 |
- | 23 | madisonNAIP | rf_prob  |            15.00 | N-15_C-8   |  0.08 |     0.08 |   225.00 |        15.00 |        8.00 |
- | 24 | madisonNAIP | rf_prob  |            15.00 | N-45_C-27  |  0.08 |     0.08 |   225.00 |        45.00 |       27.00 |
- | 25 | madisonNAIP | rf_prob  |            10.00 | N-15_C-4   |  0.08 |     0.09 |   100.00 |        15.00 |        4.00 |
- | 26 | madisonNAIP | svm_resp |            10.00 | Pixel      |  0.08 |     0.10 |   100.00 |         1.00 |        1.00 |
- | 27 | madisonNAIP | rf_prob  |            10.00 | N-60_C-36  |  0.08 |     0.09 |   100.00 |        60.00 |       36.00 |
- | 28 | madisonNAIP | rf_prob  |            15.00 | N-30_C-9   |  0.08 |     0.08 |   225.00 |        30.00 |        9.00 |
- | 29 | madisonNAIP | svm_resp |            15.00 | N-60_C-30  |  0.08 |     0.08 |   225.00 |        60.00 |       30.00 |
- | 30 | madisonNAIP | svm_resp |            15.00 | N-100_C-60 |  0.08 |     0.08 |   225.00 |       100.00 |       60.00 |
+|    | image       | model    | grid.row.col.num | seg.params | MAE_t | sd_MAE_t | n.points | segment.size | compactness |
+|----+-------------+----------+------------------+------------+-------+----------+----------+--------------+-------------|
+|  1 | madisonNAIP | svm_resp |            15.00 | N-20_C-6   |  0.05 |     0.08 |   225.00 |        20.00 |        6.00 |
+|  2 | madisonNAIP | svm_resp |            15.00 | N-30_C-18  |  0.06 |     0.08 |   225.00 |        30.00 |       18.00 |
+|  3 | madisonNAIP | rf_prob  |            15.00 | N-15_C-9   |  0.06 |     0.07 |   225.00 |        15.00 |        9.00 |
+|  4 | madisonNAIP | rf_prob  |            15.00 | N-30_C-15  |  0.06 |     0.08 |   225.00 |        30.00 |       15.00 |
+|  5 | madisonNAIP | rf_prob  |            15.00 | N-100_C-60 |  0.06 |     0.08 |   225.00 |       100.00 |       60.00 |
+|  6 | madisonNAIP | rf_prob  |            15.00 | N-30_C-18  |  0.06 |     0.08 |   225.00 |        30.00 |       18.00 |
+|  7 | madisonNAIP | svm_resp |            10.00 | N-20_C-6   |  0.06 |     0.09 |   100.00 |        20.00 |        6.00 |
+|  8 | madisonNAIP | svm_resp |            15.00 | Pixel      |  0.06 |     0.08 |   225.00 |         1.00 |        1.00 |
+|  9 | madisonNAIP | rf_prob  |            15.00 | N-20_C-10  |  0.07 |     0.07 |   225.00 |        20.00 |       10.00 |
+| 10 | madisonNAIP | rf_prob  |            15.00 | N-100_C-50 |  0.07 |     0.08 |   225.00 |       100.00 |       50.00 |
+| 11 | madisonNAIP | svm_resp |            10.00 | N-30_C-18  |  0.07 |     0.09 |   100.00 |        30.00 |       18.00 |
+| 12 | madisonNAIP | rf_prob  |            15.00 | N-20_C-6   |  0.07 |     0.08 |   225.00 |        20.00 |        6.00 |
+| 13 | madisonNAIP | svm_resp |            15.00 | N-60_C-18  |  0.07 |     0.08 |   225.00 |        60.00 |       18.00 |
+| 14 | madisonNAIP | rf_prob  |            15.00 | N-15_C-4   |  0.07 |     0.08 |   225.00 |        15.00 |        4.00 |
+| 15 | madisonNAIP | rf_prob  |            15.00 | N-45_C-22  |  0.07 |     0.08 |   225.00 |        45.00 |       22.00 |
+| 16 | madisonNAIP | rf_prob  |            10.00 | N-15_C-9   |  0.07 |     0.10 |   100.00 |        15.00 |        9.00 |
+| 17 | madisonNAIP | rf_prob  |            15.00 | N-60_C-36  |  0.07 |     0.08 |   225.00 |        60.00 |       36.00 |
+| 18 | madisonNAIP | rf_prob  |            10.00 | N-30_C-15  |  0.07 |     0.10 |   100.00 |        30.00 |       15.00 |
+| 19 | madisonNAIP | rf_prob  |            15.00 | N-20_C-12  |  0.07 |     0.08 |   225.00 |        20.00 |       12.00 |
+| 20 | madisonNAIP | rf_prob  |            10.00 | N-20_C-10  |  0.08 |     0.09 |   100.00 |        20.00 |       10.00 |
+| 21 | madisonNAIP | rf_prob  |            10.00 | N-100_C-60 |  0.08 |     0.09 |   100.00 |       100.00 |       60.00 |
+| 22 | madisonNAIP | rf_prob  |            10.00 | N-30_C-18  |  0.08 |     0.10 |   100.00 |        30.00 |       18.00 |
+| 23 | madisonNAIP | rf_prob  |            15.00 | N-15_C-8   |  0.08 |     0.08 |   225.00 |        15.00 |        8.00 |
+| 24 | madisonNAIP | rf_prob  |            15.00 | N-45_C-27  |  0.08 |     0.08 |   225.00 |        45.00 |       27.00 |
+| 25 | madisonNAIP | rf_prob  |            10.00 | N-15_C-4   |  0.08 |     0.09 |   100.00 |        15.00 |        4.00 |
+| 26 | madisonNAIP | svm_resp |            10.00 | Pixel      |  0.08 |     0.10 |   100.00 |         1.00 |        1.00 |
+| 27 | madisonNAIP | rf_prob  |            10.00 | N-60_C-36  |  0.08 |     0.09 |   100.00 |        60.00 |       36.00 |
+| 28 | madisonNAIP | rf_prob  |            15.00 | N-30_C-9   |  0.08 |     0.08 |   225.00 |        30.00 |        9.00 |
+| 29 | madisonNAIP | svm_resp |            15.00 | N-60_C-30  |  0.08 |     0.08 |   225.00 |        60.00 |       30.00 |
+| 30 | madisonNAIP | svm_resp |            15.00 | N-100_C-60 |  0.08 |     0.08 |   225.00 |       100.00 |       60.00 |
 Joining, by = "unq__ID"
 |   | image       | model   | grid.row.col.num | seg.params | MAE_t | sd_MAE_t | n.points | segment.size |
 |---+-------------+---------+------------------+------------+-------+----------+----------+--------------|
@@ -1802,16 +1804,16 @@ Joining, by = "unq__ID"
 
 ******* What are the top 5 models at each scale?
 #+begin_src R
-options(warn = -1)
-MAE_tree %>%
-group_by(seg.params, model, image, grid.row.col.num) %>%
-summarize(mean_error_across_grids = mean(MAE_t, na.rm = T)) %>%
-group_by(grid.row.col.num) %>%
-top_n(-5, wt = mean_error_across_grids) %>%
-arrange(grid.row.col.num, mean_error_across_grids) %>%
-data.frame %>%
-ascii
-options(warn = 1)
+  options(warn = -1)
+  MAE_tree %>%
+      group_by(seg.params, model, image, grid.row.col.num) %>%
+      summarize(mean_error_across_grids = mean(MAE_t, na.rm = T)) %>%
+      group_by(grid.row.col.num) %>%
+      top_n(-5, wt = mean_error_across_grids) %>%
+      arrange(grid.row.col.num, mean_error_across_grids) %>%
+      data.frame %>%
+      ascii
+  options(warn = 1)
 #+end_src
 
 #+results:
@@ -1858,14 +1860,14 @@ facet(segmentation~cover_type)
 
 #+BEGIN_SRC R :results graphics :file figs/Grids_MAE_areaVSerror.png :height 300 :width 900
 
-    MAE_tree_.5compactness <- MAE_tree %>%
+  MAE_tree_.5compactness <- MAE_tree %>%
       mutate(c = compactness/segment.size) %>%
       filter( c > .45 & c < .55 | c ==1) %>%
       filter(area < 2000)
 
-      ggplot(MAE_tree_.5compactness, aes(x = area, y = MAE_t, color = model, size = n.points)) + geom_point() +
-          facet_grid(image~segment.size, labeller = label_both) +
-            theme(text = element_text(size = 15))
+  ggplot(MAE_tree_.5compactness, aes(x = area, y = MAE_t, color = model, size = n.points)) + geom_point() +
+      facet_grid(image~segment.size, labeller = label_both) +
+      theme(text = element_text(size = 15))
 
 #+END_SRC
 
@@ -1876,13 +1878,13 @@ facet(segmentation~cover_type)
 
 #+begin_src R :exports results :results graphics :file ./figs/MAE_areaVSerror_N-30_C-15.png
 
-    MAE_tree.sub <- MAE_tree %>%
+  MAE_tree.sub <- MAE_tree %>%
       filter(segment.size == 30, compactness == 15, model == "rf_prob")
 
-    ggplot(MAE_tree.sub, aes(x = grid.row.col.num, y = MAE_t, color = model, size = n.points)) + geom_point() +
-            theme(text = element_text(size = 20)) +
-        facet_grid(image~segment.size, labeller = label_both) +
-  ggtitle("Decrease in error with increasing area")
+  ggplot(MAE_tree.sub, aes(x = grid.row.col.num, y = MAE_t, color = model, size = n.points)) + geom_point() +
+      theme(text = element_text(size = 20)) +
+      facet_grid(image~segment.size, labeller = label_both) +
+      ggtitle("Decrease in error with increasing area")
 
 #+end_src
 
@@ -1891,7 +1893,7 @@ facet(segmentation~cover_type)
 
 
 #+begin_src R
-(MAE_tree.sub) %>% data.frame
+  (MAE_tree.sub) %>% data.frame
 #+end_src
 
 #+results:
@@ -1919,7 +1921,7 @@ facet(segmentation~cover_type)
 #+BEGIN_SRC R :results graphics :file figs/MAE_tree_compare_seg.sizeXMAE.png :height 800 :width 600
 
   ggplot(MAE_tree, aes(x = segment.size, y = MAE_t, color = n.points, group = interaction(n.points)) + geom_line() +
-      facet_grid(model~image)
+                   facet_grid(model~image)
 
 #+END_SRC
 
@@ -1930,12 +1932,12 @@ facet(segmentation~cover_type)
 #+BEGIN_SRC R :results raw
   m1 <-lm(MAE_t*100 ~ image * (model +  target.type + n.points * segment.size), data = MAE_tree)
   tidy(m1, digits = 2) %>%
-ascii()
+      ascii()
 #+END_SRC
 
 #+results:
 Error in eval(expr, envir, enclos) : object 'target.type' not found
- Error in tidy(m1, digits = 2) : object 'm1' not found
+Error in tidy(m1, digits = 2) : object 'm1' not found
 [1] "org_babel_R_eoe"
 
 
@@ -1954,20 +1956,20 @@ Comparing classification to other estimates of cover.
 **** Field Data
 **** Grid of Points
 #+begin_src R :results none
-      error.df <- readRDS(str_c(derived.dir, "/Grids.point2pixel.error.df.rds"))
+  error.df <- readRDS(str_c(derived.dir, "/Grids.point2pixel.error.df.rds"))
 
-      error.df %>%
-          arrange(overall.error) %>%
-          head()
+  error.df %>%
+      arrange(overall.error) %>%
+      head()
 
-      error.df %>%
-          arrange(desc(overall.error)) %>%
-          head()
+  error.df %>%
+      arrange(desc(overall.error)) %>%
+      head()
 
-      error.df %>%
-          filter(seg.params != "Pixel") %>%
-          arrange(desc(overall.error)) %>%
-          head()
+  error.df %>%
+      filter(seg.params != "Pixel") %>%
+      arrange(desc(overall.error)) %>%
+      head()
 
   error.df <- error.df %>%
       mutate(segment.size = as.numeric(ifelse(!is.na(str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2]), str_match(seg.params, "N-([0-9]+)_C-[0-9]+")[,2], 1)),
@@ -1991,19 +1993,19 @@ Comparing classification to other estimates of cover.
 ***** Plots of 20 best classified grids with points superimposed
 For each grid, find the best classification.  Plot best 20 grids.
 #+begin_src R :results raw
-    best.classified.grids <- error.df %>%
-        ungroup() %>%
-        group_by(grid) %>%
-        top_n(1, desc(overall.error)) %>%
-        ungroup() %>%
-        arrange(overall.error) %>%
-        select(overall.error, grid,image, target.cover, model, seg.params) %>%
-        mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
-        head(n = 20)
+  best.classified.grids <- error.df %>%
+      ungroup() %>%
+      group_by(grid) %>%
+      top_n(1, desc(overall.error)) %>%
+      ungroup() %>%
+      arrange(overall.error) %>%
+      select(overall.error, grid,image, target.cover, model, seg.params) %>%
+      mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+      head(n = 20)
 
-options(warn = -1)
+  options(warn = -1)
   best.classified.grids %>% ascii
-options(warn = 1)
+  options(warn = 1)
 #+end_src
 
 #+results:
@@ -2029,22 +2031,22 @@ options(warn = 1)
 | 18 |          0.06 | mad.200m.2  | madisonNAIP | all          | rf_prob  | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.200m.2_N-60_C-36_madisonNAIP_all_rf_prob.tif   |
 | 19 |          0.07 | mad.100m.28 | madisonNAIP | all          | rf_prob  | N-30_C-15  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.28_N-30_C-15_madisonNAIP_all_rf_prob.tif  |
 | 20 |          0.07 | mad.100m.3  | madisonNAIP | all          | svm_resp | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.3_Pixel_madisonNAIP_all_svm_resp.tif      |
- Error in eval(expr, envir, enclos) : object 'error.df' not found
+Error in eval(expr, envir, enclos) : object 'error.df' not found
 Error in eval(expr, envir, enclos) :
-  object 'best.classified.grids' not found
- Error: object 'ClassifiedTilesDirName' not found
+object 'best.classified.grids' not found
+Error: object 'ClassifiedTilesDirName' not found
 Error in eval(expr, envir, enclos) :
-  object 'best.classified.grids' not found
+object 'best.classified.grids' not found
 
 
 #+begin_src R :results none
 
   lapply(1:nrow(best.classified.grids), function(i){
       pts.on.classified.tile.plot.ErrorinTitle(error = best.classified.grids$overall.error[i],
-                                           grd.pts = grid.points,
-                                           classified.tile.path = best.classified.grids$path[i],
-                                           fig.dir = "figs/bestgrids",
-                                           target = "a")
+                                               grd.pts = grid.points,
+                                               classified.tile.path = best.classified.grids$path[i],
+                                               fig.dir = "figs/bestgrids",
+                                               target = "a")
   })
 
   ## plts <- lapply(best.classified.grids$path, function(path) {
@@ -2057,31 +2059,31 @@ Error in eval(expr, envir, enclos) :
   ##   pts.on.classified.tile.plot(fig.dir = "figs/bestgrids",points, ras, target = "a")
   ## })
 
-  #+end_src
+#+end_src
 
 #+BEGIN_SRC R :results raw :eval no
 
-best.grid.paths <- list.files("figs/bestgrids", full.names = T)
+  best.grid.paths <- list.files("figs/bestgrids", full.names = T)
 
-a <- sapply(best.grid.paths, function(x) message("[[file:",x,"]]"))
+  a <- sapply(best.grid.paths, function(x) message("[[file:",x,"]]"))
 
 #+END_SRC
 
 ***** DONE Plots of 20 worst classified grids with points superimposed.
 For each grid, find the worst classification.  Plot worst 20 grids.
 #+begin_src R :results raw
-      worst.classified.grids <- error.df %>%
-          ungroup() %>%
-          group_by(grid) %>%
-          top_n(1, overall.error) %>%
-          ungroup() %>%
-          arrange(desc(overall.error)) %>%
-          select(overall.error, grid,image, target.cover, model, seg.params) %>%
-          mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
-          head(n = 20)
+  worst.classified.grids <- error.df %>%
+      ungroup() %>%
+      group_by(grid) %>%
+      top_n(1, overall.error) %>%
+      ungroup() %>%
+      arrange(desc(overall.error)) %>%
+      select(overall.error, grid,image, target.cover, model, seg.params) %>%
+      mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif")) %>%
+      head(n = 20)
 
   options(warn = -1)
-    worst.classified.grids %>% ascii
+  worst.classified.grids %>% ascii
   options(warn = 1)
 #+end_src
 
@@ -2108,44 +2110,44 @@ For each grid, find the worst classification.  Plot worst 20 grids.
 | 18 |          0.43 | mad.100m.24 | madisonNAIP | all          | svm_resp | N-30_C-9   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.24_N-30_C-9_madisonNAIP_all_svm_resp.tif  |
 | 19 |          0.43 | mad.150m.3  | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.3_N-20_C-6_madisonNAIP_all_svm_resp.tif   |
 | 20 |          0.42 | mad.100m.19 | madisonNAIP | all          | svm_resp | N-20_C-6   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.19_N-20_C-6_madisonNAIP_all_svm_resp.tif  |
- Error: object 'ClassifiedTilesDirName' not found
+Error: object 'ClassifiedTilesDirName' not found
 Error in eval(expr, envir, enclos) :
-  object 'worst.classified.grids' not found
+object 'worst.classified.grids' not found
 
-  ## plts <- lapply(worst.classified.grids$path, function(path) {
-  ##   grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
-  ##   points <- grid.points[grid.points@data$unq__ID == grid.name,]
-  ##   points@data <- points@data %>%
-  ##       mutate(x = coordinates(points)[,1],
-  ##              y = coordinates(points)[,2])
-  ##   ras <- raster(path)
-  ##   pts.on.classified.tile.plot(fig.dir = "figs/worstgrids",points, ras, target = "a")
-  ## })
+## plts <- lapply(worst.classified.grids$path, function(path) {
+##   grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+##   points <- grid.points[grid.points@data$unq__ID == grid.name,]
+##   points@data <- points@data %>%
+##       mutate(x = coordinates(points)[,1],
+##              y = coordinates(points)[,2])
+##   ras <- raster(path)
+##   pts.on.classified.tile.plot(fig.dir = "figs/worstgrids",points, ras, target = "a")
+## })
 
 #+begin_src R
 
   lapply(1:nrow(worst.classified.grids), function(i){
       pts.on.classified.tile.plot.ErrorinTitle(error = worst.classified.grids$overall.error[i],
-                                           grd.pts = grid.points,
-                                           classified.tile.path = worst.classified.grids$path[i],
-                                           fig.dir = "figs/worstgrids",
-                                           target = "a")
+                                               grd.pts = grid.points,
+                                               classified.tile.path = worst.classified.grids$path[i],
+                                               fig.dir = "figs/worstgrids",
+                                               target = "a")
   })
 
 
 #+end_src
 
-  ## plts <- lapply(worst.classified.grids$path, function(path) {
-  ##   grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
-  ##   points <- grid.points[grid.points@data$unq__ID == grid.name,]
-  ##   points@data <- points@data %>%
-  ##       mutate(x = coordinates(points)[,1],
-  ##              y = coordinates(points)[,2])
-  ##   ras <- raster(path)
-  ##   pts.on.classified.tile.plot(fig.dir = "figs/worstgrids",points, ras, target = "a")
-  ## })
+## plts <- lapply(worst.classified.grids$path, function(path) {
+##   grid.name <- str_match(path, ".*([a-z]{3}\\.[0-9]+m\\.[0-9]+)_.*")[,2]
+##   points <- grid.points[grid.points@data$unq__ID == grid.name,]
+##   points@data <- points@data %>%
+##       mutate(x = coordinates(points)[,1],
+##              y = coordinates(points)[,2])
+##   ras <- raster(path)
+##   pts.on.classified.tile.plot(fig.dir = "figs/worstgrids",points, ras, target = "a")
+## })
 
-  #+end_src
+#+end_src
 
 #+results:
 :  Error in .local(.Object, ...) :
@@ -2278,25 +2280,25 @@ png
 
 #+BEGIN_SRC R :results raw :eval no
 
-worst.grid.paths <- list.files("figs/worstgrids", full.names = T)
+  worst.grid.paths <- list.files("figs/worstgrids", full.names = T)
 
-a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
+  a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
 
 #+END_SRC
 
 
 ***** Table showing performace of classifiers, average over all grids, increasing error
 #+begin_src R :results raw
-    error.df.avg.class <- error.df %>%
-        select(-grid) %>%
-        group_by(image, target.cover, model, seg.params, segment.size, compactness,tuned) %>%
-        summarize_each(funs(mean(.,na.rm = T))) %>%
-        ungroup() %>%
-        arrange(overall.error)
+  error.df.avg.class <- error.df %>%
+      select(-grid) %>%
+      group_by(image, target.cover, model, seg.params, segment.size, compactness,tuned) %>%
+      summarize_each(funs(mean(.,na.rm = T))) %>%
+      ungroup() %>%
+      arrange(overall.error)
 
 
   options(warn = -1)
-    error.df.avg.class %>% ascii
+  error.df.avg.class %>% ascii
   options(warn = 1)
 #+end_src
 
@@ -2341,10 +2343,10 @@ a <- sapply(worst.grid.paths, function(x) message("[[file:",x,"]]"))
 | 36 | madisonNAIP | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 | Untuned |          0.32 |                          0.57 |                               0.60 |                         0.09 |
 | 37 | madisonNAIP | all          | svm_resp | N-20_C-6   |        20.00 |        6.00 | Untuned |          0.32 |                          0.33 |                               0.54 |                         0.37 |
 | 38 | madisonNAIP | all          | svm_resp | N-20_C-10  |        20.00 |       10.00 | Untuned |          0.32 |                          0.59 |                               0.60 |                         0.10 |
- Error: unknown variable to group by : segment.size
+Error: unknown variable to group by : segment.size
 Error in eval(expr, envir, enclos) :
-  object 'error.df.avg.class' not found
- Error: unknown variable to group by : segment.size
+object 'error.df.avg.class' not found
+Error: unknown variable to group by : segment.size
 |   | image       | target.cover | model   | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
 |---+-------------+--------------+---------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
 | 1 | madisonNAIP | all          | rf_prob | Pixel      | 1.00         |             | 0.21          | 0.52                          | 0.24                               | 0.16                         |
@@ -2397,54 +2399,54 @@ Error in eval(expr, envir, enclos) :
 
 ***** Table showing performace of classifiers, average over all grids, decreasing accuracy
 #+begin_src R :results raw
-      options(warn = -1)
-        error.df.avg.class %>%
-            arrange(desc(overall.error)) %>%
-            ascii
-      options(warn = 1)
+  options(warn = -1)
+  error.df.avg.class %>%
+      arrange(desc(overall.error)) %>%
+      ascii
+  options(warn = 1)
 #+end_src
 
 #+results:
- |   | image       | target.cover | model   | seg.params | segment.size | compactness | tuned   | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
- |---+-------------+--------------+---------+------------+--------------+-------------+---------+---------------+-------------------------------+------------------------------------+------------------------------|
- | 1 | madisonNAIP | all          | rf_prob | Pixel      |         1.00 |             | Untuned |          0.21 |                          0.52 |                               0.24 |                         0.16 |
+|   | image       | target.cover | model   | seg.params | segment.size | compactness | tuned   | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+|---+-------------+--------------+---------+------------+--------------+-------------+---------+---------------+-------------------------------+------------------------------------+------------------------------|
+| 1 | madisonNAIP | all          | rf_prob | Pixel      |         1.00 |             | Untuned |          0.21 |                          0.52 |                               0.24 |                         0.16 |
 
 
 
- |    | image       | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
- |----+-------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
- |  1 | madisonNAIP | all          | svm_resp | N-20_C-10  |        20.00 |       10.00 |          0.33 |                          0.62 |                               0.59 |                         0.17 |
- |  2 | madisonNAIP | all          | rf_prob  | N-100_C-30 |       100.00 |       30.00 |          0.33 |                          0.50 |                               0.35 |                         0.30 |
- |  3 | madisonNAIP | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.33 |                          0.60 |                               0.60 |                         0.17 |
- |  4 | madisonNAIP | all          | svm_resp | N-100_C-30 |       100.00 |       30.00 |          0.33 |                          0.54 |                               0.35 |                         0.31 |
- |  5 | madisonNAIP | all          | svm_resp | N-45_C-22  |        45.00 |       22.00 |          0.32 |                          0.54 |                               0.37 |                         0.29 |
- |  6 | madisonNAIP | all          | svm_resp | N-60_C-18  |        60.00 |       18.00 |          0.31 |                          0.56 |                               0.28 |                         0.38 |
- |  7 | madisonNAIP | all          | rf_prob  | N-45_C-27  |        45.00 |       27.00 |          0.31 |                          0.46 |                               0.36 |                         0.27 |
- |  8 | madisonNAIP | all          | rf_prob  | N-45_C-14  |        45.00 |       14.00 |          0.30 |                          0.45 |                               0.35 |                         0.30 |
- |  9 | madisonNAIP | all          | svm_resp | N-100_C-60 |       100.00 |       60.00 |          0.30 |                          0.54 |                               0.31 |                         0.31 |
- | 10 | madisonNAIP | all          | rf_prob  | N-60_C-18  |        60.00 |       18.00 |          0.30 |                          0.48 |                               0.29 |                         0.31 |
- | 11 | madisonNAIP | all          | svm_resp | N-60_C-30  |        60.00 |       30.00 |          0.29 |                          0.54 |                               0.34 |                         0.28 |
- | 12 | madisonNAIP | all          | svm_resp | N-45_C-27  |        45.00 |       27.00 |          0.29 |                          0.55 |                               0.35 |                         0.26 |
- | 13 | madisonNAIP | all          | rf_prob  | N-60_C-30  |        60.00 |       30.00 |          0.29 |                          0.49 |                               0.33 |                         0.26 |
- | 14 | madisonNAIP | all          | rf_prob  | N-60_C-36  |        60.00 |       36.00 |          0.29 |                          0.45 |                               0.32 |                         0.28 |
- | 15 | madisonNAIP | all          | svm_resp | N-60_C-36  |        60.00 |       36.00 |          0.29 |                          0.55 |                               0.35 |                         0.26 |
- | 16 | madisonNAIP | all          | svm_resp | N-30_C-15  |        30.00 |       15.00 |          0.29 |                          0.59 |                               0.40 |                         0.23 |
- | 17 | madisonNAIP | all          | svm_resp | N-30_C-9   |        30.00 |        9.00 |          0.29 |                          0.60 |                               0.36 |                         0.27 |
- | 18 | madisonNAIP | all          | rf_prob  | N-20_C-10  |        20.00 |       10.00 |          0.29 |                          0.52 |                               0.33 |                         0.25 |
- | 19 | madisonNAIP | all          | svm_resp | N-100_C-50 |       100.00 |       50.00 |          0.29 |                          0.54 |                               0.30 |                         0.29 |
- | 20 | madisonNAIP | all          | svm_resp | N-20_C-6   |        20.00 |        6.00 |          0.28 |                          0.62 |                               0.51 |                         0.23 |
- | 21 | madisonNAIP | all          | rf_prob  | N-30_C-9   |        30.00 |        9.00 |          0.28 |                          0.48 |                               0.33 |                         0.28 |
- | 22 | madisonNAIP | all          | svm_resp | N-30_C-18  |        30.00 |       18.00 |          0.28 |                          0.57 |                               0.39 |                         0.22 |
- | 23 | madisonNAIP | all          | svm_resp | N-45_C-14  |        45.00 |       14.00 |          0.28 |                          0.55 |                               0.26 |                         0.33 |
- | 24 | madisonNAIP | all          | rf_prob  | N-30_C-15  |        30.00 |       15.00 |          0.28 |                          0.46 |                               0.33 |                         0.26 |
- | 25 | madisonNAIP | all          | rf_prob  | N-100_C-60 |       100.00 |       60.00 |          0.26 |                          0.41 |                               0.28 |                         0.32 |
- | 26 | madisonNAIP | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.24 |                          0.52 |                               0.36 |                         0.23 |
- | 27 | madisonNAIP | all          | rf_prob  | N-20_C-6   |        20.00 |        6.00 |          0.24 |                          0.53 |                               0.40 |                         0.25 |
- | 28 | madisonNAIP | all          | rf_prob  | N-100_C-50 |       100.00 |       50.00 |          0.24 |                          0.41 |                               0.30 |                         0.29 |
- | 29 | madisonNAIP | all          | rf_prob  | N-45_C-22  |        45.00 |       22.00 |          0.24 |                          0.46 |                               0.30 |                         0.24 |
- | 30 | madisonNAIP | all          | rf_prob  | N-30_C-18  |        30.00 |       18.00 |          0.24 |                          0.46 |                               0.32 |                         0.24 |
- | 31 | madisonNAIP | all          | svm_resp | Pixel      |         1.00 |             |          0.23 |                          0.57 |                               0.14 |                         0.30 |
- | 32 | madisonNAIP | all          | rf_prob  | Pixel      |         1.00 |             |          0.22 |                          0.52 |                               0.22 |                         0.19 |
+|    | image       | target.cover | model    | seg.params | segment.size | compactness | overall.error | pct.grass.classified.as.other | pct.impervious.classified.as.other | pct.tree.classified.as.other |
+|----+-------------+--------------+----------+------------+--------------+-------------+---------------+-------------------------------+------------------------------------+------------------------------|
+|  1 | madisonNAIP | all          | svm_resp | N-20_C-10  |        20.00 |       10.00 |          0.33 |                          0.62 |                               0.59 |                         0.17 |
+|  2 | madisonNAIP | all          | rf_prob  | N-100_C-30 |       100.00 |       30.00 |          0.33 |                          0.50 |                               0.35 |                         0.30 |
+|  3 | madisonNAIP | all          | svm_resp | N-20_C-12  |        20.00 |       12.00 |          0.33 |                          0.60 |                               0.60 |                         0.17 |
+|  4 | madisonNAIP | all          | svm_resp | N-100_C-30 |       100.00 |       30.00 |          0.33 |                          0.54 |                               0.35 |                         0.31 |
+|  5 | madisonNAIP | all          | svm_resp | N-45_C-22  |        45.00 |       22.00 |          0.32 |                          0.54 |                               0.37 |                         0.29 |
+|  6 | madisonNAIP | all          | svm_resp | N-60_C-18  |        60.00 |       18.00 |          0.31 |                          0.56 |                               0.28 |                         0.38 |
+|  7 | madisonNAIP | all          | rf_prob  | N-45_C-27  |        45.00 |       27.00 |          0.31 |                          0.46 |                               0.36 |                         0.27 |
+|  8 | madisonNAIP | all          | rf_prob  | N-45_C-14  |        45.00 |       14.00 |          0.30 |                          0.45 |                               0.35 |                         0.30 |
+|  9 | madisonNAIP | all          | svm_resp | N-100_C-60 |       100.00 |       60.00 |          0.30 |                          0.54 |                               0.31 |                         0.31 |
+| 10 | madisonNAIP | all          | rf_prob  | N-60_C-18  |        60.00 |       18.00 |          0.30 |                          0.48 |                               0.29 |                         0.31 |
+| 11 | madisonNAIP | all          | svm_resp | N-60_C-30  |        60.00 |       30.00 |          0.29 |                          0.54 |                               0.34 |                         0.28 |
+| 12 | madisonNAIP | all          | svm_resp | N-45_C-27  |        45.00 |       27.00 |          0.29 |                          0.55 |                               0.35 |                         0.26 |
+| 13 | madisonNAIP | all          | rf_prob  | N-60_C-30  |        60.00 |       30.00 |          0.29 |                          0.49 |                               0.33 |                         0.26 |
+| 14 | madisonNAIP | all          | rf_prob  | N-60_C-36  |        60.00 |       36.00 |          0.29 |                          0.45 |                               0.32 |                         0.28 |
+| 15 | madisonNAIP | all          | svm_resp | N-60_C-36  |        60.00 |       36.00 |          0.29 |                          0.55 |                               0.35 |                         0.26 |
+| 16 | madisonNAIP | all          | svm_resp | N-30_C-15  |        30.00 |       15.00 |          0.29 |                          0.59 |                               0.40 |                         0.23 |
+| 17 | madisonNAIP | all          | svm_resp | N-30_C-9   |        30.00 |        9.00 |          0.29 |                          0.60 |                               0.36 |                         0.27 |
+| 18 | madisonNAIP | all          | rf_prob  | N-20_C-10  |        20.00 |       10.00 |          0.29 |                          0.52 |                               0.33 |                         0.25 |
+| 19 | madisonNAIP | all          | svm_resp | N-100_C-50 |       100.00 |       50.00 |          0.29 |                          0.54 |                               0.30 |                         0.29 |
+| 20 | madisonNAIP | all          | svm_resp | N-20_C-6   |        20.00 |        6.00 |          0.28 |                          0.62 |                               0.51 |                         0.23 |
+| 21 | madisonNAIP | all          | rf_prob  | N-30_C-9   |        30.00 |        9.00 |          0.28 |                          0.48 |                               0.33 |                         0.28 |
+| 22 | madisonNAIP | all          | svm_resp | N-30_C-18  |        30.00 |       18.00 |          0.28 |                          0.57 |                               0.39 |                         0.22 |
+| 23 | madisonNAIP | all          | svm_resp | N-45_C-14  |        45.00 |       14.00 |          0.28 |                          0.55 |                               0.26 |                         0.33 |
+| 24 | madisonNAIP | all          | rf_prob  | N-30_C-15  |        30.00 |       15.00 |          0.28 |                          0.46 |                               0.33 |                         0.26 |
+| 25 | madisonNAIP | all          | rf_prob  | N-100_C-60 |       100.00 |       60.00 |          0.26 |                          0.41 |                               0.28 |                         0.32 |
+| 26 | madisonNAIP | all          | rf_prob  | N-20_C-12  |        20.00 |       12.00 |          0.24 |                          0.52 |                               0.36 |                         0.23 |
+| 27 | madisonNAIP | all          | rf_prob  | N-20_C-6   |        20.00 |        6.00 |          0.24 |                          0.53 |                               0.40 |                         0.25 |
+| 28 | madisonNAIP | all          | rf_prob  | N-100_C-50 |       100.00 |       50.00 |          0.24 |                          0.41 |                               0.30 |                         0.29 |
+| 29 | madisonNAIP | all          | rf_prob  | N-45_C-22  |        45.00 |       22.00 |          0.24 |                          0.46 |                               0.30 |                         0.24 |
+| 30 | madisonNAIP | all          | rf_prob  | N-30_C-18  |        30.00 |       18.00 |          0.24 |                          0.46 |                               0.32 |                         0.24 |
+| 31 | madisonNAIP | all          | svm_resp | Pixel      |         1.00 |             |          0.23 |                          0.57 |                               0.14 |                         0.30 |
+| 32 | madisonNAIP | all          | rf_prob  | Pixel      |         1.00 |             |          0.22 |                          0.52 |                               0.22 |                         0.19 |
 
 ***** Plots of 20 *best* classified grids by *best* classifier with points superimposed
 #+begin_src R :results raw
@@ -2460,18 +2462,18 @@ Error in eval(expr, envir, enclos) :
       select(overall.error, grid,image, target.cover, model, seg.params) %>%
       mutate(path = paste0(dd.accuracy.classified.dir,"/",image,".",grid,"_",seg.params,"_",image,"_",target.cover,"_",model,".tif"))
 
-      options(warn = -1)
+  options(warn = -1)
 
-            best.classif.best.grids %>%
-            ascii
+  best.classif.best.grids %>%
+      ascii
 
-      options(warn = 1)
+  options(warn = 1)
 
 #+end_src
 
 #+results:
- Joining, by = c("image", "target.cover", "model", "seg.params")
- |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                                 |
+Joining, by = c("image", "target.cover", "model", "seg.params")
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                                 |
 |----+---------------+-------------+-------------+--------------+---------+------------+------------------------------------------------------------------------------------------------------|
 | 1  | 0.00          | mad.50m.2   | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-60_C-36_madisonNAIP_all_rf_prob.tif   |
 | 2  | 0.02          | mad.100m.12 | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_N-60_C-36_madisonNAIP_all_rf_prob.tif |
@@ -2519,8 +2521,8 @@ Error in eval(expr, envir, enclos) :
 | 44 | 0.35          | mad.150m.8  | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_N-60_C-36_madisonNAIP_all_rf_prob.tif  |
 | 45 | 0.35          | mad.50m.3   | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_N-60_C-36_madisonNAIP_all_rf_prob.tif   |
 | 46 | 0.38          | mad.100m.22 | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_N-60_C-36_madisonNAIP_all_rf_prob.tif |
- Joining, by = c("image", "target.cover", "model", "seg.params")
- |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                                |
+Joining, by = c("image", "target.cover", "model", "seg.params")
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                                |
 |----+---------------+-------------+-------------+--------------+---------+------------+-----------------------------------------------------------------------------------------------------|
 | 1  | 0.03          | mad.50m.2   | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-15_C-8_madisonNAIP_all_rf_prob.tif   |
 | 2  | 0.03          | mad.100m.12 | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_N-15_C-8_madisonNAIP_all_rf_prob.tif |
@@ -2568,8 +2570,8 @@ Error in eval(expr, envir, enclos) :
 | 44 | 0.32          | mad.150m.8  | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_N-15_C-8_madisonNAIP_all_rf_prob.tif  |
 | 45 | 0.34          | mad.100m.22 | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_N-15_C-8_madisonNAIP_all_rf_prob.tif |
 | 46 | 0.37          | mad.50m.3   | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_N-15_C-8_madisonNAIP_all_rf_prob.tif   |
- Joining, by = c("image", "target.cover", "model", "seg.params")
- |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                                |
+Joining, by = c("image", "target.cover", "model", "seg.params")
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                                |
 |----+---------------+-------------+-------------+--------------+---------+------------+-----------------------------------------------------------------------------------------------------|
 | 1  | 0.03          | mad.50m.2   | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-15_C-8_madisonNAIP_all_rf_prob.tif   |
 | 2  | 0.03          | mad.100m.12 | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_N-15_C-8_madisonNAIP_all_rf_prob.tif |
@@ -2617,8 +2619,8 @@ Error in eval(expr, envir, enclos) :
 | 44 | 0.32          | mad.150m.8  | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_N-15_C-8_madisonNAIP_all_rf_prob.tif  |
 | 45 | 0.34          | mad.100m.22 | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_N-15_C-8_madisonNAIP_all_rf_prob.tif |
 | 46 | 0.37          | mad.50m.3   | madisonNAIP | all          | rf_prob | N-15_C-8   | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_N-15_C-8_madisonNAIP_all_rf_prob.tif   |
- Joining, by = c("image", "target.cover", "model", "seg.params")
- |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                                 |
+Joining, by = c("image", "target.cover", "model", "seg.params")
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                                 |
 |----+---------------+-------------+-------------+--------------+---------+------------+------------------------------------------------------------------------------------------------------|
 | 1  | 0.00          | mad.50m.2   | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-60_C-36_madisonNAIP_all_rf_prob.tif   |
 | 2  | 0.02          | mad.100m.12 | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_N-60_C-36_madisonNAIP_all_rf_prob.tif |
@@ -2666,8 +2668,8 @@ Error in eval(expr, envir, enclos) :
 | 44 | 0.35          | mad.150m.8  | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_N-60_C-36_madisonNAIP_all_rf_prob.tif  |
 | 45 | 0.35          | mad.50m.3   | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_N-60_C-36_madisonNAIP_all_rf_prob.tif   |
 | 46 | 0.38          | mad.100m.22 | madisonNAIP | all          | rf_prob | N-60_C-36  | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_N-60_C-36_madisonNAIP_all_rf_prob.tif |
- Joining, by = c("image", "target.cover", "model", "seg.params")
- |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
+Joining, by = c("image", "target.cover", "model", "seg.params")
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
 |----+---------------+-------------+-------------+--------------+---------+------------+--------------------------------------------------------------------------------------------------|
 | 1  | 0.04          | mad.50m.2   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif   |
 | 2  | 0.04          | mad.100m.23 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_Pixel_madisonNAIP_all_rf_prob.tif |
@@ -2715,8 +2717,8 @@ Error in eval(expr, envir, enclos) :
 | 44 | 0.37          | mad.50m.3   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_Pixel_madisonNAIP_all_rf_prob.tif   |
 | 45 | 0.38          | mad.150m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
 | 46 | 0.39          | mad.100m.22 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_Pixel_madisonNAIP_all_rf_prob.tif |
- Joining by: c("image", "target.cover", "model", "seg.params")
- |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
+Joining by: c("image", "target.cover", "model", "seg.params")
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
 |----+---------------+-------------+-------------+--------------+---------+------------+--------------------------------------------------------------------------------------------------|
 | 1  | 0.02          | mad.150m.9  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_rf_prob.tif  |
 | 2  | 0.04          | mad.50m.2   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif   |
@@ -2764,8 +2766,8 @@ Error in eval(expr, envir, enclos) :
 | 44 | 0.35          | mad.50m.3   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_Pixel_madisonNAIP_all_rf_prob.tif   |
 | 45 | 0.37          | mad.100m.22 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_Pixel_madisonNAIP_all_rf_prob.tif |
 | 46 | 0.40          | mad.150m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
- Joining by: c("image", "target.cover", "model", "seg.params")
- |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
+Joining by: c("image", "target.cover", "model", "seg.params")
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                             |
 |----+---------------+-------------+-------------+--------------+---------+------------+--------------------------------------------------------------------------------------------------|
 | 1  | 0.02          | mad.150m.9  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.9_Pixel_madisonNAIP_all_rf_prob.tif  |
 | 2  | 0.04          | mad.50m.2   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_Pixel_madisonNAIP_all_rf_prob.tif   |
@@ -2813,12 +2815,12 @@ Error in eval(expr, envir, enclos) :
 | 44 | 0.35          | mad.50m.3   | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_Pixel_madisonNAIP_all_rf_prob.tif   |
 | 45 | 0.37          | mad.100m.22 | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_Pixel_madisonNAIP_all_rf_prob.tif |
 | 46 | 0.40          | mad.150m.8  | madisonNAIP | all          | rf_prob | Pixel      | ../DD/madison_Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_Pixel_madisonNAIP_all_rf_prob.tif  |
- Joining by: c("image", "target.cover", "model", "seg.params")
+Joining by: c("image", "target.cover", "model", "seg.params")
 Error: object 'ClassifiedTilesDirName' not found
- Error in eval(expr, envir, enclos) :
-  object 'best.classif.best.grids' not found
- Joining by: c("image", "target.cover", "model", "seg.params")
- |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                         |
+Error in eval(expr, envir, enclos) :
+object 'best.classif.best.grids' not found
+Joining by: c("image", "target.cover", "model", "seg.params")
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                         |
 |----+---------------+-------------+-------------+--------------+---------+------------+----------------------------------------------------------------------------------------------|
 | 1  | 0.02          | mad.100m.12 | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.12_N-20_C-12_madisonNAIP_all_rf_prob.tif |
 | 2  | 0.03          | mad.50m.2   | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-20_C-12_madisonNAIP_all_rf_prob.tif   |
@@ -2867,7 +2869,7 @@ Error: object 'ClassifiedTilesDirName' not found
 | 45 | 0.34          | mad.150m.8  | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.150m.8_N-20_C-12_madisonNAIP_all_rf_prob.tif  |
 | 46 | 0.35          | mad.100m.22 | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.22_N-20_C-12_madisonNAIP_all_rf_prob.tif |
 
- |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                         |
+|    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                         |
 |----+---------------+-------------+-------------+--------------+---------+------------+----------------------------------------------------------------------------------------------|
 | 1  | 0.04          | mad.100m.23 | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_N-20_C-12_madisonNAIP_all_rf_prob.tif |
 | 2  | 0.07          | mad.50m.5   | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.5_N-20_C-12_madisonNAIP_all_rf_prob.tif   |
@@ -2915,12 +2917,12 @@ Error: object 'ClassifiedTilesDirName' not found
 | 44 |               | mad.50m.1   | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.1_N-20_C-12_madisonNAIP_all_rf_prob.tif   |
 | 45 |               | mad.50m.2   | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.2_N-20_C-12_madisonNAIP_all_rf_prob.tif   |
 | 46 |               | mad.50m.3   | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.50m.3_N-20_C-12_madisonNAIP_all_rf_prob.tif   |
- Joining by: c("image", "target.cover", "model", "seg.params")
+Joining by: c("image", "target.cover", "model", "seg.params")
 Error in options(., warn = -1) : invalid argument
- Warning in rep(rownames, length = nrow(x)) :
-  'x' is NULL so the result will be NULL
+Warning in rep(rownames, length = nrow(x)) :
+'x' is NULL so the result will be NULL
 Warning in rep(colnames, length = ncol(x)) :
-  'x' is NULL so the result will be NULL
+'x' is NULL so the result will be NULL
 |    | overall.error | grid        | image       | target.cover | model   | seg.params | path                                                                                         |
 |----+---------------+-------------+-------------+--------------+---------+------------+----------------------------------------------------------------------------------------------|
 | 1  | 0.04          | mad.100m.23 | madisonNAIP | all          | rf_prob | N-20_C-12  | ../DD/Accuracy/ClassifiedTiles/madisonNAIP.mad.100m.23_N-20_C-12_madisonNAIP_all_rf_prob.tif |
@@ -2947,15 +2949,15 @@ Warning in rep(colnames, length = ncol(x)) :
 
 #+begin_src R
 
-best.classif.best.grids <- best.classif.best.grids %>%  head(n=20)
+  best.classif.best.grids <- best.classif.best.grids %>%  head(n=20)
 
 
   lapply(1:nrow(best.classif.best.grids), function(i){
       pts.on.classified.tile.plot.ErrorinTitle(error = best.classif.best.grids$overall.error[i],
-                                           grd.pts = grid.points,
-                                           classified.tile.path = best.classif.best.grids$path[i],
-                                           fig.dir = "figs/bestclassif.bestgrids",
-                                           target = "a")
+                                               grd.pts = grid.points,
+                                               classified.tile.path = best.classif.best.grids$path[i],
+                                               fig.dir = "figs/bestclassif.bestgrids",
+                                               target = "a")
   })
 
 
@@ -3098,13 +3100,13 @@ null device
 
 ***** Plots of 20 *worst* classified grids by *best* classifier with points superimposed
 #+begin_src R :results none
-      best.classif.overall <- error.df.avg.class %>%
-        arrange(overall.error) %>%
-          slice(1) %>%
-        data.frame()
+  best.classif.overall <- error.df.avg.class %>%
+      arrange(overall.error) %>%
+      slice(1) %>%
+      data.frame()
 
   best.classif.worst.grids <- best.classif.overall %>%
-    select(image, target.cover, model, seg.params) %>%
+      select(image, target.cover, model, seg.params) %>%
       left_join(., error.df) %>%
       arrange(desc(overall.error)) %>%
       select(overall.error, grid,image, target.cover, model, seg.params) %>%
@@ -3114,10 +3116,10 @@ null device
 
   lapply(1:nrow(best.classif.worst.grids), function(i){
       pts.on.classified.tile.plot.ErrorinTitle(error = best.classif.worst.grids$overall.error[i],
-                                           grd.pts = grid.points,
-                                           classified.tile.path = best.classif.worst.grids$path[i],
-                                           fig.dir = "figs/bestclassif.worstgrids",
-                                           target = "a")
+                                               grd.pts = grid.points,
+                                               classified.tile.path = best.classif.worst.grids$path[i],
+                                               fig.dir = "figs/bestclassif.worstgrids",
+                                               target = "a")
   })
 
   ## plts <- lapply(best.classif.worst.grids$path, function(path) {
@@ -4336,45 +4338,35 @@ Warning messages:
 
 *** Add Zenith, Azmuth, and DOY to Seamlines by Urban Area
 #+begin_src R
-    str(seamlines_by_ua@data)
+  sunPos <- sunPosition(
+      when = as.POSIXct(as.character(seamlines_by_ua@data$date)),
+      lat = seamlines_by_ua@data$latitude,
+      long = seamlines_by_ua@data$longitude)
 
-
-  sunPosition(
-      when = seamlines_by_ua@data$date[1],
-      lat = seamlines_by_ua@data$latitude[1],
-      long = seamlines_by_ua@data$longitude[1])
-
-  sunPosition(lat = seamlines_by_ua@data$latitude[1], long = seamlines_by_ua@data$longitude[1])
-
-
-
-  sunPosition(when = Sys.time,lat = 43, long = -89)
-
-
-
-  declination <-
-  hour_angle <-
-  zenith <-
-
+  seamlines_by_ua@data <- cbind(seamlines_by_ua@data, sunPos)
+str(seamlines_by_ua@data)
 #+end_src
 
 #+results:
 #+begin_example
-'data.frame':	245 obs. of  14 variables:
- $ uid       : Factor w/ 143 levels "06/16/2013 09:13_06/16/2013 09:18",..: 19 19 19 19 19 19 141 126 38 38 ...
- $ hour      : int  9 9 9 9 9 9 10 9 9 9 ...
- $ month     : num  6 6 6 6 6 6 9 8 7 7 ...
- $ date      : POSIXct, format: "2013-06-19 09:31:00" "2013-06-19 09:31:00" ...
- $ UACE10    : Factor w/ 3601 levels "00037","00064",..: 1567 1127 1741 2761 271 226 2732 2732 2961 1288 ...
- $ AFFGEOID10: Factor w/ 3601 levels "400C100US00037",..: 1567 1127 1741 2761 271 226 2732 2732 2961 1288 ...
- $ GEOID10   : Factor w/ 3601 levels "00037","00064",..: 1567 1127 1741 2761 271 226 2732 2732 2961 1288 ...
- $ NAME10    : Factor w/ 3601 levels "Abbeville, LA",..: 1567 1127 1741 2761 271 225 2732 2732 2930 1288 ...
- $ LSAD10    : Factor w/ 2 levels "75","76": 1 2 2 2 2 2 2 2 2 1 ...
- $ UATYP10   : Factor w/ 2 levels "C","U": 2 1 1 1 1 1 1 1 1 2 ...
- $ ALAND10   : num  79615429 29009298 10432922 9600816 6026713 ...
- $ AWATER10  : num  1355978 845852 44685 117619 14520 ...
- $ latitude  : num  42.6 42.9 43.1 43.8 44 ...
- $ area      : num  914834 25075874 10435675 5843956 6020368 ...
+'data.frame':	245 obs. of  17 variables:
+ $ uid           : Factor w/ 143 levels "06/16/2013 09:13_06/16/2013 09:18",..: 19 19 19 19 19 19 141 126 38 38 ...
+ $ hour          : int  9 9 9 9 9 9 10 9 9 9 ...
+ $ month         : num  6 6 6 6 6 6 9 8 7 7 ...
+ $ date          : POSIXct, format: "2013-06-19 09:31:00" "2013-06-19 09:31:00" ...
+ $ UACE10        : Factor w/ 3601 levels "00037","00064",..: 1567 1127 1741 2761 271 226 2732 2732 2961 1288 ...
+ $ AFFGEOID10    : Factor w/ 3601 levels "400C100US00037",..: 1567 1127 1741 2761 271 226 2732 2732 2961 1288 ...
+ $ GEOID10       : Factor w/ 3601 levels "00037","00064",..: 1567 1127 1741 2761 271 226 2732 2732 2961 1288 ...
+ $ NAME10        : Factor w/ 3601 levels "Abbeville, LA",..: 1567 1127 1741 2761 271 225 2732 2732 2930 1288 ...
+ $ LSAD10        : Factor w/ 2 levels "75","76": 1 2 2 2 2 2 2 2 2 1 ...
+ $ UATYP10       : Factor w/ 2 levels "C","U": 2 1 1 1 1 1 1 1 1 2 ...
+ $ ALAND10       : num  79615429 29009298 10432922 9600816 6026713 ...
+ $ AWATER10      : num  1355978 845852 44685 117619 14520 ...
+ $ latitude      : num  42.6 42.9 43.1 43.8 44 ...
+ $ longitude     : num  -89.1 -88.9 -88.9 -88.9 -89 ...
+ $ area          : num  914834 25075874 10435675 5843956 6020368 ...
+ $ solarElevation: num  43.5 43.6 43.5 43.4 43.4 ...
+ $ azimuth       : num  97.3 97.7 97.9 98.6 98.7 ...
 #+end_example
 
 *** What are largest cities at every hour in every month?
@@ -4600,7 +4592,6 @@ df %>% ascii.nowarn.print
 #+end_src
 
 #+results:
-: [1] "org_babel_R_eoe"
 
 
 #+begin_src R
@@ -4906,7 +4897,7 @@ red          0.04878341 -0.6548348197  0.225115615 -0.04879319
 **** Combine Feature Dataframes
 
 #+BEGIN_SRC R :results none
-    cl <- makeCluster(cores)
+  cl <- makeCluster(cores)
     registerDoParallel(cl)
 
     train.dirs <- list.dirs(whole.state.dd.training) %>%
@@ -4934,7 +4925,6 @@ red          0.04878341 -0.6548348197  0.225115615 -0.04879319
 #+END_SRC
 
 **** Create Model Building Dataframes, assign Class to feature dfs
-
 #+BEGIN_SRC R :results none
   cl <- makeCluster(cores)
   registerDoParallel(cl)
@@ -4980,6 +4970,13 @@ red          0.04878341 -0.6548348197  0.225115615 -0.04879319
 
 **** Combine model builing dataframe from each scene, add hour and month features (sun angles (zenith and azmuth) and DOY?)
 
+for each feature dataframe in a train.dir.  Add the features of the
+flight (time of day, time of year, maybe solar angles)
+#+begin_src R
+
+
+
+#+end_src
 
 *** Build and Save Models
 
