@@ -13,7 +13,7 @@ with greater than 84% accuracy at pixel level, and greater accuracies
 as scale increases (up to 95% accuracy at areas of 4 hectares).  We
 found NAIP imagery greatly surpasses pan-sharpened SPOT imagery in
 classification accuracy due to greater spatial resolution and image
-quality.  However, because NAIP imagery is aquired throughout the
+quality.  However, because NAIP imagery is acquired throughout the
 growing season and at different times of day, imagery varies from city
 to city across Wisconsin and classification models trained on Madison
 imagery had accuracies as low as 82% (Wausau) and 66% (City of
@@ -41,23 +41,24 @@ training.
 1) A single raster file containing landcover maps for every urban area
    in Wisconsin usable by the Wisconsin DNR and iTree landscape's
    online application.
-2) A final report on the methods and accuracy of classification.
+2) A final report on the methods and accuracy of landcover and urban tree
+   canopy map.
 
 * Timeline
 
-| Task                                                                                      | Deadline         |
-|-------------------------------------------------------------------------------------------+------------------|
-| Select cities for training data that have imagery from each hour of day and month of year | Completed        |
-| Rewrite code for multiple training sets and cities                                        | [2016-09-16 Fri] |
-| Test improvements to model building - tuning, feature selection, bagging                  | [2016-09-20 Tue] |
-| Incorporate all additional training data                                                  | [2016-09-23 Fri] |
-| Provide Laura with accuracy assessment shapefiles                                         | [2016-09-23 Fri] |
-| Determine best classification model for state                                             | [2016-09-30 Fri] |
-| Classify every single urban area in state                                                 | [2016-10-07 Fri] |
-| UTC progress meeting                                                                      | [2016-10-07 Fri] |
-| Complete accuracy assessment for subset of urban areas across state                       | [2016-10-14 Fri] |
-| Complete landcover map as a single raster file                                            | [2016-10-21 Fri] |
-| Complete UTC project, Landcover Map and Report                                            | [2016-11-01 Tue] |
+| Task                                                                                         | Deadline     |
+|----------------------------------------------------------------------------------------------+--------------|
+| Select cities for training data that have imagery from each hour of day and month of year    | Completed    |
+| Rewrite code for multiple training sets and cities                                           | [2016-09-16] |
+| Test improvements to model building - tuning, feature selection, bagging                     | [2016-09-20] |
+| Incorporate all additional training data from DNR's Laura Lorentz                            | [2016-09-23] |
+| Provide DNR with accuracy assessment shapefiles for their assistance in human interpretation | [2016-09-23] |
+| Determine best classification model for state                                                | [2016-09-30] |
+| Classify every single urban area in state                                                    | [2016-10-07] |
+| UTC progress meeting                                                                         | [2016-10-07] |
+| Complete accuracy assessment for subset of urban areas across state                          | [2016-10-14] |
+| Complete landcover map as a single raster file                                               | [2016-10-21] |
+| Complete UTC project, landcover map and report                                               | [2016-11-01] |
 
 
 * Budget Justification
