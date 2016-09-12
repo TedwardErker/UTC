@@ -769,7 +769,7 @@ sunPosition <- function(when = Sys.time(), format, lat = 46.5, long = 6.5)
         registerDoParallel(cl)
 
         sr <- foreach (tile.name = tile.names, .packages = c("stringr","raster"), .combine ="rbind") %dopar% {
-            t.names <- str_extract(tile.paths, paste0(".*",tile.name,".*")) %>% na.omit()
+            t.names <- str_extract(tile.paths, paste0(".*",tile.name,"_.*")) %>% na.omit()
             tile <- stack(t.names)
             names(tile) <- sub(x = names(tile), pattern = ".*_", replacement = "")
             samp <- sampleRandom(tile, ifelse(ncell(tile) > max.sample.size ,max.sample.size, ncell(tile)))
