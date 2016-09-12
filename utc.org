@@ -104,7 +104,14 @@ DEADLINE: <2016-10-07 Fri -40d>
 *** TODO Complete UTC project, classification and write up
 DEADLINE: <2016-11-01 Tue -80d>
 
-This is 64 days from now.
+This is 50 days from now.
+
+
+Addendum:
+
+
+
+
 
 
 
@@ -116,7 +123,7 @@ This is 64 days from now.
   ##   install.packages("FSelector")
   ##install.packages("gdalUtils")
   ##install.packages("rgeos")
-
+library(lubridate)
   library(gdalUtils)
   library(ascii)
   library(rgeos)
@@ -143,6 +150,18 @@ This is 64 days from now.
 #+END_SRC
 
 #+results:
+#+begin_example
+
+Attaching package: ‘lubridate’
+
+The following object is masked from ‘package:plyr’:
+
+    here
+
+The following object is masked from ‘package:base’:
+
+    date
+#+end_example
 
 ** Inputs
 **** Input Directories
@@ -296,8 +315,7 @@ Especially segments between 30 and 60 m2 which seems to be performing best.
 
 #+results:
 #+begin_example
-
-                                ../DD                 ../DD/madison_Training
+                                 ../DD                 ../DD/madison_Training
                                  FALSE                                  FALSE
                  ../DD/wausau_Training                      ../DD/madison_pca
                                  FALSE                                  FALSE
@@ -4060,6 +4078,7 @@ Same Raw data as above, but adding "WholeState_DD" and "WholeState_RD"
 ** Inputs/Variables etc
 *** Input Directories
 #+BEGIN_SRC R
+  naip.dir <- "../RD_NAIP/"
   whole.state.rd <- "../WholeState_RD"
   whole.state.rd.training.regions <- str_c(whole.state.rd, "/Training_Regions")
   whole.state.dd <- "../WholeState_DD"
@@ -4109,6 +4128,7 @@ urban.layer <- "cb_2013_us_ua10_500k"
 #+END_SRC
 
 #+results:
+: Error: object 'points.accuracy.dir' not found
 
 *** Appendages
 #+begin_src R
@@ -4220,7 +4240,7 @@ seamlines <- readOGR(dsn = naip.seamlines.dir, layer = naip.seamlines.layer)
 
 #+results:
 : OGR data source with driver: ESRI Shapefile
-: Source: "../RD_NAIP/SeamLines", layer: "ortho_naip_seamline-naipseamlines2013_a_wi"
+: Source: "../RD_NAIP//SeamLines", layer: "ortho_naip_seamline-naipseamlines2013_a_wi"
 : with 243 features
 : It has 12 fields
 
@@ -4344,29 +4364,32 @@ Warning messages:
       long = seamlines_by_ua@data$longitude)
 
   seamlines_by_ua@data <- cbind(seamlines_by_ua@data, sunPos)
-str(seamlines_by_ua@data)
+head(seamlines_by_ua@data)
 #+end_src
 
 #+results:
 #+begin_example
-'data.frame':	245 obs. of  17 variables:
- $ uid           : Factor w/ 143 levels "06/16/2013 09:13_06/16/2013 09:18",..: 19 19 19 19 19 19 141 126 38 38 ...
- $ hour          : int  9 9 9 9 9 9 10 9 9 9 ...
- $ month         : num  6 6 6 6 6 6 9 8 7 7 ...
- $ date          : POSIXct, format: "2013-06-19 09:31:00" "2013-06-19 09:31:00" ...
- $ UACE10        : Factor w/ 3601 levels "00037","00064",..: 1567 1127 1741 2761 271 226 2732 2732 2961 1288 ...
- $ AFFGEOID10    : Factor w/ 3601 levels "400C100US00037",..: 1567 1127 1741 2761 271 226 2732 2732 2961 1288 ...
- $ GEOID10       : Factor w/ 3601 levels "00037","00064",..: 1567 1127 1741 2761 271 226 2732 2732 2961 1288 ...
- $ NAME10        : Factor w/ 3601 levels "Abbeville, LA",..: 1567 1127 1741 2761 271 225 2732 2732 2930 1288 ...
- $ LSAD10        : Factor w/ 2 levels "75","76": 1 2 2 2 2 2 2 2 2 1 ...
- $ UATYP10       : Factor w/ 2 levels "C","U": 2 1 1 1 1 1 1 1 1 2 ...
- $ ALAND10       : num  79615429 29009298 10432922 9600816 6026713 ...
- $ AWATER10      : num  1355978 845852 44685 117619 14520 ...
- $ latitude      : num  42.6 42.9 43.1 43.8 44 ...
- $ longitude     : num  -89.1 -88.9 -88.9 -88.9 -89 ...
- $ area          : num  914834 25075874 10435675 5843956 6020368 ...
- $ solarElevation: num  43.5 43.6 43.5 43.4 43.4 ...
- $ azimuth       : num  97.3 97.7 97.9 98.6 98.7 ...
+                                  uid hour month                date UACE10
+156 06/19/2013 09:31_06/19/2013 10:04    9     6 2013-06-19 09:31:00  42562
+157 06/19/2013 09:31_06/19/2013 10:04    9     6 2013-06-19 09:31:00  30547
+158 06/19/2013 09:31_06/19/2013 10:04    9     6 2013-06-19 09:31:00  46882
+159 06/19/2013 09:31_06/19/2013 10:04    9     6 2013-06-19 09:31:00  75205
+160 06/19/2013 09:31_06/19/2013 10:04    9     6 2013-06-19 09:31:00  07219
+161 06/19/2013 09:31_06/19/2013 10:04    9     6 2013-06-19 09:31:00  06112
+        AFFGEOID10 GEOID10            NAME10 LSAD10 UATYP10  ALAND10 AWATER10
+156 400C100US42562   42562    Janesville, WI     75       U 79615429  1355978
+157 400C100US30547   30547 Fort Atkinson, WI     76       C 29009298   845852
+158 400C100US46882   46882    Lake Mills, WI     76       C 10432922    44685
+159 400C100US75205   75205         Ripon, WI     76       C  9600816   117619
+160 400C100US07219   07219        Berlin, WI     76       C  6026713    14520
+161 400C100US06112   06112    Beaver Dam, WI     76       C 20413561    72831
+    latitude longitude       area elevation azimuthJ azimuthC
+156 42.61353 -89.08051   914834.4  43.46893 97.33968 97.33968
+157 42.86805 -88.89452 25075874.1  43.57099 97.72253 97.72253
+158 43.06298 -88.94820 10435675.4  43.50564 97.86440 97.86440
+159 43.82418 -88.87901  5843955.7  43.44615 98.63310 98.63310
+160 43.96025 -88.96932  6020367.5  43.36131 98.68844 98.68844
+161 43.43130 -88.87031 14842890.3  43.51012 98.27148 98.27148
 #+end_example
 
 *** What are largest cities at every hour in every month?
@@ -4414,10 +4437,15 @@ df %>% ascii.nowarn.print
   superior_seamlines_by_ua <- subset(superior_seamlines_by_ua, month == 6)
   superior_seamlines_by_ua <- subset(superior_seamlines_by_ua, hour == 8)
 
+selected_seamlines_by_ua <- raster::union(selected_seamlines_by_ua, superior_seamlines_by_ua)
+
 #+end_src
 
 #+results:
-: Joining, by = c("hour", "month", "NAME10", "area")
+: Joining, by = c("hour", "month", "NAME10", "area", "selected")
+: Warning message:
+: In if (class(x[, j]) != class(dd[, j])) { :
+:   the condition has length > 1 and only the first element will be used
 **** leaflet plot
 #+begin_src R :eval no
 
@@ -4482,10 +4510,8 @@ df %>% ascii.nowarn.print
       selected_seamlines_by_ua.df <- selected_seamlines_by_ua %>%
           data.frame() %>%
           mutate(city = str_extract(NAME10, "[A-Za-z ]*")) %>%
-          mutate(file.names = str_c(whole.state.dd.naip,"/city-",city,"_month-",month,"_hour-",hour,"_NAIP.tif")) %>%
+          mutate(file.names = str_c(whole.state.dd.naip,"/city-",city,"_month-",month,"_hour-",hour,"_solElv-",round(elevation),"_azimuth-",round(azimuthJ),"_NAIP.tif")) %>%
           mutate(file.names = str_replace(file.names, " ", ""))
-
-
 
   naip.stacks <-   lapply(naip.stacks, function(s) {
       proj4string(s) <- wtm
@@ -4554,104 +4580,6 @@ df %>% ascii.nowarn.print
 #+end_src
 
 #+results:
-
-*** Also Crop to Superior to provide more coverage across the state
-#+begin_src R
-
-  naip.tif.names <- list.files(naip.tile.dir, recursive = T, full.names = T) %>%
-      str_extract(pattern = ".*tif$") %>%
-      na.omit()
-
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-  naip.stacks <- foreach(naip.tif.name = naip.tif.names, .packages = "raster") %dopar% {
-      stack(naip.tif.name)
-  }
-
-  naip.stacks <-   lapply(naip.stacks, function(s) {
-      proj4string(s) <- wtm
-      s
-  })
-
-  naip.extents <- foreach(naip.stack = naip.stacks, .packages = "raster") %dopar% {
-      extent(naip.stack)
-  }
-
-  closeAllConnections()
-
-
-  #city-XXX_month-XX_hour-X_NAIP.tif"
-  superior_seamlines_by_ua.df <- superior_seamlines_by_ua %>%
-      data.frame() %>%
-      mutate(city = str_extract(NAME10, "[A-Za-z ]*")) %>%
-      mutate(file.names = str_c(whole.state.dd.naip,"/city-",city,"_month-",month,"_hour-",hour,"_NAIP.tif")) %>%
-      mutate(file.names = str_replace(file.names, " ", ""))
-
-
-#+end_src
-
-#+results:
-
-
-#+begin_src R
-                                           #loop through polygons
-   cl <- makeCluster(cores)
-   registerDoParallel(cl)
-
-   naip.at.urb <- foreach(i = 1:length(superior_seamlines_by_ua), .packages = c("raster","rgeos","foreach")) %dopar% {
-
-       u <- superior_seamlines_by_ua[i,]
-
-       tiles.in.urban <-  lapply(naip.extents, function(naip.extent) {
-           inter <- raster::intersect(naip.extent, u)
-           ifelse(is.null(inter), F, T)
-       })
-
-       tile.index <- which(unlist(tiles.in.urban))
-
-       tiles.inter.u <- lapply(tile.index, function(i) {
-           naip.extent <- as(naip.extents[[i]], "SpatialPolygons")
-           proj4string(naip.extent) <- wtm
-           inter <- gIntersects(naip.extent, u)
-       })
-
-       tile.index <- tile.index[which(unlist(tiles.inter.u))]
-
-       tiles.at.u <- naip.stacks[tile.index]
-
-
-                                         # loop through tiles at each polygon
-       crp.tiles.at.u <- foreach(t.at.u = tiles.at.u) %do% {
-
-           eu <- extent(u)
-           ei <- extent(t.at.u)
-           e <- raster::intersect(ei,eu)
-
-           t.int.u <- crop(t.at.u, e)
-
-           if (sum(!is.na(values(t.int.u))) < 500) {t.int.u <- NULL}
-
-           t.int.u
-       }
-
-       if(length(crp.tiles.at.u) > 1) {
-           out <- do.call(mosaic, c(crp.tiles.at.u,list(fun = mean, tolerance = 0.5)))
-       } else {
-           out <- crp.tiles.at.u[[1]]
-           }
-
-       writeRaster(x = out, filename = superior_seamlines_by_ua.df$file.names[i], overwrite = T)
-       out
-   }
-
-
-  # closeAllConnections()
-
-#+end_src
-
-#+results:
-:  There were 46 warnings (use warnings() to see them)
 
 ** Create State-wide classifiers
 
