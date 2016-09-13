@@ -19,6 +19,135 @@ to city across Wisconsin and classification models trained on Madison
 imagery had accuracies as low as 82% (Wausau) and 66% (City of
 Marinette).
 
+** Methods:
+
+To make a map of urban canopy cover, we tested each combination of two
+different images, 2 machine learning classification algorithms (Random
+Forests and Support Vector Machines), 7 average segment sizes ranging
+from pixels to 100 m^2, and 3 levels of compactness for each segment
+size.  This created 2*2*7*3 = 84 different maps.  Details on imagery,
+feature creation, segmentation, and classification are below.
+
+*** Imagery: SPOT 6 satellite imagery and NAIP aerial imagery
+Two types of imagery were tested.  SPOT 6 imagery with a panchromatic
+band at 1.5 meter resolution and 4 bands (Blue 0.450-0.520
+micrometers, Green 0.530-0.590 micrometers, Red 0.625-0.695
+micrometers, and Near Infrared 0.760-0.890 micrometers) at 6 meter
+resolution was aquired in August 2014. We pansharpened the spot
+imagery to 1.5 meter resolution using PCI Geomatic's geomatica software.
+
+National Agriculture Inventory Program (NAIP) aerial orthoRECTtified?
+imagery with 4 bands (blue, green, red, and near infrared) at 1 meter
+resolution was aquired over the study area on June 19 and July
+4, 2013.
+
+NAIP imagery for the state of Wisconsin was aquired between June 16
+2013 and September 5 2013.  Time of day ranged from 8:19 AM to 1:25
+PM.  This range is day of year and time of day created images with a
+large range of shadow conditions.
+
+*** Feature Creation
+In addition to reflectance values at each pixel, addition
+features/variables were created from the image to improve classification.
+**** Normalized reflectance and NDVI
+For pixels from shadow covered regions, the ratio of each band to
+total reflectance may be more important than absolute reflectance.  As
+such, each band was divided by total reflectance to normalize it.
+Another ratio-based feature added was the normalized difference
+vegetation index, NDVI: the difference between the near infrared and
+red bands divided by their sum.
+**** Texture
+Texture features are variables that describe patterns of reflectance
+within a given window and given direction.  We used 4 statistics
+(contrast, correlation, entropy, and homogeneity) derived from the
+grey-level co-occurrence matrices of the image to get estimates of
+texture.  We tested window sizes of 3x3, 5x5, and 7x7 pixels.  Given
+the directional nature of shadows in the imagery, we calculated
+textures in four directions: 0, 45, 90, and 135 degrees cite:glcm_Rpackage.
+*** Segmentation
+Segmentation, also called "object-based classification", is an
+approach to group pixels into segments or "super-pixels" based on
+spatial and spectral similarity.  We used the SLIC (Simple Linear
+Iterative Clustering) algorithm
+cite:achanta12_slic_super_compar_to_state.  One of the primary
+advantages of SLIC is its simplicity and speed which allows for the
+systematic testing of different parameters and segment sizes to
+maximize classification accuracy.  Most object-based classifications
+have not used quantitive methods to select segment size and parameter values.
+*** Classification
+**** Collection of training data
+We drew training polygons over regions of each class and assigned the class
+label to pixels of the image that fell within the training polygons or to the
+segments (in the case of superpixel/object-based models) that were
+mostly within the training polyons.  As such, the number of training
+observations was greatest for pixel-based models, and decreased as the
+segment size (number of pixels per segment) increased.
+*** Model Building
+We used R's [[https://cran.r-project.org/web/packages/mlr/index.html][mlr package]], which provides consistent wrapper
+functionality to machine learning packages in R, to select features,
+tune, and train classification models.  A major benefit to using this
+package in the unified syntax which allows access to many methods
+written by many different authors.  This makes applying additional
+classification methods relatively straightforward, but with the
+possible drawback of users applying methods without a good
+understanding of how the method works.
+
+We used MLR to train and test 2 algorithms: random forests and support
+vector machines cite:breiman01_Random_forests,kernlab_Rpackage.
+
+*** Software
+With the exception of PCI Geomatic's software to pansharpen the SPOT
+imagery, all software used was open source. The SLIC algorithm for
+segmentation was implemented with Python's sckikit image
+cite:scikit-image. QGIS was used to draw training polygons
+cite:QGIS_software.  GDAL was used for raster and vector operations
+cite:GDAL. All other computations used the R language the
+the following packages: sp, dplyr, rgdal, rgeos, glcm, doParallel,
+foreach, mlr, raster, randomForest, kernlab, and irace
+cite:sp_Rpackage_book, cite:sp_Rpackage_article, cite:rgeos,
+cite:dplyr, cite:rgdal, cite:glcm_Rpackage, cite:doParallel,
+cite:foreach_Rpackage, cite:mlr_Rpackage, cite:raster_Rpackage,
+cite:randomForest_Rpackage, cite:kernlab_Rpackage,
+cite:irace_Rpackage, cite:R_lang.
+
+All code used in this work is available at github.
+
+*** Classification Performance / Accuracy Assessment
+Google Earth imagery (june 2014) was used in two ways to evaluate the performance
+of the classifiers.  First, 610 randomly located points and, second,
+46 randomly located grids of 64-225 points were overlaid on google earth imagery
+and their class identified by human interpretation.
+
+**** Random Points - Estimating accuracy at a pixel
+The 610 random points in the image domain were assigned a class
+according to the underlying Google Earth imagery.  A traditional
+confusion matrix was created comparing this to the classification of
+the underlying pixel from the image.  This method found the best
+classifier used the Random forests algorithm and an average segment
+size of 45 m^2.  The overall error rate for Madison, WI was 16.7%.
+**** Grids of Points - Estimating accuracy over an area
+Because of elevated error at small scales caused by misregistration
+between image and reference points in a highly heterogeneous
+environment, and because managers are interesting in estimates of
+canopy cover at greater than pixel (1 meter) scale - parcels, street
+blocks, census blocks, and so on - we used the grids of points to
+assess how the accuracy of our classifiers change as scale
+increases. This method found the best classifier at scales of 50m^2
+(~60 yd^2) to be Random forests with a segment size of 20m^2 and at
+scales of 4 hectares (10 acres) to be Support Vector Machines also
+with a segment size of 20m^2.
+
+This difference is because while the Random Forest classifier is more
+accurate, it is slightly biased.  As the number of points in the grid
+increases with the area underconsideration, this bias prevents the
+error from decreasing to zero.  The unbaisedness of the Support Vector
+Machines means it has higher accuracy at larger scales.  Working to
+create an accurate classifier with little bias is one of the
+objectives of the next stage in this proposal.
+
+
+* Extened Proposal
+
 Here we propose to use the method developed for Madison and reliably
 apply it to every urban area in the State of Wisconsin.  To do so we
 will collect additional training data across the state to address the
@@ -32,10 +161,12 @@ improvements to building classification models such as tuning
 (adjusting hyperparameters for machine learning algorithms), feature
 selection and "bagging" (techniques to identify and use only the
 variables/features that provide the highest accuracy).  We will assess
-the accuracy of the landcover maps using Google Earth.  A human
+the accuracy of the landcover maps using Google Earth.  For the
+selection of the best classifier by the beginning of November 2016, a human
 interpreter will identify the landcover class of at least 50 randomly
 located points for each of at least 10 Wisconsin cities not used in
-training.
+training.  These points will be relatively rapid to identify and can
+be used to select the best me
 
 * Products
 1) A single raster file containing landcover maps for every urban area
@@ -46,19 +177,21 @@ training.
 
 * Timeline
 
-| Task                                                                                         | Deadline     |
-|----------------------------------------------------------------------------------------------+--------------|
-| Select cities for training data that have imagery from each hour of day and month of year    | Completed    |
-| Rewrite code for multiple training sets and cities                                           | [2016-09-16] |
-| Test improvements to model building - tuning, feature selection, bagging                     | [2016-09-20] |
-| Incorporate all additional training data from DNR's Laura Lorentz                            | [2016-09-23] |
-| Provide DNR with accuracy assessment shapefiles for their assistance in human interpretation | [2016-09-23] |
-| Determine best classification model for state                                                | [2016-09-30] |
-| Classify every single urban area in state                                                    | [2016-10-07] |
-| UTC progress meeting                                                                         | [2016-10-07] |
-| Complete accuracy assessment for subset of urban areas across state                          | [2016-10-14] |
-| Complete landcover map as a single raster file                                               | [2016-10-21] |
-| Complete UTC project, landcover map and report                                               | [2016-11-01] |
+| Task                                                                                      | Deadline     |
+|-------------------------------------------------------------------------------------------+--------------|
+| Select cities for training data that have imagery from each hour of day and month of year | Completed    |
+| Rewrite code for multiple training sets and cities                                        | [2016-09-16] |
+| Test improvements to model building - tuning, feature selection, bagging                  | [2016-09-20] |
+| Incorporate all additional training data from DNR's Laura Lorentz                         | [2016-09-23] |
+| Determine best classification model for state                                             | [2016-09-30] |
+| Classify every single urban area in state                                                 | [2016-10-07] |
+| UTC progress meeting                                                                      | [2016-10-07] |
+| Complete landcover map as a single raster file                                            | [2016-10-21] |
+| Assess Accuracy of landcover map at different scales across state                         | [2016-11-23] |
+| Complete UTC project, landcover map and report                                            | [2016-12-09] |
+|                                                                                           |              |
+
+
 
 
 * Budget Justification
