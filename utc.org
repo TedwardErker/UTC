@@ -4081,6 +4081,7 @@ Same Raw data as above, but adding "WholeState_DD" and "WholeState_RD"
   naip.dir <- "../RD_NAIP/"
   whole.state.rd <- "../WholeState_RD"
   whole.state.rd.training.regions <- str_c(whole.state.rd, "/Training_Regions")
+  whole.state.rd.accuracy <- str_c(whole.state.rd, "/Accuracy")
   whole.state.dd <- "../WholeState_DD"
   whole.state.dd.naip <- str_c(whole.state.dd, "/NAIP")
   whole.state.dd.training <- str_c(whole.state.dd, "/Training")
@@ -4091,7 +4092,7 @@ Same Raw data as above, but adding "WholeState_DD" and "WholeState_RD"
   water.dir <- "../RD_WI-waterbody-24k"
   urban.dir <- "../RD_US_UrbanAreasShapefile"
   urban.and.incorporated.dir <- "../RD_merged_WIurbanAreas_and_incorporatedAreas"
-dir.list <- list(whole.state.rd, whole.state.dd.naip, whole.state.rd.training.regions, whole.state.dd,   whole.state.dd.training,  whole.state.dd.accuracy,  naip.tile.dir,   naip.seamlines.dir,  crop.dir,   water.dir,   urban.dir,   urban.and.incorporated.dir)
+dir.list <- list(whole.state.rd,   whole.state.rd.accuracy, whole.state.dd.naip, whole.state.rd.training.regions, whole.state.dd,   whole.state.dd.training,  whole.state.dd.accuracy,  naip.tile.dir,   naip.seamlines.dir,  crop.dir,   water.dir,   urban.dir,   urban.and.incorporated.dir)
 
 #+END_SRC
 
@@ -4128,7 +4129,12 @@ urban.layer <- "cb_2013_us_ua10_500k"
 #+END_SRC
 
 #+results:
+: Error: object 'pca.dir' not found
+: Error: object 'training.dir' not found
+: Error: object 'grids.accuracy.dir' not found
+: Error: object 'fieldplots.accuracy.dir' not found
 : Error: object 'points.accuracy.dir' not found
+: Error: object 'grid.accuracy.region.dsn' not found
 
 *** Appendages
 #+begin_src R
@@ -4872,8 +4878,644 @@ save a model for each
 
 #+end_src
 ** Assess Accuracy of classifiers
+*** Creation of Assessment Points
+#+begin_src R
+us <- getData('GADM', country='USA', level=1)
+wi <- subset(us, us@data$NAME_1 == "Wisconsin")
+#+end_src
+
+#+results:
+
+#+begin_src R
+      ua <- readOGR(dsn = urban.dir, layer = urban.layer)
+      ua_wi <- subset(ua, grepl(".*WI",as.character(ua@data$NAME10)))
+proj4string(ua_wi) <- proj4string(wi)
+  ua_wi <- crop(ua_wi, wi)
+
+    pts <- spsample(ua_wi, n=2000, type = "random")
+#+end_src
+
+#+results:
+#+begin_example
+OGR data source with driver: ESRI Shapefile
+Source: "../RD_US_UrbanAreasShapefile", layer: "cb_2013_us_ua10_500k"
+with 3601 features
+It has 8 fields
+Warning messages:
+1: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 57 is invalid in this locale
+2: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 58 is invalid in this locale
+3: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 509 is invalid in this locale
+4: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 512 is invalid in this locale
+5: In grepl(".*WI", as.character(ua@data$NAME10)) :
+  input string 3194 is invalid in this locale
+Warning message:
+In ReplProj4string(obj, CRS(value)) :
+  A new CRS was assigned to an object with an existing CRS:
++proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0
+without reprojecting.
+For reprojection, use function spTransform
+#+end_example
+
+#+begin_src R
+  pts <- SpatialPointsDataFrame(pts, data = data.frame(id = 1:length(pts), class = rep(NA,length(pts))))
+  writeOGR(pts, dsn = whole.state.rd.accuracy, layer = "points", driver = "ESRI Shapefile", overwrite = F)
+                                          #writeOGR(pts, dsn = str_c(whole.state.rd.accuracy,"/points.kml"), layer = "points", driver = "KML", overwrite = T, dataset_options=c("ID=id"))
+#+end_src
+
+#+results:
+*** Assess Accuracy At Points
+#+begin_src R
+class.codes <- c("grass" = "g", "wetland" = "m", "water" = "w", "impervious" = "i", "tree" = "t")
+
+#+end_src
+
+#+results:
+
+**** Make tiles at accuracy points
+1) find which points intersect with which tiles
+
+***** load naip tiles and extents
+#+begin_src R
+      naip.tif.names <- list.files(naip.tile.dir, recursive = T, full.names = T) %>%
+          str_extract(pattern = ".*tif$") %>%
+          na.omit()
+
+      cl <- makeCluster(cores)
+      registerDoParallel(cl)
+
+      naip.stacks <- foreach(naip.tif.name = naip.tif.names, .packages = "raster") %dopar% {
+          stack(naip.tif.name)
+      }
+
+      naip.extents <- foreach(naip.stack = naip.stacks, .packages = "raster") %dopar% {
+          extent(naip.stack)
+      }
+
+      closeAllConnections()
+
+  naip.stacks <-   lapply(naip.stacks, function(s) {
+      proj4string(s) <- wtm
+      s
+  })
+
+#+end_src
+
+***** load points and reproject to wtm
+
+#+BEGIN_SRC R :results none
+  pts <- readOGR(dsn = whole.state.rd.accuracy, layer = "points", stringsAsFactors = F)
+  pts <- spTransform(pts, wtm)
+  str(pts)
+#+end_src
+
+***** make tiles
+#+begin_src R
+  buffer.size <- 20
+
+        box <- gBuffer(pts, width = buffer.size)
+        box <- disaggregate(box)
+
+        polygons <- as(box, "SpatialPolygons")
+
+  foreach(naip.extent = naip.extents) %do% {
 
 
+
+
+
+  }
+
+
+    closeAllConnections()
+
+#+END_SRC
+
+
+
+**** Make Feature data frames, for each Accuracy Region tile
+
+#+begin_src R :results silent
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+  tile.names <- list.files(dd.accuracy.dir) %>%
+      str_match(., pattern = str_c("(",location,".*",grid.field.point.pattern,")(.tif)"))
+
+  tile.names <- tile.names[,2] %>% na.omit()
+
+  pixel.added.features.raster.list <- foreach (i = tile.names,
+                                               .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
+
+                                                   img.nm <- str_extract(i, ("NAIP|PanshpSPOT"))
+
+                                                   feature.dfs <- make.feature.df(tile.dir = dd.accuracy.dir,
+                                                                                  tile.name = i,
+                                                                                  image.name = img.nm,
+                                                                                  bad.names = c("blue","green","red","nir"),
+                                                                                  ndvi = T,
+                                                                                  ratio.bands = c("blue","green","red","nir"),
+                                                                                  texture.params.df = texture.params,
+                                                                                  pixel.df = T,
+                                                                                  pca.location = location,
+                                                                                  segmentation = T,
+                                                                                  segment.params.df = segment.params)
+
+                                               }
+
+  closeAllConnections()
+#+end_src
+
+**** Classify Tiles at accuracy regions
+
+#+BEGIN_SRC R :results none
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+
+
+  classified.grid.tiles <-       foreach(img.nm = image.names[1]) %do% {
+
+      models <- list.files(dd.models.dir) %>%
+          str_extract(., str_c(".*",location,img.nm,".*")) %>%
+          na.omit()
+
+      tile.names <- list.files(dd.accuracy.dir) %>%
+          str_match(., pattern = str_c("(",location,img.nm,".*?)_.*\\.tif$"))
+
+      tile.names <- tile.names[,2] %>% na.omit() %>% unique()
+
+
+      foreach(tile.nm = tile.names,
+              .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
+
+                  foreach(model = models) %do% {
+
+                      seg.p <- str_extract(model, segmentation.pattern)
+
+                      if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
+                          segment.tile.name.append <- paste0("_",seg.p,".tif")
+                          segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
+
+                          classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
+                                                    model.dir = dd.models.dir,
+                                                    segment.dir = dd.accuracy.dir,
+                                                    tile.name = tile.nm,
+                                                    segmentation.appendage = segment.tile.name.append,
+                                                    model.name.rds = model,
+                                                    segment.feature.appendage = segment.feature.df.name.append,
+                                                    segmentation.prms = seg.p)
+
+                      } else {
+                          classify.pixel.raster(tile.dir = dd.accuracy.dir,
+                                                tile.name = tile.nm,
+                                                pixelFeatureDF.appendage = feature.df.appendage,
+                                                model.dir = dd.models.dir,
+                                                model.rds = model,
+                                                seg.prms = seg.p)
+                      }
+                  }
+              }
+  }
+
+  closeAllConnections()
+#+END_SRC
+**** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data also, but there is spatial association to consider.
+***** Random Points
+****** Google as reference
+#+BEGIN_SRC R
+  r.pts <- readOGR(dsn = point.accuracy.region.dsn, layer = point.accuracy.region.layer, stringsAsFactors = F)
+
+
+
+
+
+  r.pts@data$cover = mapvalues(r.pts@data$cover,
+                               from = c("imperv", "grass", "tree", "soil", "water", "wetland"),
+                               to = c("i","g","t","i",NA,NA))
+
+  xy <- coordinates(r.pts)
+  r.pts@data$x <- xy[,1]
+  r.pts@data$y <- xy[,2]
+
+  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+      str_extract(., pattern = ".*.tif$") %>%
+      str_extract(., pattern = str_c(".*",grid.field.point.pattern, ".*")) %>%
+      na.omit()
+
+  ## point.names <- classified.tile.paths %>%
+  ##     str_match(., paste0(".*(",point.pattern,").*"))
+
+  ## point.names <- point.names[,2] %>%
+  ##     unique() %>%
+  ##     na.omit()
+
+  point.names <- r.pts@data$accuracy_2
+
+
+
+
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+
+  error.df <- foreach(pt.name = point.names, .combine = "rbind",
+                      .packages = c("doParallel","plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+
+                          pts <- r.pts[r.pts@data$accuracy_2== pt.name,]
+
+                          classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*",pt.name,"_.*")) %>%
+                              na.omit()
+
+                          ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
+                          ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
+                          ##      na.omit()
+
+                                          #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
+
+
+
+                          foreach(classified.tile.path.at.point = classified.tile.paths.at.point,
+                                  .combine = "rbind",
+                                  .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %do% {
+
+                                      classified.tile.name.at.point <- basename(classified.tile.path.at.point)
+                                      classified.tile <- raster(classified.tile.path.at.point)
+
+                                      tgt <- str_extract(classified.tile.name.at.point, "tree|grass|impervious|all")
+                                      tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+
+                                      ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
+                                      ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
+                                      ## dev.off()
+
+                                      PixBool <- !is.na((str_extract(classified.tile.path.at.point, "_Pixel_")))
+
+                                      if(!is.na(str_extract(classified.tile.path.at.point, "_all_"))) {
+
+                                          error <- calcErrorAllMultinomial.wrefColumn(pts, classified.tile, Pixel = PixBool, referenceColumn = "cover", one.point = T)
+                                          error <- error %>%
+                                              t() %>%
+                                              data.frame() %>%
+                                              mutate(point = pt.name,
+                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                                     seg.params = str_extract(classified.tile.name.at.point, segmentation.pattern),
+                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
+                                          error
+                                      } else {
+                                          target = str_extract(classified.tile.name.at.point, "tree|grass|impervious")
+                                          target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                                          error <- calcErrorBinomial.wrefColumn(pts, classified.tile, target, Pixel = PixBool, referenceColumn = "cover", one.point = T)
+                                          error <- error %>%
+                                              t() %>%
+                                              data.frame() %>%
+                                              mutate(point = pt.name,
+                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                                     seg.params = str_extract(classified.tile.name.at.point, seg.prms),
+                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
+                                          error
+                                      }
+                                  }
+                      }
+
+  closeAllConnections()
+
+
+  saveRDS(error.df, str_c(derived.dir, "/RandomPoints.GoogleReference.point2pixel.error.df.rds"))
+
+#+END_SRC
+
+****** NAIP as reference
+#+BEGIN_SRC R
+  r.pts <- readOGR(dsn = point.accuracy.region.dsn, layer = point.accuracy.region.layer, stringsAsFactors = F)
+
+  r.pts@data$e_naip_cvr = mapvalues(r.pts@data$e_naip_cvr,
+                                    from = c("imperv", "grass", "tree", "soil", "water", "wetland"),
+                                    to = c("i","g","t","i",NA,NA))
+
+  xy <- coordinates(r.pts)
+  r.pts@data$x <- xy[,1]
+  r.pts@data$y <- xy[,2]
+
+  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+      str_extract(., pattern = ".*.tif$") %>%
+      str_extract(., pattern = str_c(".*",grid.field.point.pattern, ".*")) %>%
+      na.omit()
+
+  ## point.names <- classified.tile.paths %>%
+  ##     str_match(., paste0(".*(",point.pattern,").*"))
+
+  ## point.names <- point.names[,2] %>%
+  ##     unique() %>%
+  ##     na.omit()
+
+  point.names <- r.pts@data$accuracy_2
+
+  ## grid.name = str_extract(grid.names, ".*150m-[56].*") %>% na.omit()
+
+
+
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+
+  error.df <- foreach(pt.name = point.names, .combine = "rbind",
+                      .packages = c("doParallel","plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+
+                          pts <- r.pts[r.pts@data$accuracy_2== pt.name,]
+
+                          classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*",pt.name,"_.*")) %>%
+                              na.omit()
+
+                          ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
+                          ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
+                          ##      na.omit()
+
+                                          #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
+
+
+
+                          foreach(classified.tile.path.at.point = classified.tile.paths.at.point,
+                                  .combine = "rbind",
+                                  .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %do% {
+
+                                      classified.tile.name.at.point <- basename(classified.tile.path.at.point)
+                                      classified.tile <- raster(classified.tile.path.at.point)
+
+                                      tgt <- str_extract(classified.tile.name.at.point, "tree|grass|impervious|all")
+                                      tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+
+                                      ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
+                                      ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
+                                      ## dev.off()
+
+                                      PixBool <- !is.na((str_extract(classified.tile.path.at.point, "_Pixel_")))
+
+                                      if(!is.na(str_extract(classified.tile.path.at.point, "_all_"))) {
+
+                                          error <- calcErrorAllMultinomial.wrefColumn(pts, classified.tile, Pixel = PixBool, referenceColumn = "e_naip_cvr", one.point = T)
+                                          error <- error %>%
+                                              t() %>%
+                                              data.frame() %>%
+                                              mutate(point = pt.name,
+                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                                     seg.params = str_extract(classified.tile.name.at.point, segmentation.pattern),
+                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
+                                          error
+                                      } else {
+                                          target = str_extract(classified.tile.name.at.point, "tree|grass|impervious")
+                                          target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                                          error <- calcErrorBinomial.wrefColumn(pts, classified.tile, target, Pixel = PixBool, referenceColumn = "e_naip_cvr", one.point = T)
+                                          error <- error %>%
+                                              t() %>%
+                                              data.frame() %>%
+                                              mutate(point = pt.name,
+                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                                     seg.params = str_extract(classified.tile.name.at.point, seg.prms),
+                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
+                                          error
+                                      }
+                                  }
+                      }
+
+  closeAllConnections()
+
+
+  saveRDS(error.df, str_c(derived.dir, "/RandomPoints.NAIPreference.point2pixel.error.df.rds"))
+
+#+END_SRC
+
+#+results:
+: OGR data source with driver: ESRI Shapefile
+: Source: "../RD_Accuracy/PointsByRobi", layer: "PointsInDomain"
+: with 610 features
+: It has 9 fields
+
+
+***** Grids
+
+#+BEGIN_SRC R
+  grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
+
+  xy <- coordinates(grd)
+  grd@data$x <- xy[,1]
+  grd@data$y <- xy[,2]
+
+  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+      str_extract(., pattern = ".*.tif$") %>%
+      str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
+      na.omit()
+
+
+  grid.names <- classified.tile.paths %>%
+      str_match(., paste0(".*(",grid.pattern,").*"))
+
+  grid.names <- grid.names[,2] %>%
+      unique() %>%
+      na.omit()
+
+  ## grid.name = str_extract(grid.names, ".*150m-[56].*") %>% na.omit()
+
+
+
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+
+  error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
+
+      pts <- grd[grd@data$unq__ID== grid.name,]
+
+      classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
+          na.omit()
+
+      ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
+      ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
+      ##      na.omit()
+
+                                          #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
+
+
+
+      foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
+              .combine = "rbind",
+              .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+
+                  classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
+                  classified.tile <- raster(classified.tile.path.at.grid)
+
+                  tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
+                  tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+
+                  ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
+                  ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
+                  ## dev.off()
+
+                  PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
+
+                  if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
+                      error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
+                      error <- error %>%
+                          t() %>%
+                          data.frame() %>%
+                          mutate(grid = grid.name,
+                                 image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                 target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                 model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                 seg.params = str_extract(classified.tile.name.at.grid, segmentation.pattern),
+                                 tuned = str_extract(classified.tile.name.at.grid, tuned.pattern))
+                      error
+                  } else {
+                      target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
+                      target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                      error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
+                      error <- error %>%
+                          t() %>%
+                          data.frame() %>%
+                          mutate(grid = grid.name,
+                                 image =  str_extract(classified.tile.name.at.grid, image.pattern),
+                                 target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
+                                 model =  str_extract(classified.tile.name.at.grid, model.pattern),
+                                 seg.params = str_extract(classified.tile.name.at.grid, seg.prms),
+                                 tuned = str_extract(classified.tile.name.at.grid, tuned.pattern))
+                      error
+                  }
+              }
+  }
+  closeAllConnections()
+
+
+  saveRDS(error.df, str_c(derived.dir, "/Grids.point2pixel.error.df.rds"))
+
+#+END_SRC
+
+#+results:
+: OGR data source with driver: ESRI Shapefile
+: Source: "../RD_Accuracy/Grids", layer: "Grids"
+: with 20209 features
+: It has 15 fields
+
+***** Field Plots
+#+BEGIN_SRC R
+  field.pts <- readOGR(dsn = field.accuracy.region.dsn, layer = field.accuracy.region.layer, stringsAsFactors = F)
+
+
+                                          # convert class of field pts to "g", "i", "t"
+
+
+
+
+  field.pts@data$cover = mapvalues(field.pts@data$cover,
+                                   from = c("imperv", "grass", "tree", "soil", "water", "wetland"),
+                                   to = c("i","g","t","i",NA,NA))
+
+  xy <- coordinates(field.pts)
+  field.pts@data$x <- xy[,1]
+  field.pts@data$y <- xy[,2]
+
+  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+      str_extract(., pattern = ".*.tif$") %>%
+      str_extract(., pattern = str_c(".*",grid.field.point.pattern, ".*")) %>%
+      na.omit()
+
+  ## point.names <- classified.tile.paths %>%
+  ##     str_match(., paste0(".*(",point.pattern,").*"))
+
+  ## point.names <- point.names[,2] %>%
+  ##     unique() %>%
+  ##     na.omit()
+
+  point.names <- field.pts@data$accuracy_2
+
+
+
+
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+
+  error.df <- foreach(pt.name = point.names, .combine = "rbind",
+                      .packages = c("doParallel","plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
+
+                          pts <- field.pts[field.pts@data$accuracy_2== pt.name,]
+
+                          classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*",pt.name,"_.*")) %>%
+                              na.omit()
+
+                          ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
+                          ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
+                          ##      na.omit()
+
+                                          #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
+
+
+
+                          foreach(classified.tile.path.at.point = classified.tile.paths.at.point,
+                                  .combine = "rbind",
+                                  .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %do% {
+
+                                      classified.tile.name.at.point <- basename(classified.tile.path.at.point)
+                                      classified.tile <- raster(classified.tile.path.at.point)
+
+                                      tgt <- str_extract(classified.tile.name.at.point, "tree|grass|impervious|all")
+                                      tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+
+                                      ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
+                                      ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
+                                      ## dev.off()
+
+                                      PixBool <- !is.na((str_extract(classified.tile.path.at.point, "_Pixel_")))
+
+                                      if(!is.na(str_extract(classified.tile.path.at.point, "_all_"))) {
+
+                                          error <- calcErrorAllMultinomial.wrefColumn(pts, classified.tile, Pixel = PixBool, referenceColumn = "cover", one.point = T)
+                                          error <- error %>%
+                                              t() %>%
+                                              data.frame() %>%
+                                              mutate(point = pt.name,
+                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                                     seg.params = str_extract(classified.tile.name.at.point, segmentation.pattern),
+                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
+                                          error
+                                      } else {
+                                          target = str_extract(classified.tile.name.at.point, "tree|grass|impervious")
+                                          target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                                          error <- calcErrorBinomial.wrefColumn(pts, classified.tile, target, Pixel = PixBool, referenceColumn = "cover", one.point = T)
+                                          error <- error %>%
+                                              t() %>%
+                                              data.frame() %>%
+                                              mutate(point = pt.name,
+                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                                     seg.params = str_extract(classified.tile.name.at.point, seg.prms),
+                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
+                                          error
+                                      }
+                                  }
+                      }
+
+  closeAllConnections()
+
+
+  saveRDS(error.df, str_c(derived.dir, "/RandomPoints.GoogleReference.point2pixel.error.df.rds"))
+
+#+END_SRC
+
+***
 
 * Classify Every Urban Area in the State (before [2016-08-29 Mon])
 ** inputs

@@ -1,8 +1,7 @@
-#+TITLE:Addendum to Mapping Urban Tree Cover in Wisconsin
-#+AUTHOR: Tedward Erker
-#+email: erker@wisc.edu
+#+TITLE:Extension to Mapping Urban Tree Cover in Wisconsin
 #+PROPERTY: header-args:R :session *R* :cache no :results output :exports both :tangle yes
-#+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
+#+LATEX_HEADER: \usepackage[margin=1in]{geometry}
+#+OPTIONS: toc:nil num:nil
 ------------
 
 * Overview
@@ -36,7 +35,7 @@ micrometers, and Near Infrared 0.760-0.890 micrometers) at 6 meter
 resolution was aquired in August 2014. We pansharpened the spot
 imagery to 1.5 meter resolution using PCI Geomatic's geomatica software.
 
-National Agriculture Inventory Program (NAIP) aerial orthoRECTtified?
+National Agriculture Inventory Program (NAIP) aerial orthorectified
 imagery with 4 bands (blue, green, red, and near infrared) at 1 meter
 resolution was aquired over the study area on June 19 and July
 4, 2013.
@@ -68,7 +67,8 @@ textures in four directions: 0, 45, 90, and 135 degrees cite:glcm_Rpackage.
 Segmentation, also called "object-based classification", is an
 approach to group pixels into segments or "super-pixels" based on
 spatial and spectral similarity.  We used the SLIC (Simple Linear
-Iterative Clustering) algorithm
+Iterative Clustering) algorithm applied to the first three bands of a
+PCA transformed image
 cite:achanta12_slic_super_compar_to_state.  One of the primary
 advantages of SLIC is its simplicity and speed which allows for the
 systematic testing of different parameters and segment sizes to
@@ -138,15 +138,16 @@ scales of 4 hectares (10 acres) to be Support Vector Machines also
 with a segment size of 20m^2.
 
 This difference is because while the Random Forest classifier is more
-accurate, it is slightly biased.  As the number of points in the grid
-increases with the area underconsideration, this bias prevents the
-error from decreasing to zero.  The unbaisedness of the Support Vector
-Machines means it has higher accuracy at larger scales.  Working to
-create an accurate classifier with little bias is one of the
-objectives of the next stage in this proposal.
+accurate, it is biased (over predicts tree cover).  As the number of
+points in the grid increases with the area under consideration, this
+bias prevents the error from decreasing to zero.  The unbiasedness of
+the Support Vector Machines means it has higher accuracy at larger
+scales despite being less accurate at small scales.  Working to create
+an accurate classifier with little bias is one of the objectives of
+the next stage in this proposal.
 
 
-* Extened Proposal
+* Extended Proposal
 
 Here we propose to use the method developed for Madison and reliably
 apply it to every urban area in the State of Wisconsin.  To do so we
@@ -166,7 +167,10 @@ selection of the best classifier by the beginning of November 2016, a human
 interpreter will identify the landcover class of at least 50 randomly
 located points for each of at least 10 Wisconsin cities not used in
 training.  These points will be relatively rapid to identify and can
-be used to select the best me
+be used to select the best classification model.  For the
+comprehensive accuracy assessment we will make additional grids of
+points throughout the classified urban areas to report accuracy at
+increasing spatial scales.
 
 * Products
 1) A single raster file containing landcover maps for every urban area
@@ -183,6 +187,7 @@ be used to select the best me
 | Rewrite code for multiple training sets and cities                                        | [2016-09-16] |
 | Test improvements to model building - tuning, feature selection, bagging                  | [2016-09-20] |
 | Incorporate all additional training data from DNR's Laura Lorentz                         | [2016-09-23] |
+| Create pointwise accuracy assessment for selection of best classification model           | [2016-09-27] |
 | Determine best classification model for state                                             | [2016-09-30] |
 | Classify every single urban area in state                                                 | [2016-10-07] |
 | UTC progress meeting                                                                      | [2016-10-07] |
@@ -198,10 +203,28 @@ be used to select the best me
 
 The budget includes funds to support:
 
-Equivalent of 1 semester of salary for Tedward Erker.  Tedward Erker is a
-Ph.D. student in the Townsend lab whose interest in urban forestry
-aligns with the Wisconsin DNR's desire for state-wide maps of tree
-canopy cover for urban areas.  He is the primary author of the code
-used for creating and assessing the accuracy of landcover maps for
-Madison, WI.
+Salary for Tedward Erker.  Tedward Erker is a Ph.D. student in the
+Townsend lab whose interest in urban forestry aligns with the
+Wisconsin DNR's desire for state-wide maps of tree canopy cover for
+urban areas.  He is the primary author of the code used for creating
+and assessing the accuracy of landcover maps for Madison, WI.
 
+Registration cost for 2016 Society of American Foresters Conference
+($210)
+
+Funds for AGU Fall meeting?
+
+Funds for assistant to help with accuracy assessment
+
+
+
+* Figure
+
+#+CAPTION:A: 2.5 acres NAIP True Color; B: NAIP PCA transformation; C: Pixelwise classification; D: Segmented Classification; E: Large Extent NAIP True Color; F: Segmented Classification with 3 accuracy assessment grids overlaid
+[[file:figs/WI_UTC_Proposal_Extension_Figure.png]]
+
+
+
+bibliography:~/org/references.bib
+
+bibliographystyle:unsrt
