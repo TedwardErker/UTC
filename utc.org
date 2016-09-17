@@ -4974,20 +4974,38 @@ class.codes <- c("grass" = "g", "wetland" = "m", "water" = "w", "impervious" = "
 
 ***** make tiles
 #+begin_src R
-  buffer.size <- 20
+    cl <- makeCluster(cores)
+    registerDoParallel(cl)
 
-        box <- gBuffer(pts, width = buffer.size)
-        box <- disaggregate(box)
+    buffer.size <- 9
 
-        polygons <- as(box, "SpatialPolygons")
+    box <- gBuffer(pts, width = buffer.size, )
+    box <- disaggregate(box)
 
-  foreach(naip.extent = naip.extents) %do% {
+    polygons <- as(box, "SpatialPolygonsDataFrame")
 
+    polygons@data <- pts@data
 
+    out <-     foreach(naip.stack = naip.stacks, .packages = c("raster", "rgeos", "foreach", "stringr")) %dopar% {
 
+        foreach(i = 1:length(polygons)) %do% {
+            polygon <- polygons[i,]
+            en <- extent(naip.stack)
+            ep <-extent(polygon)
+            e.int <- raster::intersect(en, ep)
 
+            if(!is.null(e.int)) {
 
-  }
+                t.int <- crop(naip.stack, e.int)
+
+                if (sum(is.na(values(t.int))) < 5) {
+                    writeRaster(x = t.int, filename = str_c(whole.state.dd.accuracy, "/", "P.", polygon@data$id, ".tif"), overwrite = T)
+                }
+                t.int
+            }
+        }
+
+    }
 
 
     closeAllConnections()
