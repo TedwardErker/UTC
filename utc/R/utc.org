@@ -758,10 +758,11 @@ sunPosition <- function(when = Sys.time(), format, lat = 46.5, long = 6.5)
                                                  pca.append = pca.appendage,
                                                  max.sample.size = 10000,
                                                  core.num = cores,
-                                                 feature.pattern = ".*_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif") {
+                                                 feature.pattern = ".*_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi).tif",
+                                                 Recurs = F) {
   #                                               ratio.append = ratio.appendage) {
 
-        tile.paths <- list.files(image.dir, pattern = feature.pattern, full.names = T)
+        tile.paths <- list.files(image.dir, pattern = feature.pattern, full.names = T, recursive = Recurs)
 
         tile.names <- str_match(tile.paths,"(.*)_.*")[,2] %>%  unique() # get the image names of pca regions
 
@@ -1026,64 +1027,67 @@ wrapper for slic.
 
 *** make.feature.df
 #+begin_src R
-  make.feature.df <- function(tile.dir,
-                              image.name,
-                              tile.name,
-                              band.names,
-                              ndvi = T,
-                              ratio.bands,
-                              texture = T,
-                              texture.params.df,
-                              feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
-                              pixel.df,
-                                          #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
-                              pca.features = c("blue","green","red","nir"),
-                              pca.location,
-                              segmentation = T,
-                              segment.params.df,
-                              using.krusty = T) {
+    make.feature.df <- function(tile.dir,
+                                image.name,
+                                tile.name,
+                                band.names,
+                                ndvi = T,
+                                ratio.bands,
+                                texture = T,
+                                texture.params.df,
+                                feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
+                                pixel.df,
+                                            #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
+                                pca.features = c("blue","green","red","nir"),
+                                pca.location,
+                                pca.directory = dd.pca.dir,
+                                segmentation = T,
+                                segment.params.df,
+                                using.krusty = T) {
 
-      add.features(tile.dir,
-                   tile.name,
-                   band.names,
-                   ndvi = T,
-                   ratio.bands,
-                   texture = T,
-                   texture.params.df)
+        add.features(tile.dir,
+                     tile.name,
+                     band.names,
+                     ndvi = T,
+                     ratio.bands,
+                     texture = T,
+                     texture.params.df)
 
-      message ( tile.name,"features added")
+        message ( tile.name,"features added")
 
-      if (pixel.df ==T) {
+        if (pixel.df ==T) {
 
-          save.pixel.feature.df(tile.dir = tile.dir,
-                                tile.name = tile.name,
-                                feature.pattern)}
+            save.pixel.feature.df(tile.dir = tile.dir,
+                                  tile.name = tile.name,
+                                  feature.pattern)}
 
-      message("pixel feature df saved")
+        message("pixel feature df saved")
 
-      if (segmentation == T) {
+        if (segmentation == T) {
 
-      pca.transformation(tile.dir = tile.dir,
-                         tile.name = tile.name,
-                         image.name = image.name,
-                         loc = pca.location)
-
-      message("pca done")
-
-          segment.multiple(tile.dir = tile.dir,
+        pca.transformation(tile.dir = tile.dir,
                            tile.name = tile.name,
                            image.name = image.name,
-                           segment.params.df = segment.params.df,
-                           krusty = using.krusty)
-      message("segmentation done")
+                           loc = pca.location,
+                           pca.dir = pca.directory)
 
-          make.segment.feature.df.foreach.segmentation(tile.dir = tile.dir,
-                                                       tile.name = tile.name,
-                                                       feature.pattern = feature.pattern)}
+        message("pca done")
+
+            segment.multiple(tile.dir = tile.dir,
+                             tile.name = tile.name,
+                             image.name = image.name,
+                             segment.params.df = segment.params.df,
+                             krusty = using.krusty)
+
+        message("segmentation done")
+
+            make.segment.feature.df.foreach.segmentation(tile.dir = tile.dir,
+                                                         tile.name = tile.name,
+                                                         feature.pattern = feature.pattern)}
 
 
 
-  }
+    }
 #+end_src
 
 #+results:
@@ -1255,49 +1259,55 @@ wrapper for slic.
 
 *** untuned
 #+BEGIN_SRC R
-  Build.and.Save.models <- function(dir = dd.training.dir,
-                                    modelBuildingData = ModelBuildingRDS,
-                                    models.dir = dd.models.dir,
-                                    image.name,
-                                    location,
-                                    model.append = model.appendage){
+    Build.and.Save.models <- function(dir = dd.training.dir,
+                                      modelBuildingData = ModelBuildingRDS,
+                                      models.dir = dd.models.dir,
+                                      image.name,
+                                      location,
+                                      model.append = model.appendage,
+                                      target.name = "Class"){
 
-      dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
-          as.data.frame() %>%
-          filter(complete.cases(.))
+        dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
+            as.data.frame() %>%
+            filter(complete.cases(.))
 
-      seg.p <- str_extract(modelBuildingData, segmentation.pattern)
+# convert any character columns to factor
 
-      names <- colnames(dat)
-      names <- str_replace(names, "\\(",".")
-      names <- str_replace(names, "\\)",".")
-      names <- str_replace(names, "\\:",".")
-      colnames(dat) <- names
+dat <- dat %>% mutate_if(is.character, as.factor)
 
 
-dat <- dat[sample(nrow(dat),10000),]
+        seg.p <- str_extract(modelBuildingData, segmentation.pattern)
 
-                                          # Create Tasks
-      tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = "Class")
+        names <- colnames(dat)
+        names <- str_replace(names, "\\(",".")
+        names <- str_replace(names, "\\)",".")
+        names <- str_replace(names, "\\:",".")
+        colnames(dat) <- names
 
-                                          # Make Learners
-      RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
-                                          #      RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
-      SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
 
-                                          #      learner.list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
-      learner.list <- list(RF_prob = RF_prob, SVM_response = SVM_response)
+  #dat <- dat[sample(nrow(dat),10000),]
 
-                                          # Train Learners on Tasks, Make models
-                                          #         cl<-makeCluster(cores)
-                                          #         registerDoParallel(cl)
+                                            # Create Tasks
+        tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = target.name)
 
-      models <- foreach(lnr = learner.list) %do% {
-          mod <- train(lnr, tsk)
-          mod
-          saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_Untuned",model.append, ".rds"))
-      }
-  }
+                                            # Make Learners
+        RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
+                                            #      RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
+        SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
+
+                                            #      learner.list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
+        learner.list <- list(RF_prob = RF_prob, SVM_response = SVM_response)
+
+                                            # Train Learners on Tasks, Make models
+                                            #         cl<-makeCluster(cores)
+                                            #         registerDoParallel(cl)
+
+        models <- foreach(lnr = learner.list) %do% {
+            mod <- train(lnr, tsk)
+            mod
+            saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_Untuned",model.append, ".rds"))
+        }
+    }
 
 #+END_SRC
 

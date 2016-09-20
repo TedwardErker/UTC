@@ -4086,13 +4086,14 @@ Same Raw data as above, but adding "WholeState_DD" and "WholeState_RD"
   whole.state.dd.naip <- str_c(whole.state.dd, "/NAIP")
   whole.state.dd.training <- str_c(whole.state.dd, "/Training")
   whole.state.dd.accuracy <- str_c(whole.state.dd, "/Accuracy")
+  whole.state.dd.models <- str_c(whole.state.dd, "/Models")
   naip.tile.dir <- "/home/erker/NAIP_mount/NAIP13_WTM_TIFs"
   naip.seamlines.dir <- str_c(naip.dir, "/SeamLines")
   crop.dir <- "../RD_CroplandDataLayer"
   water.dir <- "../RD_WI-waterbody-24k"
   urban.dir <- "../RD_US_UrbanAreasShapefile"
   urban.and.incorporated.dir <- "../RD_merged_WIurbanAreas_and_incorporatedAreas"
-dir.list <- list(whole.state.rd,   whole.state.rd.accuracy, whole.state.dd.naip, whole.state.rd.training.regions, whole.state.dd,   whole.state.dd.training,  whole.state.dd.accuracy,  naip.tile.dir,   naip.seamlines.dir,  crop.dir,   water.dir,   urban.dir,   urban.and.incorporated.dir)
+dir.list <- list(whole.state.rd,   whole.state.rd.accuracy, whole.state.dd.naip, whole.state.rd.training.regions, whole.state.dd,   whole.state.dd.training,  whole.state.dd.accuracy,  naip.tile.dir,   naip.seamlines.dir,  crop.dir,   water.dir,   urban.dir,   urban.and.incorporated.dir,   whole.state.dd.models)
 
 #+END_SRC
 
@@ -4871,12 +4872,72 @@ save a model for each
 - segmentation parameter set
 - classifier (rf, svm)
 - tuned or untuned, etc
+#+begin_src R :results none
+    cl <- makeCluster(cores)
+    registerDoParallel(cl)
+                                            # parallel across images and modelbuilding dfs
+
+    ModelBuildingRDSs <- list.files(whole.state.dd.training) %>%
+        str_extract(., str_c(".*",ModelBuilding.appendage, ".rds")) %>%
+        na.omit()
+
+    foreach(ModelBuildingRDS = ModelBuildingRDSs,
+            .packages = c("parallelMap","randomForest","kernlab","irace","mlr","stringr","dplyr","foreach","doParallel")) %do% {
+
+                Build.and.Save.models(dir = whole.state.dd.training,
+                                      modelBuildingData = ModelBuildingRDS,
+                                      models.dir = whole.state.dd.models,
+                                      image.name = "NAIP",
+                                      location = "WholeState",
+                                      target.name = "class")
+            }
+
+
+    closeAllConnections()
+#+end_src
+
 
 #+begin_src R
-
-
-
+whole.state.dd.models
 #+end_src
+
+** Make a whole state PCA to use when testing accuracy regions.  This may not be best approach, but should work just fine.
+#+begin_src R
+      make.and.save.pca.transformation.wholestate(image.dir = whole.state.dd.training,
+                                                  image.name = "NAIP",
+                                                  location = "WholeState",
+                                                  Recurs = T)
+#+end_src
+
+#+results:
+#+begin_example
+ Standard deviations:
+[1] 2.58139410 1.33561361 0.59075132 0.36984938 0.20607976 0.13723929 0.06344297
+[8] 0.02876257 0.02468428
+
+Rotation:
+                   PC1         PC2        PC3          PC4         PC5
+blue         0.3546051  0.27044473 -0.2267699 -0.257275326  0.30855947
+green        0.3213313  0.41123540 -0.0836651  0.155842652  0.21923757
+ndvi        -0.3674691  0.20261643  0.1438044  0.100523044  0.40567858
+nir         -0.1906729  0.62227910 -0.3741382 -0.066674996 -0.63177242
+ratio.blue   0.3700304 -0.02315896  0.1892698 -0.724621759 -0.08662387
+ratio.green  0.3006207  0.34781510  0.6729285  0.405785072 -0.16760495
+ratio.nir   -0.3817914  0.09363262 -0.1604289 -0.005347916  0.22887281
+ratio.red    0.3018217 -0.43531884 -0.2910827  0.362021298 -0.32409109
+red          0.3680427  0.09838274 -0.4263731  0.272297262  0.31623019
+                    PC6         PC7          PC8          PC9
+blue        -0.04041485  0.13238011 -0.751904779 -0.061417418
+green       -0.20124545  0.61511590  0.476398612  0.049566484
+ndvi         0.77264041  0.17616187 -0.021467776 -0.009290331
+nir          0.16994733 -0.06196827 -0.009212816 -0.006647981
+ratio.blue   0.31357070 -0.06775461  0.264246633  0.348416672
+ratio.green  0.00569249 -0.20417027 -0.200171603  0.247547003
+ratio.nir   -0.27200565 -0.06872491 -0.067280024  0.827092878
+ratio.red    0.35718107  0.33889115 -0.171909627  0.355807751
+red          0.17912909 -0.63512861  0.251323198  0.016884277
+#+end_example
+
 ** Assess Accuracy of classifiers
 *** Creation of Assessment Points
 #+begin_src R
@@ -4964,139 +5025,1188 @@ class.codes <- c("grass" = "g", "wetland" = "m", "water" = "w", "impervious" = "
 
 #+end_src
 
+#+results:
+:  There were 46 warnings (use warnings() to see them)
+
+
 ***** load points and reproject to wtm
+
+Only make tiles at points that have a value for "class", that is,
+points that we've identified cover at.  So remove points with NA for class.
 
 #+BEGIN_SRC R :results none
   pts <- readOGR(dsn = whole.state.rd.accuracy, layer = "points", stringsAsFactors = F)
   pts <- spTransform(pts, wtm)
-  str(pts)
-#+end_src
+  pts <- pts[!is.na(pts@data$class),]
+  #+end_src
 
 ***** make tiles
+
 #+begin_src R
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
 
-    buffer.size <- 9
+  buffer.size <- 9
 
-    box <- gBuffer(pts, width = buffer.size, )
-    box <- disaggregate(box)
+  box <- gBuffer(pts, width = buffer.size, )
+  box <- disaggregate(box)
 
-    polygons <- as(box, "SpatialPolygonsDataFrame")
+  polygons <- as(box, "SpatialPolygonsDataFrame")
 
-    polygons@data <- pts@data
+  polygons@data <- pts@data
 
-    out <-     foreach(naip.stack = naip.stacks, .packages = c("raster", "rgeos", "foreach", "stringr")) %dopar% {
+  out <-     foreach(naip.stack = naip.stacks, .packages = c("raster", "rgeos", "foreach", "stringr")) %dopar% {
 
-        foreach(i = 1:length(polygons)) %do% {
-            polygon <- polygons[i,]
-            en <- extent(naip.stack)
-            ep <-extent(polygon)
-            e.int <- raster::intersect(en, ep)
+      foreach(i = (1:length(polygons))) %do% {
+          polygon <- polygons[i,]
+          en <- extent(naip.stack)
+          ep <-extent(polygon)
+          e.int <- raster::intersect(en, ep)
 
-            if(!is.null(e.int)) {
+          if(!is.null(e.int)) {
 
-                t.int <- crop(naip.stack, e.int)
+              t.int <- crop(naip.stack, e.int)
 
-                if (sum(is.na(values(t.int))) < 5) {
-                    writeRaster(x = t.int, filename = str_c(whole.state.dd.accuracy, "/", "P.", polygon@data$id, ".tif"), overwrite = T)
-                }
-                t.int
-            }
-        }
+              if (sum(is.na(values(t.int))) < 5) {
+                  writeRaster(x = t.int, filename = str_c(whole.state.dd.accuracy, "/", "P.", polygon@data$id, ".tif"), overwrite = T)
+              }
+              t.int
+          }
+      }
 
-    }
+  }
 
 
-    closeAllConnections()
+  closeAllConnections()
 
 #+END_SRC
+
+#+results:
+:  Error in { :
+:   task 12 failed - "task 11 failed - "Cannot create a RasterLayer object from this file. (file does not exist)""
 
 
 
 **** Make Feature data frames, for each Accuracy Region tile
 
 #+begin_src R :results silent
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
+    cl <- makeCluster(cores)
+    registerDoParallel(cl)
 
-  tile.names <- list.files(dd.accuracy.dir) %>%
-      str_match(., pattern = str_c("(",location,".*",grid.field.point.pattern,")(.tif)"))
+    tile.names <- list.files(whole.state.dd.accuracy) %>%
+        str_match(., pattern = str_c("(.*)(.tif)"))
 
-  tile.names <- tile.names[,2] %>% na.omit()
+    tile.names <- tile.names[,2] %>% na.omit()
 
-  pixel.added.features.raster.list <- foreach (i = tile.names,
-                                               .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
+  img.nm <- "NAIP"
+  location <- "WholeState"
 
-                                                   img.nm <- str_extract(i, ("NAIP|PanshpSPOT"))
+    pixel.added.features.raster.list <- foreach (i = tile.names,
+                                                 .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
-                                                   feature.dfs <- make.feature.df(tile.dir = dd.accuracy.dir,
-                                                                                  tile.name = i,
-                                                                                  image.name = img.nm,
-                                                                                  bad.names = c("blue","green","red","nir"),
-                                                                                  ndvi = T,
-                                                                                  ratio.bands = c("blue","green","red","nir"),
-                                                                                  texture.params.df = texture.params,
-                                                                                  pixel.df = T,
-                                                                                  pca.location = location,
-                                                                                  segmentation = T,
-                                                                                  segment.params.df = segment.params)
+                                                     feature.dfs <- make.feature.df(tile.dir = whole.state.dd.accuracy,
+                                                                                    tile.name = i,
+                                                                                    image.name = img.nm,
+                                                                                    band.names = c("blue","green","red","nir"),
+                                                                                    ndvi = T,
+                                                                                    ratio.bands = c("blue","green","red","nir"),
+                                                                                    texture.params.df = texture.params,
+                                                                                    pixel.df = T,
+                                                                                    pca.location = location,
+                                                                                    pca.directory = whole.state.dd.training,
+                                                                                    segmentation = T,
+                                                                                    segment.params.df = segment.params)
 
-                                               }
+                                                 }
 
-  closeAllConnections()
+    closeAllConnections()
 #+end_src
 
-**** Classify Tiles at accuracy regions
+**** Add Hour, Month, Elevation and Azimuth Angle
 
-#+BEGIN_SRC R :results none
+figure out which "flightline" the point is in and assign date.
+Calculate solar angles.  Add extra variables to the feature dataframe.
+
+***** Add variables to pts
+#+begin_src R
+    seamlines <- readOGR(dsn = naip.seamlines.dir, layer = naip.seamlines.layer)
+
+      seamlines@data <-     seamlines@data %>%
+            mutate(hour = hour(mdy_hm(SDATE))) %>%
+            mutate(month = month(mdy_hm(SDATE))) %>%
+            mutate(date = mdy_hm(SDATE, tz = "CDT")) %>%
+            mutate(uid = as.factor(paste0(SDATE,"_",EDATE))) %>%
+            select(uid,hour,month, date)
+
+  seamlines <- spTransform(seamlines, wtm)
+
+  pts <- readOGR(dsn = whole.state.rd.accuracy, layer = "points", stringsAsFactors = F)
+  pts <- pts[!is.na(pts@data$class),]
+
+
+  pts@data <- cbind(pts@data, longitude = coordinates(pts)[,1], latitude = coordinates(pts)[,2])
+  pts <- spTransform(pts, wtm)
+
+
+  pts@data <- cbind(pts@data,  over(pts,seamlines))
+
+      sunPos <- sunPosition(
+          when = as.POSIXct(as.character(pts@data$date)),
+          lat = pts@data$latitude,
+          long = pts@data$longitude)
+
+  pts.df <- cbind(pts@data, sunPos)
+
+  pts.df <- pts.df %>% mutate(solarElevation = elevation,
+                              solarAzimuth = azimuthJ) %>%
+      select(id, hour, month, solarAzimuth, solarElevation)
+#+end_src
+
+#+results:
+: OGR data source with driver: ESRI Shapefile
+: Source: "../RD_NAIP//SeamLines", layer: "ortho_naip_seamline-naipseamlines2013_a_wi"
+: with 243 features
+: It has 12 fields
+: OGR data source with driver: ESRI Shapefile
+: Source: "../WholeState_RD/Accuracy", layer: "points"
+: with 2000 features
+: It has 2 fields
+
+***** Add variables (hour, month, solar angles) to feature data frames
+#+begin_src R
+
+  feature.dfs <- list.files(whole.state.dd.accuracy, pattern = feature.df.appendage, full.names = T)
+
+
   cl <- makeCluster(cores)
   registerDoParallel(cl)
 
+  out <- foreach(feature.df = feature.dfs, .packages = c("dplyr","stringr")) %dopar% {
+      dat <- readRDS(feature.df)
+      pt.id <- str_extract(feature.df, "[0-9]+")
+      pt.df <- pts.df %>%
+          filter(id == pt.id)
+      dat <- cbind(dat, pt.df)
+      saveRDS(dat, file = feature.df)
+  }
 
+closeAllConnections()
+#+end_src
 
-  classified.grid.tiles <-       foreach(img.nm = image.names[1]) %do% {
+#+results:
+#+begin_example
+[[1]]
+NULL
 
-      models <- list.files(dd.models.dir) %>%
-          str_extract(., str_c(".*",location,img.nm,".*")) %>%
-          na.omit()
+[[2]]
+NULL
 
-      tile.names <- list.files(dd.accuracy.dir) %>%
-          str_match(., pattern = str_c("(",location,img.nm,".*?)_.*\\.tif$"))
+[[3]]
+NULL
 
-      tile.names <- tile.names[,2] %>% na.omit() %>% unique()
+[[4]]
+NULL
 
+[[5]]
+NULL
 
-      foreach(tile.nm = tile.names,
-              .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
+[[6]]
+NULL
 
-                  foreach(model = models) %do% {
+[[7]]
+NULL
 
-                      seg.p <- str_extract(model, segmentation.pattern)
+[[8]]
+NULL
 
-                      if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
-                          segment.tile.name.append <- paste0("_",seg.p,".tif")
-                          segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
+[[9]]
+NULL
 
-                          classify.segmented.raster(segment.feature.df.dir = dd.accuracy.dir,
-                                                    model.dir = dd.models.dir,
-                                                    segment.dir = dd.accuracy.dir,
-                                                    tile.name = tile.nm,
-                                                    segmentation.appendage = segment.tile.name.append,
-                                                    model.name.rds = model,
-                                                    segment.feature.appendage = segment.feature.df.name.append,
-                                                    segmentation.prms = seg.p)
+[[10]]
+NULL
 
-                      } else {
-                          classify.pixel.raster(tile.dir = dd.accuracy.dir,
-                                                tile.name = tile.nm,
-                                                pixelFeatureDF.appendage = feature.df.appendage,
-                                                model.dir = dd.models.dir,
-                                                model.rds = model,
-                                                seg.prms = seg.p)
-                      }
-                  }
-              }
+[[11]]
+NULL
+
+[[12]]
+NULL
+
+[[13]]
+NULL
+
+[[14]]
+NULL
+
+[[15]]
+NULL
+
+[[16]]
+NULL
+
+[[17]]
+NULL
+
+[[18]]
+NULL
+
+[[19]]
+NULL
+
+[[20]]
+NULL
+
+[[21]]
+NULL
+
+[[22]]
+NULL
+
+[[23]]
+NULL
+
+[[24]]
+NULL
+
+[[25]]
+NULL
+
+[[26]]
+NULL
+
+[[27]]
+NULL
+
+[[28]]
+NULL
+
+[[29]]
+NULL
+
+[[30]]
+NULL
+
+[[31]]
+NULL
+
+[[32]]
+NULL
+
+[[33]]
+NULL
+
+[[34]]
+NULL
+
+[[35]]
+NULL
+
+[[36]]
+NULL
+
+[[37]]
+NULL
+
+[[38]]
+NULL
+
+[[39]]
+NULL
+
+[[40]]
+NULL
+
+[[41]]
+NULL
+
+[[42]]
+NULL
+
+[[43]]
+NULL
+
+[[44]]
+NULL
+
+[[45]]
+NULL
+
+[[46]]
+NULL
+
+[[47]]
+NULL
+
+[[48]]
+NULL
+
+[[49]]
+NULL
+
+[[50]]
+NULL
+
+[[51]]
+NULL
+
+[[52]]
+NULL
+
+[[53]]
+NULL
+
+[[54]]
+NULL
+
+[[55]]
+NULL
+
+[[56]]
+NULL
+
+[[57]]
+NULL
+
+[[58]]
+NULL
+
+[[59]]
+NULL
+
+[[60]]
+NULL
+
+[[61]]
+NULL
+
+[[62]]
+NULL
+
+[[63]]
+NULL
+
+[[64]]
+NULL
+
+[[65]]
+NULL
+
+[[66]]
+NULL
+
+[[67]]
+NULL
+
+[[68]]
+NULL
+
+[[69]]
+NULL
+
+[[70]]
+NULL
+
+[[71]]
+NULL
+
+[[72]]
+NULL
+
+[[73]]
+NULL
+
+[[74]]
+NULL
+
+[[75]]
+NULL
+
+[[76]]
+NULL
+
+[[77]]
+NULL
+
+[[78]]
+NULL
+
+[[79]]
+NULL
+
+[[80]]
+NULL
+
+[[81]]
+NULL
+
+[[82]]
+NULL
+
+[[83]]
+NULL
+
+[[84]]
+NULL
+
+[[85]]
+NULL
+
+[[86]]
+NULL
+
+[[87]]
+NULL
+
+[[88]]
+NULL
+
+[[89]]
+NULL
+
+[[90]]
+NULL
+
+[[91]]
+NULL
+
+[[92]]
+NULL
+
+[[93]]
+NULL
+
+[[94]]
+NULL
+
+[[95]]
+NULL
+
+[[96]]
+NULL
+
+[[97]]
+NULL
+
+[[98]]
+NULL
+
+[[99]]
+NULL
+
+[[100]]
+NULL
+
+[[101]]
+NULL
+
+[[102]]
+NULL
+
+[[103]]
+NULL
+
+[[104]]
+NULL
+
+[[105]]
+NULL
+
+[[106]]
+NULL
+
+[[107]]
+NULL
+
+[[108]]
+NULL
+
+[[109]]
+NULL
+
+[[110]]
+NULL
+
+[[111]]
+NULL
+
+[[112]]
+NULL
+
+[[113]]
+NULL
+
+[[114]]
+NULL
+
+[[115]]
+NULL
+
+[[116]]
+NULL
+
+[[117]]
+NULL
+
+[[118]]
+NULL
+
+[[119]]
+NULL
+
+[[120]]
+NULL
+
+[[121]]
+NULL
+
+[[122]]
+NULL
+
+[[123]]
+NULL
+
+[[124]]
+NULL
+
+[[125]]
+NULL
+
+[[126]]
+NULL
+
+[[127]]
+NULL
+
+[[128]]
+NULL
+
+[[129]]
+NULL
+
+[[130]]
+NULL
+
+[[131]]
+NULL
+
+[[132]]
+NULL
+
+[[133]]
+NULL
+
+[[134]]
+NULL
+
+[[135]]
+NULL
+
+[[136]]
+NULL
+
+[[137]]
+NULL
+
+[[138]]
+NULL
+
+[[139]]
+NULL
+
+[[140]]
+NULL
+
+[[141]]
+NULL
+
+[[142]]
+NULL
+
+[[143]]
+NULL
+
+[[144]]
+NULL
+
+[[145]]
+NULL
+
+[[146]]
+NULL
+
+[[147]]
+NULL
+
+[[148]]
+NULL
+
+[[149]]
+NULL
+
+[[150]]
+NULL
+
+[[151]]
+NULL
+
+[[152]]
+NULL
+
+[[153]]
+NULL
+
+[[154]]
+NULL
+
+[[155]]
+NULL
+
+[[156]]
+NULL
+
+[[157]]
+NULL
+
+[[158]]
+NULL
+
+[[159]]
+NULL
+
+[[160]]
+NULL
+
+[[161]]
+NULL
+
+[[162]]
+NULL
+
+[[163]]
+NULL
+
+[[164]]
+NULL
+
+[[165]]
+NULL
+
+[[166]]
+NULL
+
+[[167]]
+NULL
+
+[[168]]
+NULL
+
+[[169]]
+NULL
+
+[[170]]
+NULL
+
+[[171]]
+NULL
+
+[[172]]
+NULL
+
+[[173]]
+NULL
+
+[[174]]
+NULL
+
+[[175]]
+NULL
+
+[[176]]
+NULL
+
+[[177]]
+NULL
+
+[[178]]
+NULL
+
+[[179]]
+NULL
+
+[[180]]
+NULL
+
+[[181]]
+NULL
+
+[[182]]
+NULL
+
+[[183]]
+NULL
+
+[[184]]
+NULL
+
+[[185]]
+NULL
+
+[[186]]
+NULL
+
+[[187]]
+NULL
+
+[[188]]
+NULL
+
+[[189]]
+NULL
+
+[[190]]
+NULL
+
+[[191]]
+NULL
+
+[[192]]
+NULL
+
+[[193]]
+NULL
+
+[[194]]
+NULL
+
+[[195]]
+NULL
+
+[[196]]
+NULL
+
+[[197]]
+NULL
+
+[[198]]
+NULL
+
+[[199]]
+NULL
+
+[[200]]
+NULL
+
+[[201]]
+NULL
+
+[[202]]
+NULL
+
+[[203]]
+NULL
+
+[[204]]
+NULL
+
+[[205]]
+NULL
+
+[[206]]
+NULL
+
+[[207]]
+NULL
+
+[[208]]
+NULL
+
+[[209]]
+NULL
+
+[[210]]
+NULL
+
+[[211]]
+NULL
+
+[[212]]
+NULL
+
+[[213]]
+NULL
+
+[[214]]
+NULL
+
+[[215]]
+NULL
+
+[[216]]
+NULL
+
+[[217]]
+NULL
+
+[[218]]
+NULL
+
+[[219]]
+NULL
+
+[[220]]
+NULL
+
+[[221]]
+NULL
+
+[[222]]
+NULL
+
+[[223]]
+NULL
+
+[[224]]
+NULL
+
+[[225]]
+NULL
+
+[[226]]
+NULL
+
+[[227]]
+NULL
+
+[[228]]
+NULL
+
+[[229]]
+NULL
+
+[[230]]
+NULL
+
+[[231]]
+NULL
+
+[[232]]
+NULL
+
+[[233]]
+NULL
+
+[[234]]
+NULL
+
+[[235]]
+NULL
+
+[[236]]
+NULL
+
+[[237]]
+NULL
+
+[[238]]
+NULL
+
+[[239]]
+NULL
+
+[[240]]
+NULL
+
+[[241]]
+NULL
+
+[[242]]
+NULL
+
+[[243]]
+NULL
+
+[[244]]
+NULL
+
+[[245]]
+NULL
+
+[[246]]
+NULL
+
+[[247]]
+NULL
+
+[[248]]
+NULL
+
+[[249]]
+NULL
+
+[[250]]
+NULL
+
+[[251]]
+NULL
+
+[[252]]
+NULL
+
+[[253]]
+NULL
+
+[[254]]
+NULL
+
+[[255]]
+NULL
+
+[[256]]
+NULL
+
+[[257]]
+NULL
+
+[[258]]
+NULL
+
+[[259]]
+NULL
+
+[[260]]
+NULL
+
+[[261]]
+NULL
+
+[[262]]
+NULL
+
+[[263]]
+NULL
+
+[[264]]
+NULL
+
+[[265]]
+NULL
+
+[[266]]
+NULL
+
+[[267]]
+NULL
+
+[[268]]
+NULL
+
+[[269]]
+NULL
+
+[[270]]
+NULL
+
+[[271]]
+NULL
+
+[[272]]
+NULL
+
+[[273]]
+NULL
+
+[[274]]
+NULL
+
+[[275]]
+NULL
+
+[[276]]
+NULL
+
+[[277]]
+NULL
+
+[[278]]
+NULL
+
+[[279]]
+NULL
+
+[[280]]
+NULL
+
+[[281]]
+NULL
+
+[[282]]
+NULL
+
+[[283]]
+NULL
+
+[[284]]
+NULL
+
+[[285]]
+NULL
+
+[[286]]
+NULL
+
+[[287]]
+NULL
+
+[[288]]
+NULL
+
+[[289]]
+NULL
+
+[[290]]
+NULL
+
+[[291]]
+NULL
+
+[[292]]
+NULL
+
+[[293]]
+NULL
+
+[[294]]
+NULL
+
+[[295]]
+NULL
+
+[[296]]
+NULL
+
+[[297]]
+NULL
+
+[[298]]
+NULL
+
+[[299]]
+NULL
+
+[[300]]
+NULL
+
+[[301]]
+NULL
+
+[[302]]
+NULL
+
+[[303]]
+NULL
+
+[[304]]
+NULL
+
+[[305]]
+NULL
+
+[[306]]
+NULL
+
+[[307]]
+NULL
+
+[[308]]
+NULL
+
+[[309]]
+NULL
+
+[[310]]
+NULL
+
+[[311]]
+NULL
+
+[[312]]
+NULL
+
+[[313]]
+NULL
+
+[[314]]
+NULL
+
+[[315]]
+NULL
+
+[[316]]
+NULL
+
+[[317]]
+NULL
+
+[[318]]
+NULL
+
+[[319]]
+NULL
+
+[[320]]
+NULL
+
+[[321]]
+NULL
+#+end_example
+
+**** TODO Classify Tiles at accuracy regions
+
+#+BEGIN_SRC R :results none
+  img.nm <- "NAIP"
+  location <- "WholeState"
+
+  models <- list.files(whole.state.dd.models) %>%
+      str_extract(., str_c(".*",location,img.nm,".*")) %>%
+      na.omit()
+
+  tile.names <- list.files(whole.state.dd.accuracy) %>%
+      str_match(., pattern = str_c("(.*?)_.*\\.tif$"))
+
+  tile.names <- tile.names[,2] %>% na.omit() %>% unique()
+
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+
+  classified.grid.tiles <- foreach(tile.nm = tile.names,
+                                   .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
+
+                                       foreach(model = models) %do% {
+
+                                           seg.p <- str_extract(model, segmentation.pattern)
+
+                                           if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
+                                               segment.tile.name.append <- paste0("_",seg.p,".tif")
+                                               segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
+
+                                               classify.segmented.raster(segment.feature.df.dir = whole.state.dd.accuracy,
+                                                                         model.dir = whole.state.dd.models,
+                                                                         segment.dir = whole.state.dd.accuracy,
+                                                                         tile.name = tile.nm,
+                                                                         segmentation.appendage = segment.tile.name.append,
+                                                                         model.name.rds = model,
+                                                                         segment.feature.appendage = segment.feature.df.name.append,
+                                                                         segmentation.prms = seg.p)
+
+                                           } else {
+                                               classify.pixel.raster(tile.dir = whole.state.dd.accuracy,
+                                                                     tile.name = tile.nm,
+                                                                     pixelFeatureDF.appendage = feature.df.appendage,
+                                                                     model.dir = whole.state.dd.models,
+                                                                     model.rds = model,
+                                                                     seg.prms = seg.p)
+                                           }
+                                       }
+                                   }
   }
 
   closeAllConnections()
