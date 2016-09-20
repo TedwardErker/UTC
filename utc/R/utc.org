@@ -1259,55 +1259,54 @@ wrapper for slic.
 
 *** untuned
 #+BEGIN_SRC R
-    Build.and.Save.models <- function(dir = dd.training.dir,
-                                      modelBuildingData = ModelBuildingRDS,
-                                      models.dir = dd.models.dir,
-                                      image.name,
-                                      location,
-                                      model.append = model.appendage,
-                                      target.name = "Class"){
+      Build.and.Save.models <- function(dir = dd.training.dir,
+                                        modelBuildingData = ModelBuildingRDS,
+                                        models.dir = dd.models.dir,
+                                        image.name,
+                                        location,
+                                        model.append = model.appendage,
+                                        target.name = "Class"){
 
-        dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
-            as.data.frame() %>%
-            filter(complete.cases(.))
+          dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
+              as.data.frame() %>%
+              filter(complete.cases(.))
 
-# convert any character columns to factor
-
-dat <- dat %>% mutate_if(is.character, as.factor)
-
-
-        seg.p <- str_extract(modelBuildingData, segmentation.pattern)
-
-        names <- colnames(dat)
-        names <- str_replace(names, "\\(",".")
-        names <- str_replace(names, "\\)",".")
-        names <- str_replace(names, "\\:",".")
-        colnames(dat) <- names
+  # convert any character columns to factor
+  #dat <- dat %>% mutate_if(is.character, as.factor)
 
 
-  #dat <- dat[sample(nrow(dat),10000),]
+          seg.p <- str_extract(modelBuildingData, segmentation.pattern)
 
-                                            # Create Tasks
-        tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = target.name)
+          names <- colnames(dat)
+          names <- str_replace(names, "\\(",".")
+          names <- str_replace(names, "\\)",".")
+          names <- str_replace(names, "\\:",".")
+          colnames(dat) <- names
 
-                                            # Make Learners
-        RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
-                                            #      RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
-        SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
 
-                                            #      learner.list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
-        learner.list <- list(RF_prob = RF_prob, SVM_response = SVM_response)
+    #dat <- dat[sample(nrow(dat),10000),]
 
-                                            # Train Learners on Tasks, Make models
-                                            #         cl<-makeCluster(cores)
-                                            #         registerDoParallel(cl)
+                                              # Create Tasks
+          tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = target.name)
 
-        models <- foreach(lnr = learner.list) %do% {
-            mod <- train(lnr, tsk)
-            mod
-            saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_Untuned",model.append, ".rds"))
-        }
-    }
+                                              # Make Learners
+          RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
+                                              #      RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
+          SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
+
+                                              #      learner.list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
+          learner.list <- list(RF_prob = RF_prob, SVM_response = SVM_response)
+
+                                              # Train Learners on Tasks, Make models
+                                              #         cl<-makeCluster(cores)
+                                              #         registerDoParallel(cl)
+
+          models <- foreach(lnr = learner.list) %do% {
+              mod <- train(lnr, tsk)
+              mod
+              saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_Untuned",model.append, ".rds"))
+          }
+      }
 
 #+END_SRC
 
@@ -1494,6 +1493,7 @@ target from the FSelector Package
           pix.feature.df$id <- 1:nrow(pix.feature.df)
 
           if(!is.null(pix.feature.df$y)) {
+
               pix.feature.df <- dplyr::select(pix.feature.df, -x, -y)
           }
 

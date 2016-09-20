@@ -4078,22 +4078,24 @@ Same Raw data as above, but adding "WholeState_DD" and "WholeState_RD"
 ** Inputs/Variables etc
 *** Input Directories
 #+BEGIN_SRC R
-  naip.dir <- "../RD_NAIP/"
-  whole.state.rd <- "../WholeState_RD"
-  whole.state.rd.training.regions <- str_c(whole.state.rd, "/Training_Regions")
-  whole.state.rd.accuracy <- str_c(whole.state.rd, "/Accuracy")
-  whole.state.dd <- "../WholeState_DD"
-  whole.state.dd.naip <- str_c(whole.state.dd, "/NAIP")
-  whole.state.dd.training <- str_c(whole.state.dd, "/Training")
-  whole.state.dd.accuracy <- str_c(whole.state.dd, "/Accuracy")
-  whole.state.dd.models <- str_c(whole.state.dd, "/Models")
-  naip.tile.dir <- "/home/erker/NAIP_mount/NAIP13_WTM_TIFs"
-  naip.seamlines.dir <- str_c(naip.dir, "/SeamLines")
-  crop.dir <- "../RD_CroplandDataLayer"
-  water.dir <- "../RD_WI-waterbody-24k"
-  urban.dir <- "../RD_US_UrbanAreasShapefile"
-  urban.and.incorporated.dir <- "../RD_merged_WIurbanAreas_and_incorporatedAreas"
-dir.list <- list(whole.state.rd,   whole.state.rd.accuracy, whole.state.dd.naip, whole.state.rd.training.regions, whole.state.dd,   whole.state.dd.training,  whole.state.dd.accuracy,  naip.tile.dir,   naip.seamlines.dir,  crop.dir,   water.dir,   urban.dir,   urban.and.incorporated.dir,   whole.state.dd.models)
+    naip.dir <- "../RD_NAIP/"
+    whole.state.rd <- "../WholeState_RD"
+    whole.state.rd.training.regions <- str_c(whole.state.rd, "/Training_Regions")
+    whole.state.rd.accuracy <- str_c(whole.state.rd, "/Accuracy")
+
+    whole.state.dd <- "../WholeState_DD"
+    whole.state.dd.naip <- str_c(whole.state.dd, "/NAIP")
+    whole.state.dd.training <- str_c(whole.state.dd, "/Training")
+    whole.state.dd.accuracy <- str_c(whole.state.dd, "/Accuracy")
+  whole.state.dd.accuracy.classified <- str_c(whole.state.dd.accuracy, "/ClassifiedTiles")
+    whole.state.dd.models <- str_c(whole.state.dd, "/Models")
+    naip.tile.dir <- "/home/erker/NAIP_mount/NAIP13_WTM_TIFs"
+    naip.seamlines.dir <- str_c(naip.dir, "/SeamLines")
+    crop.dir <- "../RD_CroplandDataLayer"
+    water.dir <- "../RD_WI-waterbody-24k"
+    urban.dir <- "../RD_US_UrbanAreasShapefile"
+    urban.and.incorporated.dir <- "../RD_merged_WIurbanAreas_and_incorporatedAreas"
+  dir.list <- list(whole.state.rd,   whole.state.rd.accuracy, whole.state.dd.naip, whole.state.rd.training.regions, whole.state.dd,   whole.state.dd.training,  whole.state.dd.accuracy,  naip.tile.dir,   naip.seamlines.dir,  crop.dir,   water.dir,   urban.dir,   urban.and.incorporated.dir,   whole.state.dd.models,   whole.state.dd.accuracy.classified)
 
 #+END_SRC
 
@@ -4811,7 +4813,9 @@ saved as "_pca.rds" in train.dir
 #+begin_src R
   foreach(train.dir = train.dirs) %do% {
       values <- str_match(train.dir,".*month-([0-9]*)_hour-([0-9]*)_solElv-([0-9]*)_azimuth-([0-9]*)_NAIP.*")
-      city.level.df <- data.frame(month = values[2], hour = values[3], solarElevation = values[4], solarAzimuth = values[5], stringsAsFactors = F)
+
+      city.level.df <- data.frame(month = values[2], hour = values[3], solarElevation = values[4], solarAzimuth = values[5], stringsAsFactors = F) %>%
+        mutate_if(is.character,as.numeric)
 
 
       model.building.rdss <- list.files(train.dir, pattern = str_c(".*",ModelBuilding.appendage,".rds"), full.names = T)
@@ -4844,7 +4848,6 @@ NULL
 
 **** Combine model building dataframes from each scene
 #+begin_src R
-
   model.building.rdss <- list.files(whole.state.dd.training, recursive = T, pattern = str_c(".*",ModelBuilding.appendage,".rds"), full.names = T)
 
   segment.param.sets <- model.building.rdss %>%
@@ -4873,27 +4876,27 @@ save a model for each
 - classifier (rf, svm)
 - tuned or untuned, etc
 #+begin_src R :results none
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
-                                            # parallel across images and modelbuilding dfs
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
+                                          # parallel across images and modelbuilding dfs
 
-    ModelBuildingRDSs <- list.files(whole.state.dd.training) %>%
-        str_extract(., str_c(".*",ModelBuilding.appendage, ".rds")) %>%
-        na.omit()
+  ModelBuildingRDSs <- list.files(whole.state.dd.training) %>%
+      str_extract(., str_c(".*",ModelBuilding.appendage, ".rds")) %>%
+      na.omit()
 
-    foreach(ModelBuildingRDS = ModelBuildingRDSs,
-            .packages = c("parallelMap","randomForest","kernlab","irace","mlr","stringr","dplyr","foreach","doParallel")) %do% {
+  foreach(ModelBuildingRDS = ModelBuildingRDSs,
+          .packages = c("parallelMap","randomForest","kernlab","irace","mlr","stringr","dplyr","foreach","doParallel")) %do% {
 
-                Build.and.Save.models(dir = whole.state.dd.training,
-                                      modelBuildingData = ModelBuildingRDS,
-                                      models.dir = whole.state.dd.models,
-                                      image.name = "NAIP",
-                                      location = "WholeState",
-                                      target.name = "class")
-            }
+              Build.and.Save.models(dir = whole.state.dd.training,
+                                    modelBuildingData = ModelBuildingRDS,
+                                    models.dir = whole.state.dd.models,
+                                    image.name = "NAIP",
+                                    location = "WholeState",
+                                    target.name = "class")
+          }
 
 
-    closeAllConnections()
+  closeAllConnections()
 #+end_src
 
 
@@ -6195,7 +6198,8 @@ NULL
                                                                          segmentation.appendage = segment.tile.name.append,
                                                                          model.name.rds = model,
                                                                          segment.feature.appendage = segment.feature.df.name.append,
-                                                                         segmentation.prms = seg.p)
+                                                                         segmentation.prms = seg.p,
+                                                                         classify.out.dir = whole.state.dd.accuracy.classified)
 
                                            } else {
                                                classify.pixel.raster(tile.dir = whole.state.dd.accuracy,
@@ -6203,11 +6207,12 @@ NULL
                                                                      pixelFeatureDF.appendage = feature.df.appendage,
                                                                      model.dir = whole.state.dd.models,
                                                                      model.rds = model,
-                                                                     seg.prms = seg.p)
+                                                                     seg.prms = seg.p,
+                                                                     classify.out.dir = whole.state.dd.accuracy.classified)
+
                                            }
                                        }
                                    }
-  }
 
   closeAllConnections()
 #+END_SRC
