@@ -123,7 +123,7 @@ Addendum:
   ##   install.packages("FSelector")
   ##install.packages("gdalUtils")
   ##install.packages("rgeos")
-library(lubridate)
+  library(lubridate)
   library(gdalUtils)
   library(ascii)
   library(rgeos)
@@ -3157,7 +3157,7 @@ null device
 
 ****** plot 1
 #+begin_src R :exports results :results graphics :file ./figs/gridAcc.p1.png
-ggplot(error.df, aes(y = overall.error, x = segment.size, color = compactness, group = model)) + geom_point() + facet_grid(model~image)
+  ggplot(error.df, aes(y = overall.error, x = segment.size, color = compactness, group = model)) + geom_point() + facet_grid(model~image)
 #+end_src
 
 #+results:
@@ -3165,7 +3165,7 @@ ggplot(error.df, aes(y = overall.error, x = segment.size, color = compactness, g
 
 ****** plot 2
 #+begin_src R :exports results :results graphics :file ./figs/gridAcc.p2.png :height 800 :width 1000
-ggplot(error.df, aes(y = overall.error, x = segment.size, color = compactness/segment.size, group = model)) + geom_jitter() + facet_grid(model~image)
+  ggplot(error.df, aes(y = overall.error, x = segment.size, color = compactness/segment.size, group = model)) + geom_jitter() + facet_grid(model~image)
 #+end_src
 
 #+results:
@@ -4107,7 +4107,7 @@ lapply(dir.list, dir.create)
 #+end_src
 
 *** Input Shapefile DSNs and Layers
-#+BEGIN_SRC R
+#+BEGIN_SRC R :eval no
 
 naip.seamlines.layer <- "ortho_naip_seamline-naipseamlines2013_a_wi"
 urban.layer <- "cb_2013_us_ua10_500k"
@@ -4130,14 +4130,6 @@ urban.layer <- "cb_2013_us_ua10_500k"
   accuracy.region.dsn <- c(grid.accuracy.region.dsn, field.accuracy.region.dsn, point.accuracy.region.dsn)
   accuracy.region.layer <- c(grid.accuracy.region.layer, field.accuracy.region.layer, point.accuracy.region.layer)
 #+END_SRC
-
-#+results:
-: Error: object 'pca.dir' not found
-: Error: object 'training.dir' not found
-: Error: object 'grids.accuracy.dir' not found
-: Error: object 'fieldplots.accuracy.dir' not found
-: Error: object 'points.accuracy.dir' not found
-: Error: object 'grid.accuracy.region.dsn' not found
 
 *** Appendages
 #+begin_src R
@@ -4171,15 +4163,15 @@ urban.layer <- "cb_2013_us_ua10_500k"
 *** Texture Params
 
 #+begin_src R
-  ## band.for.texture.appendage = "_ratio.nir"
-  ## window <- list(c(3,3), c(5,5), c(7,7))
-  ## statistics = list("homogeneity", "contrast", "correlation", "entropy")
-  ## shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
-
   band.for.texture.appendage = "_ratio.nir"
-  window <- list(c(3,3))
-  statistics = list("homogeneity")
-  shift = list(c(0,1))
+  window <- list(c(3,3), c(5,5), c(7,7))
+  statistics = list("homogeneity", "contrast", "correlation", "entropy")
+  shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
+
+  ## band.for.texture.appendage = "_ratio.nir"
+  ## window <- list(c(3,3))
+  ## statistics = list("homogeneity")
+  ## shift = list(c(0,1))
 
   texture.params <- expand.grid(band.appendage = band.for.texture.appendage,window = window, statistics = statistics, shift = shift, stringsAsFactors = F)
 
@@ -4378,7 +4370,8 @@ head(seamlines_by_ua@data)
 
 #+results:
 #+begin_example
-                                  uid hour month                date UACE10
+
+                                 uid hour month                date UACE10
 156 06/19/2013 09:31_06/19/2013 10:04    9     6 2013-06-19 09:31:00  42562
 157 06/19/2013 09:31_06/19/2013 10:04    9     6 2013-06-19 09:31:00  30547
 158 06/19/2013 09:31_06/19/2013 10:04    9     6 2013-06-19 09:31:00  46882
@@ -4451,7 +4444,7 @@ selected_seamlines_by_ua <- raster::union(selected_seamlines_by_ua, superior_sea
 #+end_src
 
 #+results:
-: Joining, by = c("hour", "month", "NAME10", "area", "selected")
+: Joining, by = c("hour", "month", "NAME10", "area")
 : Warning message:
 : In if (class(x[, j]) != class(dd[, j])) { :
 :   the condition has length > 1 and only the first element will be used
@@ -4567,10 +4560,11 @@ selected_seamlines_by_ua <- raster::union(selected_seamlines_by_ua, superior_sea
            e <- raster::intersect(ei,eu)
 
            t.int.u <- crop(t.at.u, e)
+           t.mask.u <- mask(t.int.u, u)
 
-           if (sum(!is.na(values(t.int.u))) < 500) {t.int.u <- NULL}
+           if (sum(!is.na(values(t.mask.u))) < 500) {t.int.u <- NULL}
 
-           t.int.u
+           t.mask.u
        }
 
        if(length(crp.tiles.at.u) > 1) {
@@ -4591,7 +4585,6 @@ selected_seamlines_by_ua <- raster::union(selected_seamlines_by_ua, superior_sea
 #+results:
 
 ** Create State-wide classifiers
-
 *** Load Training Regions
 #+begin_src R
   training.layers <-  list.files(whole.state.rd.training.regions) %>%
@@ -4603,11 +4596,13 @@ training.layers
 
 #+results:
 : [1] "city-Dodgeville_month-6_hour-13_solElv-70_azimuth-181_NAIP_Training"
-: [2] "city-NewRichmond_month-8_hour-10_solElv-45_azimuth-113_NAIP_Training"
+: [2] "city-Madison_month-7_hour-10_solElv-56_azimuth-116_NAIP_Training"
+: [3] "city-NewRichmond_month-8_hour-10_solElv-45_azimuth-113_NAIP_Training"
+: [4] "city-Reedsburg_month-6_hour-12_solElv-70_azimuth-168_NAIP_Training"
 
 *** Crop NAIP to Training Regions
 #+begin_src R
-  foreach(training.layer = training.layers) %do% {
+   foreach(training.layer = training.layers) %do% {
 
     img.nm <- str_match(training.layer, "(.*)_Training")[,2]
     img.pth <- str_c(whole.state.dd.naip,"/",img.nm, ".tif")
@@ -4616,7 +4611,7 @@ training.layers
                                            shapefile.layer = training.layer,
                                            image.path = img.pth,
                                            image.name = img.nm,
-                                           cores = 1,
+                                           cores = cores,
                                            output.dir = whole.state.dd.training)
     }
 
@@ -4627,48 +4622,69 @@ training.layers
 #+begin_example
  OGR data source with driver: ESRI Shapefile
 Source: "../WholeState_RD/Training_Regions", layer: "city-Dodgeville_month-6_hour-13_solElv-70_azimuth-181_NAIP_Training"
-with 5 features
-It has 1 fields
+with 46 features
+It has 2 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../WholeState_RD/Training_Regions", layer: "city-Madison_month-7_hour-10_solElv-56_azimuth-116_NAIP_Training"
+with 221 features
+It has 2 fields
 OGR data source with driver: ESRI Shapefile
 Source: "../WholeState_RD/Training_Regions", layer: "city-NewRichmond_month-8_hour-10_solElv-45_azimuth-113_NAIP_Training"
 with 14 features
 It has 1 fields
+OGR data source with driver: ESRI Shapefile
+Source: "../WholeState_RD/Training_Regions", layer: "city-Reedsburg_month-6_hour-12_solElv-70_azimuth-168_NAIP_Training"
+with 112 features
+It has 2 fields
 [[1]]
 NULL
 
 [[2]]
 NULL
+
+[[3]]
+NULL
+
+[[4]]
+NULL
+
+Warning message:
+In readOGR(shapefile.dsn, shapefile.layer) : Deleted feature IDs: 112
 #+end_example
 
 *** make pca transforms
 **** Add Features
 #+begin_src R
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
+  cl <- makeCluster(cores)
+  registerDoParallel(cl)
 
-    train.dirs <- list.dirs(whole.state.dd.training)
+  train.dirs <- list.dirs(whole.state.dd.training)
 
-    out <- foreach(train.dir = train.dirs) %do% {
+  out <- foreach(train.dir = train.dirs) %do% {
 
-        tile.names <- list.files(train.dir) %>%
-            str_extract(., pattern = ".*[0-9]+.tif") %>%
-            str_extract(., pattern = ".*[0-9]+") %>%
-            na.omit()
+      tile.names <- list.files(train.dir) %>%
+          str_extract(., pattern = ".*[0-9]+.tif") %>%
+          str_extract(., pattern = ".*[0-9]+") %>%
+          na.omit()
 
 
-        features <- foreach (j = tile.names,
-                           .packages = c("raster","stringr","glcm")) %dopar% {
-                               add.features(tile.dir = train.dir,
-                                            tile.name = j,
-                                            band.names = c("blue","green","red","nir"),
-                                            ratio.bands = c("blue","green","red","nir"),
-                                            texture = T,
-                                            texture.params.df = texture.params)
-                           }
-    }
+      features <- foreach (j = tile.names,
+                         .packages = c("raster","stringr","glcm")) %dopar% {
+                             add.features(tile.dir = train.dir,
+                                          tile.name = j,
+                                          band.names = c("red","green","blue","nir"),
+                                          ratio.bands = c("red","green","blue","nir"),
+                                          texture = T,
+                                          texture.params.df = texture.params)
+                         }
+  }
 
-        closeAllConnections()
+      closeAllConnections()
 #+end_src
+
+#+results:
+:  Error in { :
+:   task 2 failed - "task 1 failed - "incorrect number of layer names""
 
 **** Make PCA
 saved as "_pca.rds" in train.dir
@@ -4702,7 +4718,7 @@ saved as "_pca.rds" in train.dir
   str_extract(pattern = ".*city.*month.*hour.*NAIP") %>%
       na.omit()
 
-  foreach(train.dir = train.dirs) %do% {
+out <-  foreach(train.dir = train.dirs) %do% {
 
       train.names <- list.files(train.dir)
 
@@ -4811,7 +4827,7 @@ saved as "_pca.rds" in train.dir
 
 **** Add Month, Hour, Solar Elevation, and Azimuth to model builing df
 #+begin_src R
-  foreach(train.dir = train.dirs) %do% {
+out <-   foreach(train.dir = train.dirs) %do% {
       values <- str_match(train.dir,".*month-([0-9]*)_hour-([0-9]*)_solElv-([0-9]*)_azimuth-([0-9]*)_NAIP.*")
 
       city.level.df <- data.frame(month = values[2], hour = values[3], solarElevation = values[4], solarAzimuth = values[5], stringsAsFactors = F) %>%
@@ -4829,22 +4845,12 @@ saved as "_pca.rds" in train.dir
 #+end_src
 
 #+results:
-#+begin_example
-[[1]]
-[[1]][[1]]
-NULL
-
-[[1]][[2]]
-NULL
-
-
-[[2]]
-[[2]][[1]]
-NULL
-
-[[2]][[2]]
-NULL
-#+end_example
+: [[1]]
+: [[1]][[1]]
+: NULL
+:
+: [[1]][[2]]
+: NULL
 
 **** Combine model building dataframes from each scene
 #+begin_src R
@@ -4854,7 +4860,7 @@ NULL
       str_extract(segmentation.pattern) %>%
       unique()
 
-    foreach(segment.param.set = segment.param.sets) %do% {
+out <-    foreach(segment.param.set = segment.param.sets) %do% {
         mod.build.rdss <- str_extract(model.building.rdss, str_c(".*",segment.param.set,".*")) %>% na.omit()
         model.building.df <- lapply(mod.build.rdss, readRDS) %>% bind_rows()
         saveRDS(model.building.df, str_c(whole.state.dd.training, "/",basename(mod.build.rdss)[1]))
@@ -4862,11 +4868,55 @@ NULL
 #+end_src
 
 #+results:
-: [[1]]
-: NULL
-:
-: [[2]]
-: NULL
+#+begin_example
+[[1]]
+NULL
+
+[[2]]
+NULL
+
+Warning messages:
+1: In bind_rows_(x, .id) :
+  binding factor and character vector, coercing into character vector
+2: In bind_rows_(x, .id) :
+  binding factor and character vector, coercing into character vector
+#+end_example
+
+*** Visualize Model Building Dataframe(s)
+#+begin_src R
+    ModelBuildingRDSs <- list.files(whole.state.dd.training, full.names = T) %>%
+        str_extract(., str_c(".*",ModelBuilding.appendage, ".rds")) %>%
+        na.omit()
+
+  out <- lapply(ModelBuildingRDSs, readRDS)
+#+end_src
+
+#+results:
+
+#+begin_src R :exports results :results graphics :file ./figs/VisualizeModelBuildingDF_whole.state.png
+  df <- out[[1]]
+  ggplot(data = df, aes(x = ratio.nir_mean, y = ratio.nir_stat.homogeneity_window.3_angle.0_mean, color = class)) +
+      geom_point(alpha = .5) +
+      facet_grid(solarAzimuth~solarElevation)
+#+end_src
+
+#+results:
+[[file:./figs/VisualizeModelBuildingDF_whole.state.png]]
+
+#+begin_src R :exports results :results graphics :file ./figs/elevation_and_ratioNIR.png
+  ggplot(data = df, aes(y = nir_mean, x = factor(solarAzimuth), fill = class)) +
+      geom_boxplot(alpha = .8)
+#+end_src
+
+#+results:
+[[file:./figs/elevation_and_ratioNIR.png]]
+
+#+begin_src R :exports results :results graphics :file ./figs/ggpairs.png
+ggpairs(df, mapping = aes(color = class, alpha = .5), columns = c("ratio.nir_stat.homogeneity_window.3_angle.0_mean","nir_mean","ratio.nir_mean", "ratio.nir_sd"))
+#+end_src
+
+#+results:
+[[file:./figs/ggpairs.png]]
 
 *** Build and Save Models
 
@@ -4878,7 +4928,7 @@ save a model for each
 #+begin_src R :results none
   cl <- makeCluster(cores)
   registerDoParallel(cl)
-                                          # parallel across images and modelbuilding dfs
+
 
   ModelBuildingRDSs <- list.files(whole.state.dd.training) %>%
       str_extract(., str_c(".*",ModelBuilding.appendage, ".rds")) %>%
@@ -4904,6 +4954,12 @@ save a model for each
 whole.state.dd.models
 #+end_src
 
+#+results:
+: [1] "../WholeState_DD/Models"
+
+*** Assess Models (Important variables etc)
+
+
 ** Make a whole state PCA to use when testing accuracy regions.  This may not be best approach, but should work just fine.
 #+begin_src R
       make.and.save.pca.transformation.wholestate(image.dir = whole.state.dd.training,
@@ -4915,30 +4971,30 @@ whole.state.dd.models
 #+results:
 #+begin_example
  Standard deviations:
-[1] 2.58139410 1.33561361 0.59075132 0.36984938 0.20607976 0.13723929 0.06344297
-[8] 0.02876257 0.02468428
+[1] 2.48000842 1.39087215 0.79076589 0.44139624 0.23894265 0.17345620 0.07495305
+[8] 0.03747623 0.02623865
 
 Rotation:
-                   PC1         PC2        PC3          PC4         PC5
-blue         0.3546051  0.27044473 -0.2267699 -0.257275326  0.30855947
-green        0.3213313  0.41123540 -0.0836651  0.155842652  0.21923757
-ndvi        -0.3674691  0.20261643  0.1438044  0.100523044  0.40567858
-nir         -0.1906729  0.62227910 -0.3741382 -0.066674996 -0.63177242
-ratio.blue   0.3700304 -0.02315896  0.1892698 -0.724621759 -0.08662387
-ratio.green  0.3006207  0.34781510  0.6729285  0.405785072 -0.16760495
-ratio.nir   -0.3817914  0.09363262 -0.1604289 -0.005347916  0.22887281
-ratio.red    0.3018217 -0.43531884 -0.2910827  0.362021298 -0.32409109
-red          0.3680427  0.09838274 -0.4263731  0.272297262  0.31623019
-                    PC6         PC7          PC8          PC9
-blue        -0.04041485  0.13238011 -0.751904779 -0.061417418
-green       -0.20124545  0.61511590  0.476398612  0.049566484
-ndvi         0.77264041  0.17616187 -0.021467776 -0.009290331
-nir          0.16994733 -0.06196827 -0.009212816 -0.006647981
-ratio.blue   0.31357070 -0.06775461  0.264246633  0.348416672
-ratio.green  0.00569249 -0.20417027 -0.200171603  0.247547003
-ratio.nir   -0.27200565 -0.06872491 -0.067280024  0.827092878
-ratio.red    0.35718107  0.33889115 -0.171909627  0.355807751
-red          0.17912909 -0.63512861  0.251323198  0.016884277
+                   PC1          PC2         PC3         PC4           PC5
+blue         0.3448509  0.345576697  0.17784703 -0.27400425  0.1423186025
+green        0.2865952  0.501173180  0.05674281  0.14435037  0.0837178558
+ndvi        -0.3750152  0.192886425 -0.19161148  0.00920961  0.7840301266
+nir         -0.2445653  0.548208861  0.20119906  0.08788171 -0.4957702420
+ratio.blue   0.3813948 -0.005090362 -0.13270668 -0.68079796  0.0138982770
+ratio.green  0.2875216  0.197925913 -0.78401758  0.39612203 -0.1054196290
+ratio.nir   -0.3910602  0.151225116  0.12945446  0.03484931 -0.0007579628
+ratio.red    0.3010834 -0.428069597  0.27078975  0.42339797  0.0405809858
+red          0.3560654  0.215292515  0.40690845  0.30886534  0.3151055576
+                     PC6         PC7         PC8          PC9
+blue        -0.150650107  0.32778723 -0.70218677  0.107172608
+green       -0.138558918  0.48965518  0.60474371 -0.104630238
+ndvi         0.405655744  0.06872290 -0.03613413  0.008387100
+nir          0.571431667 -0.09519906 -0.09765232  0.023010486
+ratio.blue   0.342719323 -0.21907436  0.17995123 -0.418795255
+ratio.green  0.002447446 -0.13554641 -0.22460200 -0.163163238
+ratio.nir   -0.363775227 -0.03099969 -0.15788198 -0.804990214
+ratio.red    0.459198874  0.33502546 -0.14771793 -0.356285287
+red         -0.079728873 -0.67781870  0.02830774  0.002561422
 #+end_example
 
 ** Assess Accuracy of classifiers
@@ -4991,6 +5047,8 @@ For reprojection, use function spTransform
 #+end_src
 
 #+results:
+: Error in writeOGR(pts, dsn = whole.state.rd.accuracy, layer = "points",  :
+:   layer exists, use a new layer name
 *** Assess Accuracy At Points
 #+begin_src R
 class.codes <- c("grass" = "g", "wetland" = "m", "water" = "w", "impervious" = "i", "tree" = "t")
@@ -5029,7 +5087,6 @@ class.codes <- c("grass" = "g", "wetland" = "m", "water" = "w", "impervious" = "
 #+end_src
 
 #+results:
-:  There were 46 warnings (use warnings() to see them)
 
 
 ***** load points and reproject to wtm
@@ -5049,12 +5106,9 @@ points that we've identified cover at.  So remove points with NA for class.
   cl <- makeCluster(cores)
   registerDoParallel(cl)
 
-  buffer.size <- 9
+  buffer.size <- 20
 
-  box <- gBuffer(pts, width = buffer.size, )
-  box <- disaggregate(box)
-
-  polygons <- as(box, "SpatialPolygonsDataFrame")
+  box <- gBuffer(pts, width = buffer.size, byid = T)
 
   polygons@data <- pts@data
 
@@ -5085,8 +5139,7 @@ points that we've identified cover at.  So remove points with NA for class.
 #+END_SRC
 
 #+results:
-:  Error in { :
-:   task 12 failed - "task 11 failed - "Cannot create a RasterLayer object from this file. (file does not exist)""
+:  Error in unserialize(socklist[[n]]) : error reading from connection
 
 
 
@@ -5197,972 +5250,8 @@ closeAllConnections()
 #+end_src
 
 #+results:
-#+begin_example
-[[1]]
-NULL
 
-[[2]]
-NULL
-
-[[3]]
-NULL
-
-[[4]]
-NULL
-
-[[5]]
-NULL
-
-[[6]]
-NULL
-
-[[7]]
-NULL
-
-[[8]]
-NULL
-
-[[9]]
-NULL
-
-[[10]]
-NULL
-
-[[11]]
-NULL
-
-[[12]]
-NULL
-
-[[13]]
-NULL
-
-[[14]]
-NULL
-
-[[15]]
-NULL
-
-[[16]]
-NULL
-
-[[17]]
-NULL
-
-[[18]]
-NULL
-
-[[19]]
-NULL
-
-[[20]]
-NULL
-
-[[21]]
-NULL
-
-[[22]]
-NULL
-
-[[23]]
-NULL
-
-[[24]]
-NULL
-
-[[25]]
-NULL
-
-[[26]]
-NULL
-
-[[27]]
-NULL
-
-[[28]]
-NULL
-
-[[29]]
-NULL
-
-[[30]]
-NULL
-
-[[31]]
-NULL
-
-[[32]]
-NULL
-
-[[33]]
-NULL
-
-[[34]]
-NULL
-
-[[35]]
-NULL
-
-[[36]]
-NULL
-
-[[37]]
-NULL
-
-[[38]]
-NULL
-
-[[39]]
-NULL
-
-[[40]]
-NULL
-
-[[41]]
-NULL
-
-[[42]]
-NULL
-
-[[43]]
-NULL
-
-[[44]]
-NULL
-
-[[45]]
-NULL
-
-[[46]]
-NULL
-
-[[47]]
-NULL
-
-[[48]]
-NULL
-
-[[49]]
-NULL
-
-[[50]]
-NULL
-
-[[51]]
-NULL
-
-[[52]]
-NULL
-
-[[53]]
-NULL
-
-[[54]]
-NULL
-
-[[55]]
-NULL
-
-[[56]]
-NULL
-
-[[57]]
-NULL
-
-[[58]]
-NULL
-
-[[59]]
-NULL
-
-[[60]]
-NULL
-
-[[61]]
-NULL
-
-[[62]]
-NULL
-
-[[63]]
-NULL
-
-[[64]]
-NULL
-
-[[65]]
-NULL
-
-[[66]]
-NULL
-
-[[67]]
-NULL
-
-[[68]]
-NULL
-
-[[69]]
-NULL
-
-[[70]]
-NULL
-
-[[71]]
-NULL
-
-[[72]]
-NULL
-
-[[73]]
-NULL
-
-[[74]]
-NULL
-
-[[75]]
-NULL
-
-[[76]]
-NULL
-
-[[77]]
-NULL
-
-[[78]]
-NULL
-
-[[79]]
-NULL
-
-[[80]]
-NULL
-
-[[81]]
-NULL
-
-[[82]]
-NULL
-
-[[83]]
-NULL
-
-[[84]]
-NULL
-
-[[85]]
-NULL
-
-[[86]]
-NULL
-
-[[87]]
-NULL
-
-[[88]]
-NULL
-
-[[89]]
-NULL
-
-[[90]]
-NULL
-
-[[91]]
-NULL
-
-[[92]]
-NULL
-
-[[93]]
-NULL
-
-[[94]]
-NULL
-
-[[95]]
-NULL
-
-[[96]]
-NULL
-
-[[97]]
-NULL
-
-[[98]]
-NULL
-
-[[99]]
-NULL
-
-[[100]]
-NULL
-
-[[101]]
-NULL
-
-[[102]]
-NULL
-
-[[103]]
-NULL
-
-[[104]]
-NULL
-
-[[105]]
-NULL
-
-[[106]]
-NULL
-
-[[107]]
-NULL
-
-[[108]]
-NULL
-
-[[109]]
-NULL
-
-[[110]]
-NULL
-
-[[111]]
-NULL
-
-[[112]]
-NULL
-
-[[113]]
-NULL
-
-[[114]]
-NULL
-
-[[115]]
-NULL
-
-[[116]]
-NULL
-
-[[117]]
-NULL
-
-[[118]]
-NULL
-
-[[119]]
-NULL
-
-[[120]]
-NULL
-
-[[121]]
-NULL
-
-[[122]]
-NULL
-
-[[123]]
-NULL
-
-[[124]]
-NULL
-
-[[125]]
-NULL
-
-[[126]]
-NULL
-
-[[127]]
-NULL
-
-[[128]]
-NULL
-
-[[129]]
-NULL
-
-[[130]]
-NULL
-
-[[131]]
-NULL
-
-[[132]]
-NULL
-
-[[133]]
-NULL
-
-[[134]]
-NULL
-
-[[135]]
-NULL
-
-[[136]]
-NULL
-
-[[137]]
-NULL
-
-[[138]]
-NULL
-
-[[139]]
-NULL
-
-[[140]]
-NULL
-
-[[141]]
-NULL
-
-[[142]]
-NULL
-
-[[143]]
-NULL
-
-[[144]]
-NULL
-
-[[145]]
-NULL
-
-[[146]]
-NULL
-
-[[147]]
-NULL
-
-[[148]]
-NULL
-
-[[149]]
-NULL
-
-[[150]]
-NULL
-
-[[151]]
-NULL
-
-[[152]]
-NULL
-
-[[153]]
-NULL
-
-[[154]]
-NULL
-
-[[155]]
-NULL
-
-[[156]]
-NULL
-
-[[157]]
-NULL
-
-[[158]]
-NULL
-
-[[159]]
-NULL
-
-[[160]]
-NULL
-
-[[161]]
-NULL
-
-[[162]]
-NULL
-
-[[163]]
-NULL
-
-[[164]]
-NULL
-
-[[165]]
-NULL
-
-[[166]]
-NULL
-
-[[167]]
-NULL
-
-[[168]]
-NULL
-
-[[169]]
-NULL
-
-[[170]]
-NULL
-
-[[171]]
-NULL
-
-[[172]]
-NULL
-
-[[173]]
-NULL
-
-[[174]]
-NULL
-
-[[175]]
-NULL
-
-[[176]]
-NULL
-
-[[177]]
-NULL
-
-[[178]]
-NULL
-
-[[179]]
-NULL
-
-[[180]]
-NULL
-
-[[181]]
-NULL
-
-[[182]]
-NULL
-
-[[183]]
-NULL
-
-[[184]]
-NULL
-
-[[185]]
-NULL
-
-[[186]]
-NULL
-
-[[187]]
-NULL
-
-[[188]]
-NULL
-
-[[189]]
-NULL
-
-[[190]]
-NULL
-
-[[191]]
-NULL
-
-[[192]]
-NULL
-
-[[193]]
-NULL
-
-[[194]]
-NULL
-
-[[195]]
-NULL
-
-[[196]]
-NULL
-
-[[197]]
-NULL
-
-[[198]]
-NULL
-
-[[199]]
-NULL
-
-[[200]]
-NULL
-
-[[201]]
-NULL
-
-[[202]]
-NULL
-
-[[203]]
-NULL
-
-[[204]]
-NULL
-
-[[205]]
-NULL
-
-[[206]]
-NULL
-
-[[207]]
-NULL
-
-[[208]]
-NULL
-
-[[209]]
-NULL
-
-[[210]]
-NULL
-
-[[211]]
-NULL
-
-[[212]]
-NULL
-
-[[213]]
-NULL
-
-[[214]]
-NULL
-
-[[215]]
-NULL
-
-[[216]]
-NULL
-
-[[217]]
-NULL
-
-[[218]]
-NULL
-
-[[219]]
-NULL
-
-[[220]]
-NULL
-
-[[221]]
-NULL
-
-[[222]]
-NULL
-
-[[223]]
-NULL
-
-[[224]]
-NULL
-
-[[225]]
-NULL
-
-[[226]]
-NULL
-
-[[227]]
-NULL
-
-[[228]]
-NULL
-
-[[229]]
-NULL
-
-[[230]]
-NULL
-
-[[231]]
-NULL
-
-[[232]]
-NULL
-
-[[233]]
-NULL
-
-[[234]]
-NULL
-
-[[235]]
-NULL
-
-[[236]]
-NULL
-
-[[237]]
-NULL
-
-[[238]]
-NULL
-
-[[239]]
-NULL
-
-[[240]]
-NULL
-
-[[241]]
-NULL
-
-[[242]]
-NULL
-
-[[243]]
-NULL
-
-[[244]]
-NULL
-
-[[245]]
-NULL
-
-[[246]]
-NULL
-
-[[247]]
-NULL
-
-[[248]]
-NULL
-
-[[249]]
-NULL
-
-[[250]]
-NULL
-
-[[251]]
-NULL
-
-[[252]]
-NULL
-
-[[253]]
-NULL
-
-[[254]]
-NULL
-
-[[255]]
-NULL
-
-[[256]]
-NULL
-
-[[257]]
-NULL
-
-[[258]]
-NULL
-
-[[259]]
-NULL
-
-[[260]]
-NULL
-
-[[261]]
-NULL
-
-[[262]]
-NULL
-
-[[263]]
-NULL
-
-[[264]]
-NULL
-
-[[265]]
-NULL
-
-[[266]]
-NULL
-
-[[267]]
-NULL
-
-[[268]]
-NULL
-
-[[269]]
-NULL
-
-[[270]]
-NULL
-
-[[271]]
-NULL
-
-[[272]]
-NULL
-
-[[273]]
-NULL
-
-[[274]]
-NULL
-
-[[275]]
-NULL
-
-[[276]]
-NULL
-
-[[277]]
-NULL
-
-[[278]]
-NULL
-
-[[279]]
-NULL
-
-[[280]]
-NULL
-
-[[281]]
-NULL
-
-[[282]]
-NULL
-
-[[283]]
-NULL
-
-[[284]]
-NULL
-
-[[285]]
-NULL
-
-[[286]]
-NULL
-
-[[287]]
-NULL
-
-[[288]]
-NULL
-
-[[289]]
-NULL
-
-[[290]]
-NULL
-
-[[291]]
-NULL
-
-[[292]]
-NULL
-
-[[293]]
-NULL
-
-[[294]]
-NULL
-
-[[295]]
-NULL
-
-[[296]]
-NULL
-
-[[297]]
-NULL
-
-[[298]]
-NULL
-
-[[299]]
-NULL
-
-[[300]]
-NULL
-
-[[301]]
-NULL
-
-[[302]]
-NULL
-
-[[303]]
-NULL
-
-[[304]]
-NULL
-
-[[305]]
-NULL
-
-[[306]]
-NULL
-
-[[307]]
-NULL
-
-[[308]]
-NULL
-
-[[309]]
-NULL
-
-[[310]]
-NULL
-
-[[311]]
-NULL
-
-[[312]]
-NULL
-
-[[313]]
-NULL
-
-[[314]]
-NULL
-
-[[315]]
-NULL
-
-[[316]]
-NULL
-
-[[317]]
-NULL
-
-[[318]]
-NULL
-
-[[319]]
-NULL
-
-[[320]]
-NULL
-
-[[321]]
-NULL
-#+end_example
-
-**** TODO Classify Tiles at accuracy regions
+**** Classify Tiles at accuracy regions
 
 #+BEGIN_SRC R :results none
   img.nm <- "NAIP"
@@ -6218,23 +5307,16 @@ NULL
 #+END_SRC
 **** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data also, but there is spatial association to consider.
 ***** Random Points
-****** Google as reference
 #+BEGIN_SRC R
-  r.pts <- readOGR(dsn = point.accuracy.region.dsn, layer = point.accuracy.region.layer, stringsAsFactors = F)
+  pts <- readOGR(dsn = whole.state.rd.accuracy, layer = "points", stringsAsFactors = F)
+  pts <- pts[!is.na(pts@data$class),]
+  pts <- spTransform(pts, wtm)
 
+  xy <- coordinates(pts)
+  pts@data$x <- xy[,1]
+  pts@data$y <- xy[,2]
 
-
-
-
-  r.pts@data$cover = mapvalues(r.pts@data$cover,
-                               from = c("imperv", "grass", "tree", "soil", "water", "wetland"),
-                               to = c("i","g","t","i",NA,NA))
-
-  xy <- coordinates(r.pts)
-  r.pts@data$x <- xy[,1]
-  r.pts@data$y <- xy[,2]
-
-  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
+  classified.tile.paths <- list.files(str_c(whole.state.dd.accuracy.classified), full.names = T) %>%
       str_extract(., pattern = ".*.tif$") %>%
       str_extract(., pattern = str_c(".*",grid.field.point.pattern, ".*")) %>%
       na.omit()
@@ -6246,10 +5328,7 @@ NULL
   ##     unique() %>%
   ##     na.omit()
 
-  point.names <- r.pts@data$accuracy_2
-
-
-
+  point.names <- pts@data$id
 
   cl <- makeCluster(cores)
   registerDoParallel(cl)
@@ -6258,17 +5337,10 @@ NULL
   error.df <- foreach(pt.name = point.names, .combine = "rbind",
                       .packages = c("doParallel","plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
 
-                          pts <- r.pts[r.pts@data$accuracy_2== pt.name,]
+                          pts.sub <- pts[pts@data$id == pt.name,]
 
-                          classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*",pt.name,"_.*")) %>%
+                          classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*P.",pt.name,"_.*")) %>%
                               na.omit()
-
-                          ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
-                          ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
-                          ##      na.omit()
-
-                                          #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
-
 
 
                           foreach(classified.tile.path.at.point = classified.tile.paths.at.point,
@@ -6281,15 +5353,11 @@ NULL
                                       tgt <- str_extract(classified.tile.name.at.point, "tree|grass|impervious|all")
                                       tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
 
-                                      ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
-                                      ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
-                                      ## dev.off()
-
                                       PixBool <- !is.na((str_extract(classified.tile.path.at.point, "_Pixel_")))
 
                                       if(!is.na(str_extract(classified.tile.path.at.point, "_all_"))) {
 
-                                          error <- calcErrorAllMultinomial.wrefColumn(pts, classified.tile, Pixel = PixBool, referenceColumn = "cover", one.point = T)
+                                          error <- calcErrorAllMultinomial.wrefColumn(pts.sub, classified.tile, Pixel = PixBool, referenceColumn = "class", one.point = T)
                                           error <- error %>%
                                               t() %>%
                                               data.frame() %>%
@@ -6298,12 +5366,13 @@ NULL
                                                      target.cover = str_extract(classified.tile.name.at.point, target.pattern),
                                                      model =  str_extract(classified.tile.name.at.point, model.pattern),
                                                      seg.params = str_extract(classified.tile.name.at.point, segmentation.pattern),
-                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
+                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern),
+                                                     overall.error = as.numeric(as.character(overall.error)))
                                           error
                                       } else {
                                           target = str_extract(classified.tile.name.at.point, "tree|grass|impervious")
                                           target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
-                                          error <- calcErrorBinomial.wrefColumn(pts, classified.tile, target, Pixel = PixBool, referenceColumn = "cover", one.point = T)
+                                          error <- calcErrorBinomial.wrefColumn(pts.sub, classified.tile, target, Pixel = PixBool, referenceColumn = "cover", one.point = T)
                                           error <- error %>%
                                               t() %>%
                                               data.frame() %>%
@@ -6320,335 +5389,52 @@ NULL
 
   closeAllConnections()
 
-
-  saveRDS(error.df, str_c(derived.dir, "/RandomPoints.GoogleReference.point2pixel.error.df.rds"))
-
-#+END_SRC
-
-****** NAIP as reference
-#+BEGIN_SRC R
-  r.pts <- readOGR(dsn = point.accuracy.region.dsn, layer = point.accuracy.region.layer, stringsAsFactors = F)
-
-  r.pts@data$e_naip_cvr = mapvalues(r.pts@data$e_naip_cvr,
-                                    from = c("imperv", "grass", "tree", "soil", "water", "wetland"),
-                                    to = c("i","g","t","i",NA,NA))
-
-  xy <- coordinates(r.pts)
-  r.pts@data$x <- xy[,1]
-  r.pts@data$y <- xy[,2]
-
-  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-      str_extract(., pattern = ".*.tif$") %>%
-      str_extract(., pattern = str_c(".*",grid.field.point.pattern, ".*")) %>%
-      na.omit()
-
-  ## point.names <- classified.tile.paths %>%
-  ##     str_match(., paste0(".*(",point.pattern,").*"))
-
-  ## point.names <- point.names[,2] %>%
-  ##     unique() %>%
-  ##     na.omit()
-
-  point.names <- r.pts@data$accuracy_2
-
-  ## grid.name = str_extract(grid.names, ".*150m-[56].*") %>% na.omit()
-
-
-
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-
-  error.df <- foreach(pt.name = point.names, .combine = "rbind",
-                      .packages = c("doParallel","plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
-
-                          pts <- r.pts[r.pts@data$accuracy_2== pt.name,]
-
-                          classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*",pt.name,"_.*")) %>%
-                              na.omit()
-
-                          ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
-                          ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
-                          ##      na.omit()
-
-                                          #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
-
-
-
-                          foreach(classified.tile.path.at.point = classified.tile.paths.at.point,
-                                  .combine = "rbind",
-                                  .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %do% {
-
-                                      classified.tile.name.at.point <- basename(classified.tile.path.at.point)
-                                      classified.tile <- raster(classified.tile.path.at.point)
-
-                                      tgt <- str_extract(classified.tile.name.at.point, "tree|grass|impervious|all")
-                                      tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
-
-                                      ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
-                                      ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
-                                      ## dev.off()
-
-                                      PixBool <- !is.na((str_extract(classified.tile.path.at.point, "_Pixel_")))
-
-                                      if(!is.na(str_extract(classified.tile.path.at.point, "_all_"))) {
-
-                                          error <- calcErrorAllMultinomial.wrefColumn(pts, classified.tile, Pixel = PixBool, referenceColumn = "e_naip_cvr", one.point = T)
-                                          error <- error %>%
-                                              t() %>%
-                                              data.frame() %>%
-                                              mutate(point = pt.name,
-                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
-                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
-                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
-                                                     seg.params = str_extract(classified.tile.name.at.point, segmentation.pattern),
-                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
-                                          error
-                                      } else {
-                                          target = str_extract(classified.tile.name.at.point, "tree|grass|impervious")
-                                          target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
-                                          error <- calcErrorBinomial.wrefColumn(pts, classified.tile, target, Pixel = PixBool, referenceColumn = "e_naip_cvr", one.point = T)
-                                          error <- error %>%
-                                              t() %>%
-                                              data.frame() %>%
-                                              mutate(point = pt.name,
-                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
-                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
-                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
-                                                     seg.params = str_extract(classified.tile.name.at.point, seg.prms),
-                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
-                                          error
-                                      }
-                                  }
-                      }
-
-  closeAllConnections()
-
-
-  saveRDS(error.df, str_c(derived.dir, "/RandomPoints.NAIPreference.point2pixel.error.df.rds"))
+  saveRDS(error.df, str_c(whole.state.dd.accuracy, "/RandomPoints.GoogleReference.point2pixel.error.df.rds"))
 
 #+END_SRC
 
 #+results:
 : OGR data source with driver: ESRI Shapefile
-: Source: "../RD_Accuracy/PointsByRobi", layer: "PointsInDomain"
-: with 610 features
-: It has 9 fields
+: Source: "../WholeState_RD/Accuracy", layer: "points"
+: with 2000 features
+: It has 2 fields
+***** Print Best Models determined by Random points
+#+begin_src R :results raw
+    error.df <- readRDS("../WholeState_DD/Accuracy/RandomPoints.GoogleReference.point2pixel.error.df.rds")
 
 
-***** Grids
+  Sys.time()
 
-#+BEGIN_SRC R
-  grd <- readOGR(dsn = grid.accuracy.region.dsn, layer = grid.accuracy.region.layer, stringsAsFactors = F)
+    error.df %>%
+        group_by(image, target.cover, model, seg.params, tuned) %>%
+       summarize(mean.overall.error = mean(overall.error)) %>%
+      arrange(mean.overall.error) %>%
+      ascii.nowarn.print
 
-  xy <- coordinates(grd)
-  grd@data$x <- xy[,1]
-  grd@data$y <- xy[,2]
-
-  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-      str_extract(., pattern = ".*.tif$") %>%
-      str_extract(., pattern = str_c(".*",grid.pattern, ".*")) %>%
-      na.omit()
-
-
-  grid.names <- classified.tile.paths %>%
-      str_match(., paste0(".*(",grid.pattern,").*"))
-
-  grid.names <- grid.names[,2] %>%
-      unique() %>%
-      na.omit()
-
-  ## grid.name = str_extract(grid.names, ".*150m-[56].*") %>% na.omit()
-
-
-
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-
-  error.df <- foreach(grid.name = grid.names, .combine = "rbind") %do% {
-
-      pts <- grd[grd@data$unq__ID== grid.name,]
-
-      classified.tile.paths.at.grid <- str_extract(classified.tile.paths, str_c(".*",grid.name,"_.*")) %>%
-          na.omit()
-
-      ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
-      ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
-      ##      na.omit()
-
-                                          #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
-
-
-
-      foreach(classified.tile.path.at.grid = classified.tile.paths.at.grid,
-              .combine = "rbind",
-              .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
-
-                  classified.tile.name.at.grid <- basename(classified.tile.path.at.grid)
-                  classified.tile <- raster(classified.tile.path.at.grid)
-
-                  tgt <- str_extract(classified.tile.name.at.grid, "tree|grass|impervious|all")
-                  tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
-
-                  ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
-                  ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
-                  ## dev.off()
-
-                  PixBool <- !is.na((str_extract(classified.tile.path.at.grid, "_Pixel_")))
-
-                  if(!is.na(str_extract(classified.tile.path.at.grid, "_all_"))) {
-                      error <- calcErrorAllMultinomial(pts, classified.tile, Pixel = PixBool)
-                      error <- error %>%
-                          t() %>%
-                          data.frame() %>%
-                          mutate(grid = grid.name,
-                                 image =  str_extract(classified.tile.name.at.grid, image.pattern),
-                                 target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
-                                 model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                                 seg.params = str_extract(classified.tile.name.at.grid, segmentation.pattern),
-                                 tuned = str_extract(classified.tile.name.at.grid, tuned.pattern))
-                      error
-                  } else {
-                      target = str_extract(classified.tile.name.at.grid, "tree|grass|impervious")
-                      target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
-                      error <- calcErrorBinomial(pts, classified.tile, target, Pixel = PixBool)
-                      error <- error %>%
-                          t() %>%
-                          data.frame() %>%
-                          mutate(grid = grid.name,
-                                 image =  str_extract(classified.tile.name.at.grid, image.pattern),
-                                 target.cover = str_extract(classified.tile.name.at.grid, target.pattern),
-                                 model =  str_extract(classified.tile.name.at.grid, model.pattern),
-                                 seg.params = str_extract(classified.tile.name.at.grid, seg.prms),
-                                 tuned = str_extract(classified.tile.name.at.grid, tuned.pattern))
-                      error
-                  }
-              }
-  }
-  closeAllConnections()
-
-
-  saveRDS(error.df, str_c(derived.dir, "/Grids.point2pixel.error.df.rds"))
-
-#+END_SRC
+#+end_src
 
 #+results:
-: OGR data source with driver: ESRI Shapefile
-: Source: "../RD_Accuracy/Grids", layer: "Grids"
-: with 20209 features
-: It has 15 fields
-
-***** Field Plots
-#+BEGIN_SRC R
-  field.pts <- readOGR(dsn = field.accuracy.region.dsn, layer = field.accuracy.region.layer, stringsAsFactors = F)
-
-
-                                          # convert class of field pts to "g", "i", "t"
-
-
-
-
-  field.pts@data$cover = mapvalues(field.pts@data$cover,
-                                   from = c("imperv", "grass", "tree", "soil", "water", "wetland"),
-                                   to = c("i","g","t","i",NA,NA))
-
-  xy <- coordinates(field.pts)
-  field.pts@data$x <- xy[,1]
-  field.pts@data$y <- xy[,2]
-
-  classified.tile.paths <- list.files(str_c(dd.accuracy.classified.dir), full.names = T) %>%
-      str_extract(., pattern = ".*.tif$") %>%
-      str_extract(., pattern = str_c(".*",grid.field.point.pattern, ".*")) %>%
-      na.omit()
-
-  ## point.names <- classified.tile.paths %>%
-  ##     str_match(., paste0(".*(",point.pattern,").*"))
-
-  ## point.names <- point.names[,2] %>%
-  ##     unique() %>%
-  ##     na.omit()
-
-  point.names <- field.pts@data$accuracy_2
-
-
-
-
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
-
-
-  error.df <- foreach(pt.name = point.names, .combine = "rbind",
-                      .packages = c("doParallel","plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
-
-                          pts <- field.pts[field.pts@data$accuracy_2== pt.name,]
-
-                          classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*",pt.name,"_.*")) %>%
-                              na.omit()
-
-                          ## classified.tile.paths.at.grid2 = classified.tile.paths.at.grid %>%
-                          ##      str_extract(., ".*madisonNAIP.*N-105.*svm_.*") %>%
-                          ##      na.omit()
-
-                                          #         classified.tile.path.at.grid = classified.tile.paths.at.grid[1]
-
-
-
-                          foreach(classified.tile.path.at.point = classified.tile.paths.at.point,
-                                  .combine = "rbind",
-                                  .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %do% {
-
-                                      classified.tile.name.at.point <- basename(classified.tile.path.at.point)
-                                      classified.tile <- raster(classified.tile.path.at.point)
-
-                                      tgt <- str_extract(classified.tile.name.at.point, "tree|grass|impervious|all")
-                                      tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
-
-                                      ##  png(str_c("figs/","ClassifiedVersusGrid","/",names(classified.tile),".png"))
-                                      ## print(pts.on.classified.tile.plot(pts, classified.tile, target = tgt))
-                                      ## dev.off()
-
-                                      PixBool <- !is.na((str_extract(classified.tile.path.at.point, "_Pixel_")))
-
-                                      if(!is.na(str_extract(classified.tile.path.at.point, "_all_"))) {
-
-                                          error <- calcErrorAllMultinomial.wrefColumn(pts, classified.tile, Pixel = PixBool, referenceColumn = "cover", one.point = T)
-                                          error <- error %>%
-                                              t() %>%
-                                              data.frame() %>%
-                                              mutate(point = pt.name,
-                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
-                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
-                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
-                                                     seg.params = str_extract(classified.tile.name.at.point, segmentation.pattern),
-                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
-                                          error
-                                      } else {
-                                          target = str_extract(classified.tile.name.at.point, "tree|grass|impervious")
-                                          target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
-                                          error <- calcErrorBinomial.wrefColumn(pts, classified.tile, target, Pixel = PixBool, referenceColumn = "cover", one.point = T)
-                                          error <- error %>%
-                                              t() %>%
-                                              data.frame() %>%
-                                              mutate(point = pt.name,
-                                                     image =  str_extract(classified.tile.name.at.point, image.pattern),
-                                                     target.cover = str_extract(classified.tile.name.at.point, target.pattern),
-                                                     model =  str_extract(classified.tile.name.at.point, model.pattern),
-                                                     seg.params = str_extract(classified.tile.name.at.point, seg.prms),
-                                                     tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
-                                          error
-                                      }
-                                  }
-                      }
-
-  closeAllConnections()
-
-
-  saveRDS(error.df, str_c(derived.dir, "/RandomPoints.GoogleReference.point2pixel.error.df.rds"))
-
-#+END_SRC
-
-***
+[1] "2016-09-20 15:51:05 CDT"
+ |   | image          | target.cover | model    | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+----------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | svm_resp | N-30_C-15  | Untuned | 0.41               |
+| 2 | WholeStateNAIP | all          | rf_prob  | N-30_C-15  | Untuned | 0.42               |
+| 3 | WholeStateNAIP | all          | rf_prob  | N-35_C-18  | Untuned | 0.45               |
+| 4 | WholeStateNAIP | all          | svm_resp | N-35_C-18  | Untuned | 0.45               |
+[1] "2016-09-20 14:50:53 CDT"
+ |   | image          | target.cover | model    | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+----------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | svm_resp | N-30_C-15  | Untuned | 0.41               |
+| 2 | WholeStateNAIP | all          | rf_prob  | N-30_C-15  | Untuned | 0.42               |
+| 3 | WholeStateNAIP | all          | rf_prob  | N-35_C-18  | Untuned | 0.45               |
+| 4 | WholeStateNAIP | all          | svm_resp | N-35_C-18  | Untuned | 0.45               |
+[1] "2016-09-20 14:50:43 CDT"
+ |   | image          | target.cover | model    | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+----------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | svm_resp | N-30_C-15  | Untuned | 0.41               |
+| 2 | WholeStateNAIP | all          | rf_prob  | N-30_C-15  | Untuned | 0.42               |
+| 3 | WholeStateNAIP | all          | rf_prob  | N-35_C-18  | Untuned | 0.45               |
+| 4 | WholeStateNAIP | all          | svm_resp | N-35_C-18  | Untuned | 0.45               |
 
 * Classify Every Urban Area in the State (before [2016-08-29 Mon])
 ** inputs
