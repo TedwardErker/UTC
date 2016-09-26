@@ -1,7 +1,7 @@
 #+TITLE:Functions to Map Urban Tree Canopy
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc:krusty*
+#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc*
 #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
 ------------
 * Functions
@@ -372,29 +372,29 @@ sunPosition <- function(when = Sys.time(), format, lat = 46.5, long = 6.5)
 *** Crop image to each Shapefile polygon
 #+BEGIN_SRC R
   #old
-    Crop_image_to_each_Shapefile_polygon <- function(shapefile.dsn,
-                                                     shapefile.layer,
-                                                     image.path,
-                                                     cores,
-                                                     output.dir)  {
-        image.name <- extract.name.from.path(image.path)
-        shape <- readOGR(shapefile.dsn, str_c(image.name,"_",shapefile.layer))
-        polygons <- as(shape, "SpatialPolygons")
+    ## Crop_image_to_each_Shapefile_polygon <- function(shapefile.dsn,
+    ##                                                  shapefile.layer,
+    ##                                                  image.path,
+    ##                                                  cores,
+    ##                                                  output.dir)  {
+    ##     image.name <- extract.name.from.path(image.path)
+    ##     shape <- readOGR(shapefile.dsn, str_c(image.name,"_",shapefile.layer))
+    ##     polygons <- as(shape, "SpatialPolygons")
 
-        image <- stack(image.path)
+    ##     image <- stack(image.path)
 
-        cl <- makeCluster(cores)
-        registerDoParallel(cl)
+    ##     cl <- makeCluster(cores)
+    ##     registerDoParallel(cl)
 
-        foreach (i = seq_along(polygons),
-                 .packages = c("raster")) %dopar% {
-                     r <- image
-                     r <- crop(r, polygons[i])
-                     writeRaster(r, paste0(output.dir,"/",image.name,".",i,".tif"),
-                                 overwrite = T)
-                 }
-    closeAllConnections()
-    }
+    ##     foreach (i = seq_along(polygons),
+    ##              .packages = c("raster")) %do% {
+    ##                  r <- image
+    ##                  r <- crop(r, polygons[i])
+    ##                  writeRaster(r, paste0(output.dir,"/",image.name,".",i,".tif"),
+    ##                              overwrite = T)
+    ##              }
+    ## closeAllConnections()
+    ## }
 
   #new [2016-09-06 Tue]
     Crop_image_to_each_Shapefile_polygon <- function(shapefile.dsn,
@@ -1038,7 +1038,7 @@ wrapper for slic.
                                 feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
                                 pixel.df,
                                             #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
-                                pca.features = c("blue","green","red","nir"),
+                                pca.features = c("red","green","blue","nir"),
                                 pca.location,
                                 pca.directory = dd.pca.dir,
                                 segmentation = T,
@@ -1272,8 +1272,9 @@ wrapper for slic.
 
           dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
               as.data.frame() %>%
-              filter(complete.cases(.)) %>%
-              select(-image.name, -segment, -Id, -segment.id, -polygon.id, -tile.name)
+              select(-image.name, -segment, -Id, -segment.id, -polygon.id, -tile.name, -id) %>%
+              filter(complete.cases(.))
+
 
   # convert any character columns to factor
   #dat <- dat %>% mutate_if(is.character, as.factor)
