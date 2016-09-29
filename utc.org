@@ -1,7 +1,7 @@
 #+TITLE: Wisconsin Urban Tree Canopy Mapping
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc*
+#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc2*
 #+STARTUP: indent
 #+FILETAGS: work utc
 
@@ -4073,6 +4073,9 @@ Same Raw data as above, but adding "WholeState_DD" and "WholeState_RD"
     library(FSelector)
   library(leaflet)
   library(htmlwidgets)
+library(adabag)
+library(gbm)
+library(parallelMap)
 #+END_SRC
 
 ** Inputs/Variables etc
@@ -4153,7 +4156,7 @@ lapply(dir.list, dir.create)
   segmentation.pattern = "Pixel|N-[0-9]+_C-[0-9]+"
   target.pattern = "all|grass|impervious|tree"
   image.pattern = "[a-zA-Z]{5}[a-zA-Z]+"
-  model.pattern = "rf_prob|rf_resp|svm_resp"
+  model.pattern = "rf_prob|rf_resp|svm_resp|ada_prob|gbm_prob"
   tuned.pattern = "Untuned|Tuned"
 
   point.pattern = "A.[0-9]{4}"
@@ -4166,8 +4169,8 @@ lapply(dir.list, dir.create)
 *** Texture Params
 
 #+begin_src R
-  band.for.texture.appendage = "_ratio.nir"
-  window <- list(c(3,3), c(5,5), c(7,7))
+  band.for.texture.appendage = c("_ratio.nir","_ratio.red")
+  window <- list(c(3,3), c(5,5), c(7,7), c(9,9), c(11,11))
   statistics = list("homogeneity", "contrast", "entropy") # I removed Correlation because it had low decrease Gini
   shift = list(c(0,1),c(1,0),c(1,1),c(-1,1))
 
@@ -4184,11 +4187,11 @@ lapply(dir.list, dir.create)
 
 *** Segment Params
 #+begin_src R
-#  segment.size <- c(rep(15,3), rep(20,3),rep(30,3),rep(45,3),rep(60,3),rep(100,3))
- # compactness <- round(segment.size * c(.3, .5, .6))
+  segment.size <- c(rep(15,3), rep(20,3),rep(30,3),rep(45,3),rep(60,3),rep(100,3))
+  compactness <- round(segment.size * c(.3, .5, .6))
 
-   segment.size <- c(30,35)
-   compactness <- round(segment.size * .5)
+ #  segment.size <- c(30,35)
+ # compactness <- round(segment.size * .5)
 
   segment.params <- data.frame(compactness = compactness, segment.size = segment.size)
 
@@ -4604,14 +4607,20 @@ training.layers
 #+end_src
 
 #+results:
-: [1] "city-Dodgeville_month-6_hour-13_solElv-70_azimuth-181_NAIP_Training"
-: [2] "city-Duluth_month-6_hour-8_solElv-34_azimuth-91_NAIP_Training"
-: [3] "city-EauClaire_month-7_hour-11_solElv-59_azimuth-124_NAIP_Training"
-: [4] "city-Madison_month-7_hour-10_solElv-56_azimuth-116_NAIP_Training"
-: [5] "city-Marshfield_month-7_hour-12_solElv-67_azimuth-157_NAIP_Training"
-: [6] "city-NewRichmond_month-8_hour-10_solElv-45_azimuth-113_NAIP_Training"
-: [7] "city-Racine_month-6_hour-9_solElv-46_azimuth-100_NAIP_Training"
-: [8] "city-Reedsburg_month-6_hour-12_solElv-70_azimuth-168_NAIP_Training"
+#+begin_example
+
+[1] "city-Dodgeville_month-6_hour-13_solElv-70_azimuth-181_NAIP_Training"
+ [2] "city-Duluth_month-6_hour-8_solElv-34_azimuth-91_NAIP_Training"
+ [3] "city-EauClaire_month-7_hour-11_solElv-59_azimuth-124_NAIP_Training"
+ [4] "city-Madison_month-7_hour-10_solElv-56_azimuth-116_NAIP_Training"
+ [5] "city-Marshfield_month-7_hour-12_solElv-67_azimuth-157_NAIP_Training"
+ [6] "city-NewRichmond_month-8_hour-10_solElv-45_azimuth-113_NAIP_Training"
+ [7] "city-Racine_month-6_hour-9_solElv-46_azimuth-100_NAIP_Training"
+ [8] "city-Reedsburg_month-6_hour-12_solElv-70_azimuth-168_NAIP_Training"
+ [9] "city-Rhinelander_month-9_hour-10_solElv-38_azimuth-126_NAIP_Training"
+[10] "city-Watertown_month-6_hour-8_solElv-37_azimuth-92_NAIP_Training"
+[11] "city-Wausau_month-8_hour-9_solElv-39_azimuth-111_NAIP_Training"
+#+end_example
 
 *** Crop NAIP to Training Regions
 #+begin_src R
@@ -4696,9 +4705,11 @@ NULL
   cl <- makeCluster(cores)
   registerDoParallel(cl)
 
-  train.dirs <- list.dirs(whole.state.dd.training)
+  train.dirs <- list.dirs(whole.state.dd.training) %>%
+      str_extract(pattern = ".*city.*NAIP") %>%
+      na.omit()
 
-  out <- foreach(train.dir = train.dirs) %do% {
+  out <- foreach(train.dir = train.dirs[2:11]) %do% {
 
       tile.names <- list.files(train.dir) %>%
           str_extract(., pattern = ".*[0-9]+.tif") %>%
@@ -4721,8 +4732,6 @@ NULL
 #+end_src
 
 #+results:
-:  Error in { :
-:   task 2 failed - "task 1 failed - "incorrect number of layer names""
 
 **** Make PCA
 saved as "_pca.rds" in train.dir
@@ -4957,6 +4966,9 @@ save a model for each
 - segmentation parameter set
 - classifier (rf, svm)
 - tuned or untuned, etc
+
+
+**** untuned all features
 #+begin_src R :results none
   cl <- makeCluster(cores)
   registerDoParallel(cl)
@@ -4967,7 +4979,7 @@ save a model for each
       na.omit()
 
   foreach(ModelBuildingRDS = ModelBuildingRDSs,
-          .packages = c("parallelMap","randomForest","kernlab","irace","mlr","stringr","dplyr","foreach","doParallel")) %do% {
+          .packages = c("parallelMap","randomForest","kernlab","irace","mlr","stringr","dplyr","foreach","doParallel","gbm","adabag")) %dopar% {
 
               Build.and.Save.models(dir = whole.state.dd.training,
                                     modelBuildingData = ModelBuildingRDS,
@@ -4989,6 +5001,35 @@ whole.state.dd.models
 #+results:
 : [1] "../WholeState_DD/Models"
 
+**** Tune to Select Features
+#+begin_src R
+
+#+end_src
+**** Tune to Select Features and Hyperparameters
+#+begin_src R
+
+    ModelBuildingRDSs <- list.files(whole.state.dd.training) %>%
+        str_extract(., str_c(".*",ModelBuilding.appendage, ".rds")) %>%
+        na.omit()
+
+    res <- foreach(ModelBuildingRDS = ModelBuildingRDSs,
+            .packages = c("parallelMap","randomForest","kernlab","irace","mlr","stringr","dplyr","foreach","doParallel","gbm","adabag")) %do% {
+
+  # I run parallelization within the function at resampling
+
+                Tune.Build.and.Save.models(dir = whole.state.dd.training,
+                                      modelBuildingData = ModelBuildingRDS,
+                                      models.dir = whole.state.dd.models,
+                                      image.name = "NAIP",
+                                      location = "WholeState",
+                                      target.name = "class",
+                                      n.cores = 20)
+            }
+
+
+    closeAllConnections()
+
+#+end_src
 *** Assess Models (Important variables etc)
 
 #+begin_src R
@@ -5227,9 +5268,9 @@ For reprojection, use function spTransform
 #+results:
 : Error in writeOGR(pts, dsn = whole.state.rd.accuracy, layer = "points",  :
 :   layer exists, use a new layer name
-*** TODO Assess Accuracy At Points
+***  Assess Accuracy At Points
 #+begin_src R
-class.codes <- c("agriculture" = "a", "grass" = "g", "wetland" = "m", "water" = "w", "impervious" = "i", "tree" = "t")
+class.codes <- c("agriculture" = "a", "grass" = "g", "wetland" = "m", "water" = "w", "impervious" = "i", "tree" = "t", "soil" = "s")
 
 #+end_src
 
@@ -5491,94 +5532,94 @@ at each hour of day" to get the seamlines_by_ua object
 
 ***** Random Points
 #+BEGIN_SRC R
-    pts <- readOGR(dsn = whole.state.rd.accuracy, layer = "points", stringsAsFactors = F)
-    pts <- pts[!is.na(pts@data$class),]
-    pts <- spTransform(pts, wtm)
+      pts <- readOGR(dsn = whole.state.rd.accuracy, layer = "points", stringsAsFactors = F)
+      pts <- pts[!is.na(pts@data$class),]
+      pts <- spTransform(pts, wtm)
 
-  # remove agriculture, wetland, and water
-  pts <- subset(pts, class != "w")
-  pts <- subset(pts, class != "m")
-  pts <- subset(pts, class != "a")
+    # remove agriculture, wetland, and water
+    pts <- subset(pts, class != "w")
+    pts <- subset(pts, class != "m")
+    pts <- subset(pts, class != "a")
+  pts@data$class[pts@data$class == "s"] <- "i"
 
+      xy <- coordinates(pts)
+      pts@data$x <- xy[,1]
+      pts@data$y <- xy[,2]
 
-    xy <- coordinates(pts)
-    pts@data$x <- xy[,1]
-    pts@data$y <- xy[,2]
+      classified.tile.paths <- list.files(str_c(whole.state.dd.accuracy.classified), full.names = T) %>%
+          str_extract(., pattern = ".*.tif$") %>%
+          str_extract(., pattern = str_c(".*",grid.field.point.pattern, ".*")) %>%
+          na.omit()
 
-    classified.tile.paths <- list.files(str_c(whole.state.dd.accuracy.classified), full.names = T) %>%
-        str_extract(., pattern = ".*.tif$") %>%
-        str_extract(., pattern = str_c(".*",grid.field.point.pattern, ".*")) %>%
-        na.omit()
+      ## point.names <- classified.tile.paths %>%
+      ##     str_match(., paste0(".*(",point.pattern,").*"))
 
-    ## point.names <- classified.tile.paths %>%
-    ##     str_match(., paste0(".*(",point.pattern,").*"))
+      ## point.names <- point.names[,2] %>%
+      ##     unique() %>%
+      ##     na.omit()
 
-    ## point.names <- point.names[,2] %>%
-    ##     unique() %>%
-    ##     na.omit()
+      point.names <- pts@data$id
 
-    point.names <- pts@data$id
-
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
-
-
-    error.df <- foreach(pt.name = point.names, .combine = "rbind",
-                        .packages = c("doParallel","plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
-
-                            pts.sub <- pts[pts@data$id == pt.name,]
-
-                            classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*P.",pt.name,"_.*")) %>%
-                                na.omit()
+      cl <- makeCluster(cores)
+      registerDoParallel(cl)
 
 
-                            foreach(classified.tile.path.at.point = classified.tile.paths.at.point,
-                                    .combine = "rbind",
-                                    .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %do% {
+      error.df <- foreach(pt.name = point.names, .combine = "rbind",
+                          .packages = c("doParallel","plyr","raster","dplyr", "stringr","ggplot2")) %dopar% {
 
-                                        classified.tile.name.at.point <- basename(classified.tile.path.at.point)
-                                        classified.tile <- raster(classified.tile.path.at.point)
+                              pts.sub <- pts[pts@data$id == pt.name,]
 
-                                        tgt <- str_extract(classified.tile.name.at.point, "tree|grass|impervious|all")
-                                        tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
+                              classified.tile.paths.at.point <- str_extract(classified.tile.paths, str_c(".*P.",pt.name,"_.*")) %>%
+                                  na.omit()
 
-                                        PixBool <- !is.na((str_extract(classified.tile.path.at.point, "_Pixel_")))
 
-                                        if(!is.na(str_extract(classified.tile.path.at.point, "_all_"))) {
+                              foreach(classified.tile.path.at.point = classified.tile.paths.at.point,
+                                      .combine = "rbind",
+                                      .packages = c("plyr","raster","dplyr", "stringr","ggplot2")) %do% {
 
-                                            error <- calcErrorAllMultinomial.wrefColumn(pts.sub, classified.tile, Pixel = PixBool, referenceColumn = "class", one.point = T)
-                                            error <- error %>%
-                                                t() %>%
-                                                data.frame() %>%
-                                                mutate(point = pt.name,
-                                                       image =  str_extract(classified.tile.name.at.point, image.pattern),
-                                                       target.cover = str_extract(classified.tile.name.at.point, target.pattern),
-                                                       model =  str_extract(classified.tile.name.at.point, model.pattern),
-                                                       seg.params = str_extract(classified.tile.name.at.point, segmentation.pattern),
-                                                       tuned = str_extract(classified.tile.name.at.point, tuned.pattern),
-                                                       overall.error = as.numeric(as.character(overall.error)))
-                                            error
-                                        } else {
-                                            target = str_extract(classified.tile.name.at.point, "tree|grass|impervious")
-                                            target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
-                                            error <- calcErrorBinomial.wrefColumn(pts.sub, classified.tile, target, Pixel = PixBool, referenceColumn = "cover", one.point = T)
-                                            error <- error %>%
-                                                t() %>%
-                                                data.frame() %>%
-                                                mutate(point = pt.name,
-                                                       image =  str_extract(classified.tile.name.at.point, image.pattern),
-                                                       target.cover = str_extract(classified.tile.name.at.point, target.pattern),
-                                                       model =  str_extract(classified.tile.name.at.point, model.pattern),
-                                                       seg.params = str_extract(classified.tile.name.at.point, seg.prms),
-                                                       tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
-                                            error
-                                        }
-                                    }
-                        }
+                                          classified.tile.name.at.point <- basename(classified.tile.path.at.point)
+                                          classified.tile <- raster(classified.tile.path.at.point)
 
-    closeAllConnections()
+                                          tgt <- str_extract(classified.tile.name.at.point, "tree|grass|impervious|all")
+                                          tgt <- mapvalues(tgt, c("tree","grass","impervious","all"), c("t","g","i","a"))
 
-    saveRDS(error.df, str_c(whole.state.dd.accuracy, "/RandomPoints.GoogleReference.point2pixel.error.df.rds"))
+                                          PixBool <- !is.na((str_extract(classified.tile.path.at.point, "_Pixel_")))
+
+                                          if(!is.na(str_extract(classified.tile.path.at.point, "_all_"))) {
+
+                                              error <- calcErrorAllMultinomial.wrefColumn(pts.sub, classified.tile, Pixel = PixBool, referenceColumn = "class", one.point = T)
+                                              error <- error %>%
+                                                  t() %>%
+                                                  data.frame() %>%
+                                                  mutate(point = pt.name,
+                                                         image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                                         target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                                         model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                                         seg.params = str_extract(classified.tile.name.at.point, segmentation.pattern),
+                                                         tuned = str_extract(classified.tile.name.at.point, tuned.pattern),
+                                                         overall.error = as.numeric(as.character(overall.error)))
+                                              error
+                                          } else {
+                                              target = str_extract(classified.tile.name.at.point, "tree|grass|impervious")
+                                              target <- mapvalues(target, c("tree","grass","impervious"), c("t","g","i"))
+                                              error <- calcErrorBinomial.wrefColumn(pts.sub, classified.tile, target, Pixel = PixBool, referenceColumn = "cover", one.point = T)
+                                              error <- error %>%
+                                                  t() %>%
+                                                  data.frame() %>%
+                                                  mutate(point = pt.name,
+                                                         image =  str_extract(classified.tile.name.at.point, image.pattern),
+                                                         target.cover = str_extract(classified.tile.name.at.point, target.pattern),
+                                                         model =  str_extract(classified.tile.name.at.point, model.pattern),
+                                                         seg.params = str_extract(classified.tile.name.at.point, seg.prms),
+                                                         tuned = str_extract(classified.tile.name.at.point, tuned.pattern))
+                                              error
+                                          }
+                                      }
+                          }
+
+      closeAllConnections()
+
+      saveRDS(error.df, str_c(whole.state.dd.accuracy, "/RandomPoints.GoogleReference.point2pixel.error.df.rds"))
 
 #+END_SRC
 
@@ -5602,6 +5643,17 @@ at each hour of day" to get the seamlines_by_ua object
 #+end_src
 
 #+results:
+[1] "2016-09-27 12:58:53 CDT"
+ |   | image          | target.cover | model    | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+----------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | rf_prob  | N-35_C-18  | Untuned | 0.25               |
+| 2 | WholeStateNAIP | all          | rf_prob  | N-30_C-15  | Untuned | 0.26               |
+| 3 | WholeStateNAIP | all          | ada_prob | N-30_C-15  | Untuned | 0.27               |
+| 4 | WholeStateNAIP | all          | ada_prob | N-35_C-18  | Untuned | 0.27               |
+| 5 | WholeStateNAIP | all          | gbm_prob | N-35_C-18  | Untuned | 0.28               |
+| 6 | WholeStateNAIP | all          | gbm_prob | N-30_C-15  | Untuned | 0.29               |
+| 7 | WholeStateNAIP | all          | svm_resp | N-30_C-15  | Untuned | 0.30               |
+| 8 | WholeStateNAIP | all          | svm_resp | N-35_C-18  | Untuned | 0.31               |
 [1] "2016-09-26 17:14:54 CDT"
  |   | image          | target.cover | model    | seg.params | tuned   | mean.overall.error |
 |---+----------------+--------------+----------+------------+---------+--------------------|
@@ -5766,75 +5818,76 @@ at each hour of day" to get the seamlines_by_ua object
 
 ***** Percent of wrong points by urban area:
 #+begin_src R
-    n.pts <-   error.df %>%
-       filter(seg.params == "N-35_C-18", model == "rf_prob") %>%
-       select(overall.error, point,NAME10) %>%
-        group_by(NAME10) %>%
-        summarize(n.pts = n(),
-                  error = sum(overall.error)/n()) %>%
-      arrange(error) %>%
-      ascii.nowarn.print
+      n.pts <-   error.df %>%
+         filter(seg.params == "N-35_C-18", model == "rf_prob") %>%
+#         select(overall.error, point,NAME10) %>%
+          group_by(NAME10) %>%
+          summarize(n.pts = n(),
+                    error = sum(overall.error)/n(),
+                    hour = mean(hour)) %>%
+        arrange(error) %>%
+        ascii.nowarn.print
 
 
-  ## error.df %>%
-  ##     filter(seg.params == "N-35_C-18", model == "rf_prob") %>%
-  ##     select(overall.error, point,NAME10) %>%
-  ##   left_join(n.pts) %>%
-  ##   ascii.nowarn.print
+    ## error.df %>%
+    ##     filter(seg.params == "N-35_C-18", model == "rf_prob") %>%
+    ##     select(overall.error, point,NAME10) %>%
+    ##   left_join(n.pts) %>%
+    ##   ascii.nowarn.print
   #+end_src
 
 #+results:
 #+begin_example
- |    | NAME10                                       | n.pts | error |
-|----+----------------------------------------------+-------+-------|
-| 1  | Ashland, WI                                  | 1.00  | 0.00  |
-| 2  | Baraboo, WI                                  | 1.00  | 0.00  |
-| 3  | Beloit, WI--IL                               | 3.00  | 0.00  |
-| 4  | Burlington, WI                               | 2.00  | 0.00  |
-| 5  | Chetek, WI                                   | 1.00  | 0.00  |
-| 6  | Chilton, WI                                  | 2.00  | 0.00  |
-| 7  | Delavan, WI                                  | 1.00  | 0.00  |
-| 8  | Edgerton, WI                                 | 1.00  | 0.00  |
-| 9  | Evansville, WI                               | 1.00  | 0.00  |
-| 10 | Fort Atkinson, WI                            | 3.00  | 0.00  |
-| 11 | Hudson, WI--MN                               | 2.00  | 0.00  |
-| 12 | Iron Mountain--Kingsford, MI--WI             | 1.00  | 0.00  |
-| 13 | Kenosha, WI--IL                              | 4.00  | 0.00  |
-| 14 | Kewaunee, WI                                 | 1.00  | 0.00  |
-| 15 | La Crosse, WI--MN                            | 2.00  | 0.00  |
-| 16 | Menomonie, WI                                | 1.00  | 0.00  |
-| 17 | Merrill, WI                                  | 1.00  | 0.00  |
-| 18 | Rice Lake, WI                                | 1.00  | 0.00  |
-| 19 | River Falls, WI                              | 1.00  | 0.00  |
-| 20 | Stanley, WI                                  | 1.00  | 0.00  |
-| 21 | Waterloo, WI                                 | 1.00  | 0.00  |
-| 22 | West Bend, WI                                | 3.00  | 0.00  |
-| 23 | Eau Claire, WI                               | 12.00 | 0.08  |
-| 24 | Racine, WI                                   | 8.00  | 0.12  |
-| 25 | Wausau, WI                                   | 11.00 | 0.18  |
-| 26 | Green Bay, WI                                | 10.00 | 0.20  |
-| 27 | Rhinelander, WI                              | 5.00  | 0.20  |
-| 28 | Stevens Point, WI                            | 4.00  | 0.25  |
-| 29 | Appleton, WI                                 | 14.00 | 0.29  |
-| 30 | Milwaukee, WI                                | 52.00 | 0.29  |
-| 31 | Madison, WI                                  | 16.00 | 0.31  |
-| 32 | Fond du Lac, WI                              | 3.00  | 0.33  |
-| 33 | Lake Geneva, WI                              | 3.00  | 0.33  |
-| 34 | Manitowoc, WI                                | 3.00  | 0.33  |
-| 35 | Oshkosh, WI                                  | 3.00  | 0.33  |
-| 36 | Sheboygan, WI                                | 6.00  | 0.33  |
-| 37 | Wisconsin Rapids, WI                         | 3.00  | 0.33  |
-| 38 | Clintonville, WI                             | 2.00  | 0.50  |
-| 39 | Horicon, WI                                  | 2.00  | 0.50  |
-| 40 | Janesville, WI                               | 2.00  | 0.50  |
-| 41 | Round Lake Beach--McHenry--Grayslake, IL--WI | 2.00  | 0.50  |
-| 42 | Sparta, WI                                   | 2.00  | 0.50  |
-| 43 | Arcadia, WI                                  | 1.00  | 1.00  |
-| 44 | Brodhead, WI                                 | 1.00  | 1.00  |
-| 45 | Mauston, WI                                  | 1.00  | 1.00  |
-| 46 | Shawano, WI                                  | 2.00  | 1.00  |
-| 47 | Union Grove, WI                              | 1.00  | 1.00  |
-| 48 | Waupaca, WI                                  | 2.00  | 1.00  |
+ |    | NAME10                                       | n.pts | error | hour  |
+|----+----------------------------------------------+-------+-------+-------|
+| 1  | Ashland, WI                                  | 1.00  | 0.00  | 9.00  |
+| 2  | Baraboo, WI                                  | 1.00  | 0.00  | 9.00  |
+| 3  | Beloit, WI--IL                               | 3.00  | 0.00  | 10.00 |
+| 4  | Burlington, WI                               | 2.00  | 0.00  | 11.00 |
+| 5  | Chetek, WI                                   | 1.00  | 0.00  | 9.00  |
+| 6  | Chilton, WI                                  | 2.00  | 0.00  | 9.00  |
+| 7  | Delavan, WI                                  | 1.00  | 0.00  | 9.00  |
+| 8  | Edgerton, WI                                 | 1.00  | 0.00  | 10.00 |
+| 9  | Evansville, WI                               | 1.00  | 0.00  | 11.00 |
+| 10 | Fort Atkinson, WI                            | 3.00  | 0.00  | 9.00  |
+| 11 | Hudson, WI--MN                               | 2.00  | 0.00  | 9.00  |
+| 12 | Iron Mountain--Kingsford, MI--WI             | 1.00  | 0.00  | 11.00 |
+| 13 | Kenosha, WI--IL                              | 4.00  | 0.00  | 9.75  |
+| 14 | Kewaunee, WI                                 | 1.00  | 0.00  | 10.00 |
+| 15 | La Crosse, WI--MN                            | 2.00  | 0.00  | 10.00 |
+| 16 | Menomonie, WI                                | 1.00  | 0.00  | 9.00  |
+| 17 | Merrill, WI                                  | 1.00  | 0.00  | 9.00  |
+| 18 | Rice Lake, WI                                | 1.00  | 0.00  | 9.00  |
+| 19 | River Falls, WI                              | 1.00  | 0.00  | 9.00  |
+| 20 | Stanley, WI                                  | 1.00  | 0.00  | 9.00  |
+| 21 | Waterloo, WI                                 | 1.00  | 0.00  | 10.00 |
+| 22 | West Bend, WI                                | 3.00  | 0.00  | 10.00 |
+| 23 | Eau Claire, WI                               | 12.00 | 0.08  | 9.50  |
+| 24 | Racine, WI                                   | 8.00  | 0.12  | 9.25  |
+| 25 | Wausau, WI                                   | 11.00 | 0.18  | 9.00  |
+| 26 | Green Bay, WI                                | 10.00 | 0.20  | 9.60  |
+| 27 | Rhinelander, WI                              | 5.00  | 0.20  | 9.60  |
+| 28 | Stevens Point, WI                            | 4.00  | 0.25  | 9.00  |
+| 29 | Appleton, WI                                 | 14.00 | 0.29  | 8.21  |
+| 30 | Milwaukee, WI                                | 52.00 | 0.29  | 10.17 |
+| 31 | Madison, WI                                  | 16.00 | 0.31  | 10.75 |
+| 32 | Fond du Lac, WI                              | 3.00  | 0.33  | 8.00  |
+| 33 | Lake Geneva, WI                              | 3.00  | 0.33  | 8.00  |
+| 34 | Manitowoc, WI                                | 3.00  | 0.33  | 8.33  |
+| 35 | Oshkosh, WI                                  | 3.00  | 0.33  | 9.00  |
+| 36 | Sheboygan, WI                                | 6.00  | 0.33  | 9.00  |
+| 37 | Wisconsin Rapids, WI                         | 3.00  | 0.33  | 9.67  |
+| 38 | Clintonville, WI                             | 2.00  | 0.50  | 9.00  |
+| 39 | Horicon, WI                                  | 2.00  | 0.50  | 9.00  |
+| 40 | Janesville, WI                               | 2.00  | 0.50  | 10.00 |
+| 41 | Round Lake Beach--McHenry--Grayslake, IL--WI | 2.00  | 0.50  | 10.50 |
+| 42 | Sparta, WI                                   | 2.00  | 0.50  | 12.00 |
+| 43 | Arcadia, WI                                  | 1.00  | 1.00  | 11.00 |
+| 44 | Brodhead, WI                                 | 1.00  | 1.00  | 10.00 |
+| 45 | Mauston, WI                                  | 1.00  | 1.00  | 11.00 |
+| 46 | Shawano, WI                                  | 2.00  | 1.00  | 8.00  |
+| 47 | Union Grove, WI                              | 1.00  | 1.00  | 10.00 |
+| 48 | Waupaca, WI                                  | 2.00  | 1.00  | 10.00 |
 #+end_example
 
 
