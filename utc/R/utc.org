@@ -1513,8 +1513,8 @@ standardGeneric for "res" defined from package "raster"
 
 function (x)
 standardGeneric("res")
-<bytecode: 0x2daf6b8>
-<environment: 0x2dba930>
+<bytecode: 0x49026b8>
+<environment: 0x490d930>
 Methods may be defined for arguments: x
 Use  showMethods("res")  for currently available ones.
 Error: unexpected '}' in "}"

@@ -4609,17 +4609,20 @@ training.layers
 #+results:
 #+begin_example
 
-[1] "city-Dodgeville_month-6_hour-13_solElv-70_azimuth-181_NAIP_Training"
- [2] "city-Duluth_month-6_hour-8_solElv-34_azimuth-91_NAIP_Training"
- [3] "city-EauClaire_month-7_hour-11_solElv-59_azimuth-124_NAIP_Training"
- [4] "city-Madison_month-7_hour-10_solElv-56_azimuth-116_NAIP_Training"
- [5] "city-Marshfield_month-7_hour-12_solElv-67_azimuth-157_NAIP_Training"
- [6] "city-NewRichmond_month-8_hour-10_solElv-45_azimuth-113_NAIP_Training"
- [7] "city-Racine_month-6_hour-9_solElv-46_azimuth-100_NAIP_Training"
- [8] "city-Reedsburg_month-6_hour-12_solElv-70_azimuth-168_NAIP_Training"
- [9] "city-Rhinelander_month-9_hour-10_solElv-38_azimuth-126_NAIP_Training"
-[10] "city-Watertown_month-6_hour-8_solElv-37_azimuth-92_NAIP_Training"
-[11] "city-Wausau_month-8_hour-9_solElv-39_azimuth-111_NAIP_Training"
+[1] "city-Appleton_month-7_hour-8_solElv-31_azimuth-88_NAIP_Training"
+ [2] "city-Dodgeville_month-6_hour-13_solElv-70_azimuth-181_NAIP_Training"
+ [3] "city-Duluth_month-6_hour-8_solElv-34_azimuth-91_NAIP_Training"
+ [4] "city-EauClaire_month-7_hour-11_solElv-59_azimuth-124_NAIP_Training"
+ [5] "city-GreenBay_month-7_hour-9_solElv-45_azimuth-102_NAIP_Training"
+ [6] "city-Madison_month-7_hour-10_solElv-56_azimuth-116_NAIP_Training"
+ [7] "city-Marshfield_month-7_hour-12_solElv-67_azimuth-157_NAIP_Training"
+ [8] "city-Milwaukee_month-6_hour-11_solElv-62_azimuth-126_NAIP_Training"
+ [9] "city-NewRichmond_month-8_hour-10_solElv-45_azimuth-113_NAIP_Training"
+[10] "city-Racine_month-6_hour-9_solElv-46_azimuth-100_NAIP_Training"
+[11] "city-Reedsburg_month-6_hour-12_solElv-70_azimuth-168_NAIP_Training"
+[12] "city-Rhinelander_month-9_hour-10_solElv-38_azimuth-126_NAIP_Training"
+[13] "city-Watertown_month-6_hour-8_solElv-37_azimuth-92_NAIP_Training"
+[14] "city-Wausau_month-8_hour-9_solElv-39_azimuth-111_NAIP_Training"
 #+end_example
 
 *** Crop NAIP to Training Regions
@@ -4640,65 +4643,6 @@ training.layers
 
 #+end_src
 
-#+results:
-#+begin_example
- OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-Dodgeville_month-6_hour-13_solElv-70_azimuth-181_NAIP_Training"
-with 46 features
-It has 2 fields
-OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-Duluth_month-6_hour-8_solElv-34_azimuth-91_NAIP_Training"
-with 50 features
-It has 2 fields
-OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-EauClaire_month-7_hour-11_solElv-59_azimuth-124_NAIP_Training"
-with 58 features
-It has 2 fields
-OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-Madison_month-7_hour-10_solElv-56_azimuth-116_NAIP_Training"
-with 221 features
-It has 2 fields
-OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-Marshfield_month-7_hour-12_solElv-67_azimuth-157_NAIP_Training"
-with 43 features
-It has 2 fields
-OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-NewRichmond_month-8_hour-10_solElv-45_azimuth-113_NAIP_Training"
-with 42 features
-It has 2 fields
-OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-Racine_month-6_hour-9_solElv-46_azimuth-100_NAIP_Training"
-with 45 features
-It has 2 fields
-OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-Reedsburg_month-6_hour-12_solElv-70_azimuth-168_NAIP_Training"
-with 112 features
-It has 2 fields
-[[1]]
-NULL
-
-[[2]]
-NULL
-
-[[3]]
-NULL
-
-[[4]]
-NULL
-
-[[5]]
-NULL
-
-[[6]]
-NULL
-
-[[7]]
-NULL
-
-[[8]]
-NULL
-#+end_example
-
 *** make pca transforms
 **** Add Features
 #+begin_src R
@@ -4709,7 +4653,7 @@ NULL
       str_extract(pattern = ".*city.*NAIP") %>%
       na.omit()
 
-  out <- foreach(train.dir = train.dirs[2:11]) %do% {
+  out <- foreach(train.dir = train.dirs) %do% {
 
       tile.names <- list.files(train.dir) %>%
           str_extract(., pattern = ".*[0-9]+.tif") %>%
@@ -4732,21 +4676,41 @@ NULL
 #+end_src
 
 #+results:
+**** Make Pixel Feature DF
+#+begin_src R
+    cl <- makeCluster(cores)
+    registerDoParallel(cl)
 
+    out <- foreach(train.dir = train.dirs) %do% {
+
+        tile.names <- list.files(train.dir) %>%
+            str_extract(., pattern = ".*[0-9]+.tif") %>%
+            str_extract(., pattern = ".*[0-9]+") %>%
+            na.omit()
+
+        pixel.feature.dfs <- foreach (j = tile.names,
+                                      .packages = c("raster","stringr","glcm")) %dopar% {
+        save.pixel.feature.df(tile.dir = train.dir,
+                              tile.name = j,
+                              feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+|ratio.red_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
+                              feature.df.append = feature.df.appendage)
+                                      }
+    }
+closeAllConnections()
+#+end_src
 **** Make PCA
 saved as "_pca.rds" in train.dir
 #+begin_src R
+
     train.dirs <- list.dirs(whole.state.dd.training) %>%
     str_extract(pattern = ".*city.*NAIP") %>%
         na.omit()
 
-  out <-     foreach(train.dir = train.dirs) %do% {
+  out <-     foreach(train.dir = train.dirs[5]) %do% {
           make.and.save.pca.transformation.wholestate(image.dir = train.dir,
                                                       image.name = "",
                                                       location = "")
       }
-    closeAllConnections()
-
 
 #+end_src
 
@@ -4792,10 +4756,11 @@ saved as "_pca.rds" in train.dir
 
             make.segment.feature.df.foreach.segmentation(tile.dir = train.dir,
                                                          tile.name = train.name,
-                                                         feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif")
+                                                         feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+|ratio.red_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif")
 
         }
     }
+closeAllConnections()
 #+end_src
 
 **** Combine Feature Dataframes
@@ -4909,18 +4874,8 @@ out <-    foreach(segment.param.set = segment.param.sets) %do% {
 #+end_src
 
 #+results:
-#+begin_example
-OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-EauClaire_month-7_hour-11_solElv-59_azimuth-124_NAIP_Training"
-with 58 features
-It has 2 fields
-OGR data source with driver: ESRI Shapefile
-Source: "../WholeState_RD/Training_Regions", layer: "city-Racine_month-6_hour-9_solElv-46_azimuth-100_NAIP_Training"
-with 45 features
-It has 2 fields
-There were 46 warnings (use warnings() to see them)
-[1] "org_babel_R_eoe"
-#+end_example
+: Error in { : task 1 failed - "task 1 failed - "subscript out of bounds""
+: [1] "org_babel_R_eoe"
 
 *** Visualize Model Building Dataframe(s)
 #+begin_src R
@@ -4932,20 +4887,39 @@ There were 46 warnings (use warnings() to see them)
 #+end_src
 
 #+results:
+:  Error in list.files(whole.state.dd.training, full.names = T) :
+:   object 'whole.state.dd.training' not found
+: Error in lapply(ModelBuildingRDSs, readRDS) :
+:   object 'ModelBuildingRDSs' not found
 
-#+begin_src R :exports results :results graphics :file ./figs/VisualizeModelBuildingDF_whole.state.png
-  df <- out[[1]]
-  ggplot(data = df, aes(x = ratio.nir_mean, y = ratio.nir_stat.homogeneity_window.3_angle.0_mean, color = class)) +
-      geom_point(alpha = .5) +
-      facet_grid(solarAzimuth~solarElevation)
+
+
+#+begin_src R :exports results :results graphics :file ./figs/VisualizeModelBuildingDF_whole.state.png :width 700 :height 700
+
+    utc.pal <- c("g" = "#F2AD00", "i" = "#FF0000", "t" = "#00A08A")
+  utc.col <- scale_color_manual(values = utc.pal)
+  utc.fill <- scale_fill_manual(values = utc.pal)
+  utc.theme <- list(theme(),utc.col)
+
+  df <- out[[4]]
+      ggplot(data = df, aes(x = ratio.nir_mean, y = ratio.nir_stat.homogeneity_window.3_angle.0_mean, color = class)) +
+          geom_point(alpha = .1) +
+          facet_wrap(~solarElevation) +
+          utc.col
+
+
+
+
+
 #+end_src
 
 #+results:
 [[file:./figs/VisualizeModelBuildingDF_whole.state.png]]
 
-#+begin_src R :exports results :results graphics :file ./figs/elevation_and_ratioNIR.png
+#+begin_src R :exports results :results graphics :file ./figs/elevation_and_ratioNIR.png :width 1000
   ggplot(data = df, aes(y = nir_mean, x = factor(solarAzimuth), fill = class)) +
-      geom_boxplot(alpha = .8)
+      geom_boxplot(alpha = .8) +
+      utc.fill
 #+end_src
 
 #+results:
@@ -4953,7 +4927,7 @@ There were 46 warnings (use warnings() to see them)
 
 #+begin_src R :exports results :results graphics :file ./figs/ggpairs.png
 library(GGally)
-ggpairs(df, mapping = aes(color = class, alpha = .1), columns = c("ratio.nir_stat.homogeneity_window.3_angle.0_mean","ndvi_mean","ratio.nir_mean", "blue_mean"))
+ggpairs(df, mapping = aes(color = class, alpha = .1), columns = c("ratio.nir_stat.homogeneity_window.3_angle.0_mean","ndvi_mean","ratio.nir_mean", "blue_mean","solarAzimuth"), palette = utc.pal)
 #+end_src
 
 #+results:
