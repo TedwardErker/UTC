@@ -1,7 +1,7 @@
 #+TITLE:Functions to Map Urban Tree Canopy
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc*
+#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc:sumac*
 #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
 ------------
 * Functions
@@ -1272,7 +1272,7 @@ wrapper for slic.
 
           dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
               as.data.frame() %>%
-              select(-image.name, -segment, -Id, -segment.id, -polygon.id, -tile.name, -id) %>%
+              dplyr::select(-image.name, -segment, -Id, -segment.id, -polygon.id, -tile.name) %>%
               filter(complete.cases(.))
 
 
@@ -1504,7 +1504,8 @@ target from the FSelector Package
                            makeDiscreteParam("fw.abs", values = seq_len(getTaskNFeats(iris.task)))))"
 Error in checkClass(x, classes, ordered) : object 'svm.ps' not found
 Error in checkClass(x, classes, ordered) : object 'rf.ps' not found
-Error in checkClass(x, classes, ordered) : object 'ada.ps' not found
+Error in requirePackages(package, why = stri_paste("learner", id, sep = " "),  :
+  For learner classif.boosting please install the following packages: adabag
 Error in assertInt(x, na.ok, lower, upper, tol, .var.name = .var.name,  :
   object 'n.cores' not found
 Error: object 'svm.lrn' not found
@@ -1513,8 +1514,8 @@ standardGeneric for "res" defined from package "raster"
 
 function (x)
 standardGeneric("res")
-<bytecode: 0x424b6b8>
-<environment: 0x4256930>
+<bytecode: 0x7f8f2d64a990>
+<environment: 0x7f8f2d6540b0>
 Methods may be defined for arguments: x
 Use  showMethods("res")  for currently available ones.
 Error: unexpected '}' in "}"

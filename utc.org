@@ -1,7 +1,7 @@
 #+TITLE: Wisconsin Urban Tree Canopy Mapping
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc:sumac*
+#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc2*
 #+STARTUP: indent
 #+FILETAGS: work utc
 
@@ -4220,7 +4220,7 @@ googCRS <- CRS("+init=epsg:4326")
 #+BEGIN_SRC R
     all.cores <- detectCores()
     cores <- ifelse(all.cores > 4, all.cores - 2, all.cores)
-
+#cores <- 25
 #+END_SRC
 
 #+results:
@@ -4290,21 +4290,17 @@ seamlines <- readOGR(dsn = naip.seamlines.dir, layer = naip.seamlines.layer)
 #+end_src
 #+results:
 #+begin_example
-OGR data source with driver: ESRI Shapefile
-Source: "../RD_US_UrbanAreasShapefile", layer: "cb_2013_us_ua10_500k"
-with 3601 features
-It has 8 fields
-Warning messages:
-1: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 57 is invalid in this locale
-2: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 58 is invalid in this locale
-3: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 509 is invalid in this locale
-4: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 512 is invalid in this locale
-5: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 3194 is invalid in this locale
+Error in ogrInfo(dsn = dsn, layer = layer, encoding = encoding, use_iconv = use_iconv,  :
+  Cannot open file
+Error in subset(ua, grepl(".*WI", as.character(ua@data$NAME10))) :
+  object 'ua' not found
+Error in .class1(object) : object 'ua_wi' not found
+ Error in { :
+  task 1 failed - "object of type 'closure' is not subsettable"
+Error: object 'lat.mid' not found
+ Error in { :
+  task 1 failed - "object of type 'closure' is not subsettable"
+Error: object 'long.mid' not found
 #+end_example
 
 
@@ -4807,93 +4803,98 @@ closeAllConnections()
 
 **** Create Model Building Dataframes, assign Class to feature dfs
 #+BEGIN_SRC R :results none
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
+          cl <- makeCluster(cores)
+          registerDoParallel(cl)
 
 
-    model.building.dfs <-  foreach(train.dir = train.dirs) %do% {
+          model.building.dfs <-  foreach(train.dir = train.dirs[3:15],.packages = c("mlr","foreach","doParallel", "stringr", "raster","rgeos","dplyr","sp","tidyr")) %do% {
 
-        featureDF.files <- list.files(train.dir) %>%
-            str_extract(., str_c("^_(",segmentation.pattern,")", feature.df.appendage,".rds$")) %>%
-            str_extract(.,".*Pixel.*") %>%   #ADDED THIS TO DEBUG THE PIXEL FEATURE DF
-            na.omit()
+              featureDF.files <- list.files(train.dir) %>%
+                  str_extract(., str_c("^_(",segmentation.pattern,")", feature.df.appendage,".rds$")) %>%
+    #            str_extract(.,".*Pixel.*") %>%   #ADDED THIS TO DEBUG THE PIXEL FEATURE DF
+                  na.omit()
 
-        training.polygon.layer <- list.files(whole.state.rd.training.regions) %>%
-            str_extract(., paste0(basename(train.dir),"_Training")) %>%
-            na.omit() %>%
-            unique()
+              training.polygon.layer <- list.files(whole.state.rd.training.regions) %>%
+                  str_extract(., paste0(basename(train.dir),"_Training")) %>%
+                  na.omit() %>%
+                  unique()
 
-        training.polygons <- readOGR(dsn = whole.state.rd.training.regions, layer = training.polygon.layer)
+              training.polygons <- readOGR(dsn = whole.state.rd.training.regions, layer = training.polygon.layer)
 
-        foreach(featureDF.file = featureDF.files, .packages = c("mlr","foreach","doParallel", "stringr", "raster","rgeos","dplyr","sp","tidyr")) %dopar% {
+              foreach(featureDF.file = featureDF.files, .packages = c("mlr","foreach","doParallel", "stringr", "raster","rgeos","dplyr","sp","tidyr")) %dopar% {
 
-            feature.df <- readRDS(file = str_c(train.dir,"/",featureDF.file))
+                  feature.df <- readRDS(file = str_c(train.dir,"/",featureDF.file))
 
-            if(complete.cases(str_extract(featureDF.file, "Pixel"))) {
-                feature.df <- sample_n(feature.df, 100000) ## Test for now
-                model.building.df <- getPixel.Class.and.Coords.Within.Polygon(PixelFeatureDF = feature.df,
-                                                                              training.sp = training.polygons)
+                  if(complete.cases(str_extract(featureDF.file, "Pixel"))) {
 
-                model.building.df <- model.building.df %>%
-                    dplyr::select(-x, -y)
+                      model.building.df <- getPixel.Class.and.Coords.Within.Polygon(PixelFeatureDF = feature.df,
+                                                                                    training.sp = training.polygons)
 
-                saveRDS(object = model.building.df, file = paste0(train.dir,"/","_Pixel",ModelBuilding.appendage,".rds"))
-             } else          {
-                segment.parameters <- str_extract(featureDF.file, segmentation.pattern)
-                model.building.df <- getSegment.class.and.features.Within.Polygon(SegmentFeatureDF = feature.df,
-                                                                                  training.sp = training.polygons,
-                                                                                  seg.tiles.dir = train.dir,
-                                                                                  seg.params = segment.parameters)
-                saveRDS(model.building.df, file = str_c(train.dir,"/","_",segment.parameters,ModelBuilding.appendage,".rds"))
-            }
-        }
-    }
-    closeAllConnections()
+                      model.building.df <- model.building.df %>%
+                          dplyr::select(-x, -y)
+
+                      saveRDS(object = model.building.df, file = paste0(train.dir,"/","_Pixel",ModelBuilding.appendage,".rds"))
+                   } else          {
+                      segment.parameters <- str_extract(featureDF.file, segmentation.pattern)
+                      model.building.df <- getSegment.class.and.features.Within.Polygon(SegmentFeatureDF = feature.df,
+                                                                                        training.sp = training.polygons,
+                                                                                        seg.tiles.dir = train.dir,
+                                                                                        seg.params = segment.parameters)
+                      saveRDS(model.building.df, file = str_c(train.dir,"/","_",segment.parameters,ModelBuilding.appendage,".rds"))
+                  }
+              }
+          }
+
+          closeAllConnections()
 #+END_SRC
 
 **** Add Month, Hour, Solar Elevation, and Azimuth to model builing df
 #+begin_src R
+          cl <- makeCluster(cores)
+          registerDoParallel(cl)
+
+
   out <-   foreach(train.dir = train.dirs) %do% {
-        values <- str_match(train.dir,".*month-([0-9]*)_hour-([0-9]*)_solElv-([0-9]*)_azimuth-([0-9]*)_NAIP.*")
+          values <- str_match(train.dir,".*month-([0-9]*)_hour-([0-9]*)_solElv-([0-9]*)_azimuth-([0-9]*)_NAIP.*")
 
-        city.level.df <- data.frame(month = values[2], hour = values[3], solarElevation = values[4], solarAzimuth = values[5], stringsAsFactors = F) %>%
-          mutate_if(is.character,as.numeric)
+          city.level.df <- data.frame(month = values[2], hour = values[3], solarElevation = values[4], solarAzimuth = values[5], stringsAsFactors = F) %>%
+            mutate_if(is.character,as.numeric)
 
 
-        model.building.rdss <- list.files(train.dir, pattern = str_c(".*",ModelBuilding.appendage,".rds"), full.names = T)
+          model.building.rdss <- list.files(train.dir, pattern = str_c(".*",ModelBuilding.appendage,".rds"), full.names = T)
 
-#  model.building.rdss <- model.building.rdss  %>% str_extract(.,".*Pixel.*") %>% na.omit  # THIS IS FOR DEBUGGING PIXEL FEATUER DF
+  #  model.building.rdss <- model.building.rdss  %>% str_extract(.,".*Pixel.*") %>% na.omit  # THIS IS FOR DEBUGGING PIXEL FEATUER DF
 
-        foreach(model.building.rds = model.building.rdss) %do% {
-            md.df <- readRDS(model.building.rds)
-            md.df <- cbind(md.df, city.level.df)
-            saveRDS(md.df, model.building.rds)
-        }
-    }
+          foreach(model.building.rds = model.building.rdss) %dopar% {
+              md.df <- readRDS(model.building.rds)
+              md.df <- cbind(md.df, city.level.df)
+              saveRDS(md.df, model.building.rds)
+          }
+      }
 #+end_src
 
 #+results:
-:  Error in { :
-:   task 1 failed - "task 1 failed - "arguments imply differing number of rows: 0, 1""
+:  Error: unexpected '}' in:
+: "
+:         }"
+: Error: unexpected '}' in "    }"
 
 **** Combine model building dataframes from each scene
 #+begin_src R
-  model.building.rdss <- list.files(whole.state.dd.training, recursive = T, pattern = str_c(".*",ModelBuilding.appendage,".rds"), full.names = T)
+  model.building.rdss <- list.files(whole.state.dd.training, recursive = T, pattern = str_c(".*",ModelBuilding.appendage,".rds"), full.names = T) %>%
+      str_extract(., ".*city-.*month-.*") %>%
+      na.omit()
 
-  segment.param.sets <- model.building.rdss %>%
-      str_extract(segmentation.pattern) %>%
-      unique()
+    segment.param.sets <- model.building.rdss %>%
+        str_extract(segmentation.pattern) %>%
+        unique()
 
-out <-    foreach(segment.param.set = segment.param.sets, .packages = c("dplyr", "stringr")) %dopar% {
-        mod.build.rdss <- str_extract(model.building.rdss, str_c(".*",segment.param.set,".*")) %>% na.omit()
-        model.building.df <- lapply(mod.build.rdss, readRDS) %>% bind_rows()
-        saveRDS(model.building.df, str_c(whole.state.dd.training, "/",basename(mod.build.rdss)[1]))
-    }
+  out <-    foreach(segment.param.set = segment.param.sets, .packages = c("dplyr", "stringr")) %dopar% {
+          mod.build.rdss <- str_extract(model.building.rdss, str_c(".*",segment.param.set,".*")) %>% na.omit()
+          model.building.df <- lapply(mod.build.rdss, readRDS) %>% bind_rows()
+          saveRDS(model.building.df, str_c(whole.state.dd.training, "/",basename(mod.build.rdss)[1]))
+      }
 #+end_src
-
-#+results:
-: Error in { : task 1 failed - "task 1 failed - "subscript out of bounds""
-: [1] "org_babel_R_eoe"
 
 *** Visualize Model Building Dataframe(s)
 #+begin_src R
@@ -4902,7 +4903,7 @@ out <-    foreach(segment.param.set = segment.param.sets, .packages = c("dplyr",
           na.omit()
 
   #  out <- lapply(ModelBuildingRDSs, readRDS)
-  full.df <- readRDS(ModelBuildingRDSs[19])
+  full.df <- readRDS(ModelBuildingRDSs[16])
 #+end_src
 
 #+results:
@@ -4914,21 +4915,21 @@ out <-    foreach(segment.param.set = segment.param.sets, .packages = c("dplyr",
   utc.theme <- list(theme(),utc.col)
 
   df <- sample_n(full.df, size = 10000)
+#df <- full.df
 #+end_src
 
 #+results:
-: [1] "org_babel_R_eoe"
 
 #+begin_src R :exports results :results graphics :file ./figs/VisualizeModelBuildingDF_whole.state.png :width 700 :height 700
-  ggplot(data = df, aes(x = ratio.nir, y = ratio.nir_stat.homogeneity_window.7_angle.0,color = class)) +
-      geom_point(alpha = .1) +
-      facet_wrap(~solarElevation) +
-      utc.col
-
-  ## ggplot(data = df, aes(x = ratio.nir, y = ratio.nir_stat.homogeneity_window.3_angle.0, color = class)) +
+  ## ggplot(data = df, aes(x = ratio.nir_mean, y = ratio.nir_stat.homogeneity_window.7_angle.0_mean,color = class)) +
   ##     geom_point(alpha = .1) +
   ##     facet_wrap(~solarElevation) +
   ##     utc.col
+
+  ggplot(data = df, aes(x = ratio.nir, y = ratio.nir_stat.homogeneity_window.3_angle.0, color = class)) +
+      geom_point(alpha = .1) +
+      facet_wrap(~solarElevation) +
+      utc.col
 
 #+end_src
 
@@ -5230,32 +5231,37 @@ wi <- subset(us, us@data$NAME_1 == "Wisconsin")
 proj4string(ua_wi) <- proj4string(wi)
   ua_wi <- crop(ua_wi, wi)
 
-    pts <- spsample(ua_wi, n=2000, type = "random")
+    pts <- spsample(ua_wi, n=4000, type = "random")
 #+end_src
 
 #+results:
 #+begin_example
+../WholeState_DD/Accuracy
+average number of pixels per segment is 45.0
+compactness parameter is 27
+P.1112_pca.tif
 OGR data source with driver: ESRI Shapefile
 Source: "../RD_US_UrbanAreasShapefile", layer: "cb_2013_us_ua10_500k"
 with 3601 features
 It has 8 fields
-Warning messages:
-1: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 57 is invalid in this locale
-2: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 58 is invalid in this locale
-3: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 509 is invalid in this locale
-4: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 512 is invalid in this locale
-5: In grepl(".*WI", as.character(ua@data$NAME10)) :
-  input string 3194 is invalid in this locale
+../WholeState_DD/Accuracy
+average number of pixels per segment is 60.0
+compactness parameter is 18
+P.1112_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 60.0
+compactness parameter is 30
+P.1112_pca.tif
 Warning message:
 In ReplProj4string(obj, CRS(value)) :
   A new CRS was assigned to an object with an existing CRS:
 +proj=longlat +datum=NAD83 +no_defs +ellps=GRS80 +towgs84=0,0,0
 without reprojecting.
 For reprojection, use function spTransform
+../WholeState_DD/Accuracy
+average number of pixels per segment is 60.0
+compactness parameter is 36
+P.1112_pca.tif
 #+end_example
 
 #+begin_src R :eval no
@@ -5324,7 +5330,7 @@ points that we've identified cover at.  So remove points with NA for class.
     cl <- makeCluster(cores)
     registerDoParallel(cl)
 
-  buffer.size <- 15
+  buffer.size <- 40
 
     box <- gBuffer(pts, width = buffer.size, byid = T)
   polygons <- as(box, "SpatialPolygonsDataFrame")
@@ -5375,6 +5381,10 @@ points that we've identified cover at.  So remove points with NA for class.
 
   img.nm <- "NAIP"
   location <- "WholeState"
+
+#Adjusting Segment Params for speed
+
+  segment.params <- data.frame(compactness = 15, segment.size = 30)
 
     pixel.added.features.raster.list <- foreach (i = tile.names,
                                                  .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
@@ -5491,7 +5501,12 @@ closeAllConnections()
   classified.grid.tiles <- foreach(tile.nm = tile.names,
                                    .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
 
-                                       foreach(model = models) %do% {
+  ###
+  ###           I am selecting the 3rd model, 30-15 rf, just to get an initial classificaotn
+  ###
+
+
+                                       foreach(model = models[3]) %do% {
 
                                            seg.p <- str_extract(model, segmentation.pattern)
 
