@@ -1,7 +1,7 @@
 #+TITLE: Wisconsin Urban Tree Canopy Mapping
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc2*
+#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc*
 #+STARTUP: indent
 #+FILETAGS: work utc
 
@@ -5324,7 +5324,7 @@ points that we've identified cover at.  So remove points with NA for class.
   pts <- pts[!is.na(pts@data$class),]
   #+end_src
 
-***** make tiles
+***** make tiles  I SHOULD MODIFY CODE TO ONLY MAKE TILES AT TREES GRASS AND IMPERVIOUS
 
 #+begin_src R
     cl <- makeCluster(cores)
@@ -5454,7 +5454,7 @@ Calculate solar angles.  Add extra variables to the feature dataframe.
 : It has 12 fields
 : OGR data source with driver: ESRI Shapefile
 : Source: "../WholeState_RD/Accuracy", layer: "points"
-: with 2000 features
+: with 3999 features
 : It has 2 fields
 
 ***** Add variables (hour, month, solar angles) to feature data frames
