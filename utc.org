@@ -1,7 +1,7 @@
 #+TITLE: Wisconsin Urban Tree Canopy Mapping
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc*
+#+PROPERTY:  header-args:R :cache no :results output :tangle classifying_urban_WI.R :exports both :comments link :session *R:utc:krusty*
 #+STARTUP: indent
 #+FILETAGS: work utc
 
@@ -4264,6 +4264,9 @@ seamlines <- readOGR(dsn = naip.seamlines.dir, layer = naip.seamlines.layer)
 #+end_src
 
 #+results:
+:  Warning messages:
+: 1: In as.POSIXct.POSIXlt(lt) : unknown timezone 'CDT'
+: 2: In as.POSIXlt.POSIXct(ct) : unknown timezone 'CDT'
 
 #+results:{{{results(==)}}}
 *** Urban areas
@@ -4289,19 +4292,10 @@ seamlines <- readOGR(dsn = naip.seamlines.dir, layer = naip.seamlines.layer)
 
 #+end_src
 #+results:
-#+begin_example
-Error in ogrInfo(dsn = dsn, layer = layer, encoding = encoding, use_iconv = use_iconv,  :
-  Cannot open file
-Error in subset(ua, grepl(".*WI", as.character(ua@data$NAME10))) :
-  object 'ua' not found
-Error in .class1(object) : object 'ua_wi' not found
- Error in { :
-  task 1 failed - "object of type 'closure' is not subsettable"
-Error: object 'lat.mid' not found
- Error in { :
-  task 1 failed - "object of type 'closure' is not subsettable"
-Error: object 'long.mid' not found
-#+end_example
+: OGR data source with driver: ESRI Shapefile
+: Source: "../RD_US_UrbanAreasShapefile", layer: "cb_2013_us_ua10_500k"
+: with 3601 features
+: It has 8 fields
 
 
 *** Crop Seamlines by urban area
@@ -4319,11 +4313,12 @@ Error: object 'long.mid' not found
 
 #+results:
 : Warning messages:
-: 1: In RGEOSUnaryPredFunc(spgeom, byid, "rgeos_isvalid") :
-:   Self-intersection at or near point -89.830529428331886 44.408498591753428
+: 1: In as.POSIXlt.POSIXct(x, tz) : unknown timezone 'CDT'
 : 2: In RGEOSUnaryPredFunc(spgeom, byid, "rgeos_isvalid") :
+:   Self-intersection at or near point -89.830529428331886 44.408498591753428
+: 3: In RGEOSUnaryPredFunc(spgeom, byid, "rgeos_isvalid") :
 :   Too few points in geometry component at or near point -91.873062270000005 45.399226169999999
-: 3: In if (class(x[, j]) != class(dd[, j])) { :
+: 4: In if (class(x[, j]) != class(dd[, j])) { :
 :   the condition has length > 1 and only the first element will be used
 
 **** leaflet plot
@@ -4903,10 +4898,14 @@ closeAllConnections()
           na.omit()
 
   #  out <- lapply(ModelBuildingRDSs, readRDS)
-  full.df <- readRDS(ModelBuildingRDSs[16])
+  full.df <- readRDS(ModelBuildingRDSs[15])
 #+end_src
 
 #+results:
+:  Error in list.files(whole.state.dd.training, full.names = T) :
+:   object 'whole.state.dd.training' not found
+: Error in readRDS(ModelBuildingRDSs[16]) :
+:   object 'ModelBuildingRDSs' not found
 
 #+begin_src R
   utc.pal <- c("g" = "#F2AD00", "i" = "#FF0000", "t" = "#00A08A")
@@ -4920,28 +4919,28 @@ closeAllConnections()
 
 #+results:
 
-#+begin_src R :exports results :results graphics :file ./figs/VisualizeModelBuildingDF_whole.state.png :width 700 :height 700
-  ## ggplot(data = df, aes(x = ratio.nir_mean, y = ratio.nir_stat.homogeneity_window.7_angle.0_mean,color = class)) +
+#+begin_src R :exports results :results graphics :file ./figs/VisualizeModelBuildingDF_whole.state.png :width 1000 :height 700
+  ggplot(data = df, aes(x = ratio.nir_mean, y = ratio.nir_stat.homogeneity_window.7_angle.0_mean,color = class)) +
+      geom_point(alpha = .7) +
+      facet_wrap(~solarElevation, ncol=5) +
+      utc.col
+
+  ## ggplot(data = df, aes(x = ratio.nir, y = ratio.nir_stat.homogeneity_window.3_angle.0, color = class)) +
   ##     geom_point(alpha = .1) +
   ##     facet_wrap(~solarElevation) +
   ##     utc.col
-
-  ggplot(data = df, aes(x = ratio.nir, y = ratio.nir_stat.homogeneity_window.3_angle.0, color = class)) +
-      geom_point(alpha = .1) +
-      facet_wrap(~solarElevation) +
-      utc.col
 
 #+end_src
 
 #+results:
 [[file:./figs/VisualizeModelBuildingDF_whole.state.png]]
 
-#+begin_src R :exports results :results graphics :file ./figs/elevation_and_ratioNIR.png :width 1000
+#+begin_src R :exports results :results graphics :file ./figs/elevation_and_ratioNIR.png :width 700
   ## ggplot(data = df, aes(y = ratio.nir_stat.homogeneity_window.5_angle.0, x = factor(solarAzimuth), fill = class)) +
   ##     geom_boxplot(alpha = .8) +
   ##     utc.fill
 
-  ggplot(data = df, aes(y = ratio.nir, x = factor(solarAzimuth), fill = class)) +
+  ggplot(data = df, aes(y = ratio.nir_mean, x = factor(solarAzimuth), fill = class)) +
       geom_boxplot(alpha = .8) +
       utc.fill
 
@@ -4968,7 +4967,7 @@ save a model for each
 - tuned or untuned, etc
 
 
-**** untuned all features
+**** untuned,  all features
 #+begin_src R :results none
   cl <- makeCluster(cores)
   registerDoParallel(cl)
@@ -4986,7 +4985,8 @@ save a model for each
                                     models.dir = whole.state.dd.models,
                                     image.name = "NAIP",
                                     location = "WholeState",
-                                    target.name = "class")
+                                    target.name = "class",
+                                    n.subset = 10000000)
           }
 
 
@@ -5313,7 +5313,7 @@ class.codes <- c("agriculture" = "a", "grass" = "g", "wetland" = "m", "water" = 
 #+results:
 
 
-***** load points and reproject to wtm
+***** load points, reproject to wtm and remove non grass, impervious, and tree points
 
 Only make tiles at points that have a value for "class", that is,
 points that we've identified cover at.  So remove points with NA for class.
@@ -5322,9 +5322,16 @@ points that we've identified cover at.  So remove points with NA for class.
   pts <- readOGR(dsn = whole.state.rd.accuracy, layer = "points", stringsAsFactors = F)
   pts <- spTransform(pts, wtm)
   pts <- pts[!is.na(pts@data$class),]
+
+    # remove agriculture, wetland, and water
+    pts <- subset(pts, class != "w")
+    pts <- subset(pts, class != "m")
+    pts <- subset(pts, class != "a")
+  pts@data$class[pts@data$class == "s"] <- "i"
+
   #+end_src
 
-***** make tiles  I SHOULD MODIFY CODE TO ONLY MAKE TILES AT TREES GRASS AND IMPERVIOUS
+***** make tiles
 
 #+begin_src R
     cl <- makeCluster(cores)
@@ -5371,40 +5378,38 @@ points that we've identified cover at.  So remove points with NA for class.
 **** Make Feature data frames, for each Accuracy Region tile
 
 #+begin_src R :results silent
-    cl <- makeCluster(cores)
-    registerDoParallel(cl)
+      cl <- makeCluster(cores)
+      registerDoParallel(cl)
 
-    tile.names <- list.files(whole.state.dd.accuracy) %>%
-        str_match(., pattern = str_c("(P.[0-9]+?)(.tif)"))
+      tile.names <- list.files(whole.state.dd.accuracy) %>%
+          str_match(., pattern = str_c("(P.[0-9]+?)(.tif)"))
 
-    tile.names <- tile.names[,2] %>% na.omit() %>% unique()
+      tile.names <- tile.names[,2] %>% na.omit() %>% unique()
 
-  img.nm <- "NAIP"
-  location <- "WholeState"
+    img.nm <- "NAIP"
+    location <- "WholeState"
 
-#Adjusting Segment Params for speed
+  feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.red_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif"
 
-  segment.params <- data.frame(compactness = 15, segment.size = 30)
+      pixel.added.features.raster.list <- foreach (i = tile.names,
+                                                   .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
 
-    pixel.added.features.raster.list <- foreach (i = tile.names,
-                                                 .packages = c("glcm","raster","stringr","dplyr")) %dopar% {
+                                                       feature.dfs <- make.feature.df(tile.dir = whole.state.dd.accuracy,
+                                                                                      tile.name = i,
+                                                                                      image.name = img.nm,
+                                                                                      band.names = c("red","green","blue","nir"),
+                                                                                      ndvi = T,
+                                                                                      ratio.bands = c("red","green","blue","nir"),
+                                                                                      texture.params.df = texture.params,
+                                                                                      pixel.df = T,
+                                                                                      pca.location = location,
+                                                                                      pca.directory = whole.state.dd.training,
+                                                                                      segmentation = T,
+                                                                                      segment.params.df = segment.params)
 
-                                                     feature.dfs <- make.feature.df(tile.dir = whole.state.dd.accuracy,
-                                                                                    tile.name = i,
-                                                                                    image.name = img.nm,
-                                                                                    band.names = c("red","green","blue","nir"),
-                                                                                    ndvi = T,
-                                                                                    ratio.bands = c("red","green","blue","nir"),
-                                                                                    texture.params.df = texture.params,
-                                                                                    pixel.df = T,
-                                                                                    pca.location = location,
-                                                                                    pca.directory = whole.state.dd.training,
-                                                                                    segmentation = T,
-                                                                                    segment.params.df = segment.params)
+                                                   }
 
-                                                 }
-
-    closeAllConnections()
+      closeAllConnections()
 #+end_src
 
 **** Add Hour, Month, Elevation and Azimuth Angle
@@ -5483,61 +5488,60 @@ closeAllConnections()
 **** Classify Tiles at accuracy regions
 
 #+BEGIN_SRC R :results none
-  img.nm <- "NAIP"
-  location <- "WholeState"
+    img.nm <- "NAIP"
+    location <- "WholeState"
 
-  models <- list.files(whole.state.dd.models) %>%
-      str_extract(., str_c(".*",location,img.nm,".*")) %>%
-      na.omit()
+    models <- list.files(whole.state.dd.models) %>%
+        str_extract(., str_c(".*",location,img.nm,".*")) %>%
+        na.omit()
 
-  tile.names <- list.files(whole.state.dd.accuracy) %>%
-      str_match(., pattern = str_c("(.*?)_.*\\.tif$"))
+    tile.names <- list.files(whole.state.dd.accuracy) %>%
+        str_match(., pattern = str_c("(.*?)_.*\\.tif$"))
 
-  tile.names <- tile.names[,2] %>% na.omit() %>% unique()
+    tile.names <- tile.names[,2] %>% na.omit() %>% unique()
 
-  cl <- makeCluster(cores)
-  registerDoParallel(cl)
+    cl <- makeCluster(cores)
+    registerDoParallel(cl)
 
-  classified.grid.tiles <- foreach(tile.nm = tile.names,
-                                   .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
+    ###
+    ###           I am selecting the 3rd model, 30-15 rf, just to get an initial classificaotn
+    ###
 
-  ###
-  ###           I am selecting the 3rd model, 30-15 rf, just to get an initial classificaotn
-  ###
+  foreach(model = models[3]) %do% {
 
+      classified.grid.tiles <- foreach(tile.nm = tile.names,
+                                       .packages = c("plyr","dplyr","raster","stringr","mlr","foreach","doParallel")) %dopar% {
 
-                                       foreach(model = models[3]) %do% {
+                                             seg.p <- str_extract(model, segmentation.pattern)
 
-                                           seg.p <- str_extract(model, segmentation.pattern)
+                                             if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
+                                                 segment.tile.name.append <- paste0("_",seg.p,".tif")
+                                                 segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
 
-                                           if(grepl("N-[0-9]+_C-[0-9]+",seg.p)) {
-                                               segment.tile.name.append <- paste0("_",seg.p,".tif")
-                                               segment.feature.df.name.append <- paste0("_",seg.p,feature.df.appendage,".rds")
+                                                 classify.segmented.raster(segment.feature.df.dir = whole.state.dd.accuracy,
+                                                                           model.dir = whole.state.dd.models,
+                                                                           segment.dir = whole.state.dd.accuracy,
+                                                                           tile.name = tile.nm,
+                                                                           segmentation.appendage = segment.tile.name.append,
+                                                                           model.name.rds = model,
+                                                                           segment.feature.appendage = segment.feature.df.name.append,
+                                                                           segmentation.prms = seg.p,
+                                                                           classify.out.dir = whole.state.dd.accuracy.classified)
 
-                                               classify.segmented.raster(segment.feature.df.dir = whole.state.dd.accuracy,
-                                                                         model.dir = whole.state.dd.models,
-                                                                         segment.dir = whole.state.dd.accuracy,
-                                                                         tile.name = tile.nm,
-                                                                         segmentation.appendage = segment.tile.name.append,
-                                                                         model.name.rds = model,
-                                                                         segment.feature.appendage = segment.feature.df.name.append,
-                                                                         segmentation.prms = seg.p,
-                                                                         classify.out.dir = whole.state.dd.accuracy.classified)
+                                             } else {
+                                                 classify.pixel.raster(tile.dir = whole.state.dd.accuracy,
+                                                                       tile.name = tile.nm,
+                                                                       pixelFeatureDF.appendage = feature.df.appendage,
+                                                                       model.dir = whole.state.dd.models,
+                                                                       model.rds = model,
+                                                                       seg.prms = seg.p,
+                                                                       classify.out.dir = whole.state.dd.accuracy.classified)
 
-                                           } else {
-                                               classify.pixel.raster(tile.dir = whole.state.dd.accuracy,
-                                                                     tile.name = tile.nm,
-                                                                     pixelFeatureDF.appendage = feature.df.appendage,
-                                                                     model.dir = whole.state.dd.models,
-                                                                     model.rds = model,
-                                                                     seg.prms = seg.p,
-                                                                     classify.out.dir = whole.state.dd.accuracy.classified)
-
-                                           }
+                                             }
                                        }
-                                   }
+  }
 
-  closeAllConnections()
+    closeAllConnections()
 #+END_SRC
 **** Point-wise accuracy.  regular confusion matrix thing.  I should do this for the grids and the field plot data also, but there is spatial association to consider.
 
@@ -5555,6 +5559,7 @@ at each hour of day" to get the seamlines_by_ua object
     pts <- subset(pts, class != "m")
     pts <- subset(pts, class != "a")
   pts@data$class[pts@data$class == "s"] <- "i"
+
 
       xy <- coordinates(pts)
       pts@data$x <- xy[,1]
@@ -5638,10 +5643,112 @@ at each hour of day" to get the seamlines_by_ua object
 #+END_SRC
 
 #+results:
-: OGR data source with driver: ESRI Shapefile
-: Source: "../WholeState_RD/Accuracy", layer: "points"
-: with 2000 features
-: It has 2 fields
+#+begin_example
+OGR data source with driver: ESRI Shapefile
+Source: "../WholeState_RD/Accuracy", layer: "points"
+with 3999 features
+It has 2 fields
+ ../WholeState_DD/Accuracy
+average number of pixels per segment is 15.0
+compactness parameter is 4
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 15.0
+compactness parameter is 8
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 15.0
+compactness parameter is 9
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 20.0
+compactness parameter is 6
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 20.0
+compactness parameter is 10
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 15.0
+compactness parameter is 4
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 20.0
+compactness parameter is 12
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 15.0
+compactness parameter is 8
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 30.0
+compactness parameter is 9
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 15.0
+compactness parameter is 9
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 30.0
+compactness parameter is 15
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 20.0
+compactness parameter is 6
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 30.0
+compactness parameter is 18
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 45.0
+compactness parameter is 14
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 20.0
+compactness parameter is 10
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 45.0
+compactness parameter is 22
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 20.0
+compactness parameter is 12
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 45.0
+compactness parameter is 27
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 30.0
+compactness parameter is 9
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 30.0
+compactness parameter is 15
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 30.0
+compactness parameter is 18
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 45.0
+compactness parameter is 14
+P.1176_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 60.0
+compactness parameter is 18
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 60.0
+compactness parameter is 30
+P.1175_pca.tif
+../WholeState_DD/Accuracy
+average number of pixels per segment is 45.0
+compactness parameter is 22
+P.1176_pca.tif
+#+end_example
 ***** Print Best Models determined by Random points
 #+begin_src R :results raw
     error.df <- readRDS("../WholeState_DD/Accuracy/RandomPoints.GoogleReference.point2pixel.error.df.rds")
@@ -5657,6 +5764,49 @@ at each hour of day" to get the seamlines_by_ua object
 #+end_src
 
 #+results:
+[1] "2016-10-07 12:51:46 CDT"
+ |   | image          | target.cover | model   | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+---------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | rf_prob | N-30_C-15  | Untuned | 0.21               |
+[1] "2016-10-07 12:47:04 CDT"
+ Error in UseMethod("group_by_") :
+  no applicable method for 'group_by_' applied to an object of class "NULL"
+[1] "2016-10-07 12:43:57 CDT"
+ |   | image          | target.cover | model   | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+---------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | rf_prob | N-30_C-15  | Untuned | 0.21               |
+../WholeState_DD/Accuracy
+average number of pixels per segment is 60.0
+compactness parameter is 36
+P.1174_pca.tif
+[1] "2016-10-07 12:43:20 CDT"
+ Error in function_list[[k]](value) :
+  could not find function "ascii.nowarn.print"
+Warning messages:
+1: In RGEOSUnaryPredFunc(spgeom, byid, "rgeos_isvalid") :
+  Self-intersection at or near point -89.830529428331886 44.408498591753428
+2: In RGEOSUnaryPredFunc(spgeom, byid, "rgeos_isvalid") :
+  Too few points in geometry component at or near point -91.873062270000005 45.399226169999999
+3: In if (class(x[, j]) != class(dd[, j])) { :
+  the condition has length > 1 and only the first element will be used
+[1] "org_babel_R_eoe"
+[1] "2016-10-07 09:17:51 CDT"
+[1] "2016-10-07 09:14:09 CDT"
+ |   | image          | target.cover | model   | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+---------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | rf_prob | N-30_C-15  | Untuned | 0.21               |
+[1] "2016-10-06 20:46:42 CDT"
+ |   | image          | target.cover | model   | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+---------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | rf_prob | N-30_C-15  | Untuned | 0.10               |
+[1] "2016-10-06 20:46:05 CDT"
+ |   | image          | target.cover | model   | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+---------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | rf_prob | N-30_C-15  | Untuned | 0.10               |
+[1] "2016-10-06 20:40:17 CDT"
+ |   | image          | target.cover | model   | seg.params | tuned   | mean.overall.error |
+|---+----------------+--------------+---------+------------+---------+--------------------|
+| 1 | WholeStateNAIP | all          | rf_prob | N-30_C-15  | Untuned | 0.10               |
 [1] "2016-09-27 12:58:53 CDT"
  |   | image          | target.cover | model    | seg.params | tuned   | mean.overall.error |
 |---+----------------+--------------+----------+------------+---------+--------------------|
@@ -5757,9 +5907,11 @@ at each hour of day" to get the seamlines_by_ua object
   error.df <- left_join(error.df, pts@data, by = c("point" = "id"))
 #+end_src
 
+#+results:
+
 #+begin_src R
       e.df <-   error.df %>%
-        filter(seg.params == "N-35_C-18", model == "rf_prob") %>%
+        filter(seg.params == "N-30_C-15", model == "rf_prob") %>%
    #     group_by(point, classification, reference) %>%
   #      summarize(overall.error = mean(overall.error)) %>%
         filter(overall.error == 1) %>%
@@ -5773,67 +5925,256 @@ at each hour of day" to get the seamlines_by_ua object
 
 #+results:
 #+begin_example
- |    | overall.error | point  | NAME10                                       |
-|----+---------------+--------+----------------------------------------------|
-| 1  | 1.00          | 5.00   | Milwaukee, WI                                |
-| 2  | 1.00          | 8.00   | Milwaukee, WI                                |
-| 3  | 1.00          | 11.00  | Eau Claire, WI                               |
-| 4  | 1.00          | 13.00  | Waupaca, WI                                  |
-| 5  | 1.00          | 19.00  | Lake Geneva, WI                              |
-| 6  | 1.00          | 22.00  | Green Bay, WI                                |
-| 7  | 1.00          | 26.00  | Waupaca, WI                                  |
-| 8  | 1.00          | 32.00  | Milwaukee, WI                                |
-| 9  | 1.00          | 35.00  | Racine, WI                                   |
-| 10 | 1.00          | 36.00  | Horicon, WI                                  |
-| 11 | 1.00          | 38.00  | Oshkosh, WI                                  |
-| 12 | 1.00          | 44.00  | Arcadia, WI                                  |
-| 13 | 1.00          | 57.00  | Green Bay, WI                                |
-| 14 | 1.00          | 58.00  | Madison, WI                                  |
-| 15 | 1.00          | 61.00  | Milwaukee, WI                                |
-| 16 | 1.00          | 62.00  | Wausau, WI                                   |
-| 17 | 1.00          | 63.00  | Milwaukee, WI                                |
-| 18 | 1.00          | 64.00  | Sheboygan, WI                                |
-| 19 | 1.00          | 66.00  | Milwaukee, WI                                |
-| 20 | 1.00          | 67.00  | Mauston, WI                                  |
-| 21 | 1.00          | 73.00  | Brodhead, WI                                 |
-| 22 | 1.00          | 82.00  | Milwaukee, WI                                |
-| 23 | 1.00          | 89.00  | Milwaukee, WI                                |
-| 24 | 1.00          | 94.00  | Milwaukee, WI                                |
-| 25 | 1.00          | 98.00  | Manitowoc, WI                                |
-| 26 | 1.00          | 99.00  | Wausau, WI                                   |
-| 27 | 1.00          | 103.00 | Shawano, WI                                  |
-| 28 | 1.00          | 104.00 | Wisconsin Rapids, WI                         |
-| 29 | 1.00          | 110.00 | Madison, WI                                  |
-| 30 | 1.00          | 113.00 | Fond du Lac, WI                              |
-| 31 | 1.00          | 124.00 | Appleton, WI                                 |
-| 32 | 1.00          | 125.00 | Milwaukee, WI                                |
-| 33 | 1.00          | 143.00 | Milwaukee, WI                                |
-| 34 | 1.00          | 145.00 | Madison, WI                                  |
-| 35 | 1.00          | 156.00 | Sparta, WI                                   |
-| 36 | 1.00          | 158.00 | Clintonville, WI                             |
-| 37 | 1.00          | 166.00 | Shawano, WI                                  |
-| 38 | 1.00          | 174.00 | Union Grove, WI                              |
-| 39 | 1.00          | 179.00 | Madison, WI                                  |
-| 40 | 1.00          | 190.00 | Janesville, WI                               |
-| 41 | 1.00          | 191.00 | Appleton, WI                                 |
-| 42 | 1.00          | 192.00 | Madison, WI                                  |
-| 43 | 1.00          | 194.00 | Rhinelander, WI                              |
-| 44 | 1.00          | 196.00 | Appleton, WI                                 |
-| 45 | 1.00          | 200.00 | Appleton, WI                                 |
-| 46 | 1.00          | 201.00 | Round Lake Beach--McHenry--Grayslake, IL--WI |
-| 47 | 1.00          | 208.00 | Milwaukee, WI                                |
-| 48 | 1.00          | 210.00 | Milwaukee, WI                                |
-| 49 | 1.00          | 212.00 | Stevens Point, WI                            |
-| 50 | 1.00          | 214.00 | Milwaukee, WI                                |
-| 51 | 1.00          | 216.00 | Milwaukee, WI                                |
-| 52 | 1.00          | 234.00 | Sheboygan, WI                                |
+ |     | overall.error | point   | NAME10                                       |
+|-----+---------------+---------+----------------------------------------------|
+| 1   | 1.00          | 11.00   | Eau Claire, WI                               |
+| 2   | 1.00          | 13.00   | Waupaca, WI                                  |
+| 3   | 1.00          | 14.00   | Appleton, WI                                 |
+| 4   | 1.00          | 103.00  | Shawano, WI                                  |
+| 5   | 1.00          | 104.00  | Wisconsin Rapids, WI                         |
+| 6   | 1.00          | 106.00  | Lake Geneva, WI                              |
+| 7   | 1.00          | 110.00  | Madison, WI                                  |
+| 8   | 1.00          | 113.00  | Fond du Lac, WI                              |
+| 9   | 1.00          | 114.00  | Madison, WI                                  |
+| 10  | 1.00          | 117.00  | Milwaukee, WI                                |
+| 11  | 1.00          | 124.00  | Appleton, WI                                 |
+| 12  | 1.00          | 125.00  | Milwaukee, WI                                |
+| 13  | 1.00          | 143.00  | Milwaukee, WI                                |
+| 14  | 1.00          | 158.00  | Clintonville, WI                             |
+| 15  | 1.00          | 166.00  | Shawano, WI                                  |
+| 16  | 1.00          | 179.00  | Madison, WI                                  |
+| 17  | 1.00          | 181.00  | Fort Atkinson, WI                            |
+| 18  | 1.00          | 189.00  | Eau Claire, WI                               |
+| 19  | 1.00          | 190.00  | Janesville, WI                               |
+| 20  | 1.00          | 191.00  | Appleton, WI                                 |
+| 21  | 1.00          | 192.00  | Madison, WI                                  |
+| 22  | 1.00          | 201.00  | Round Lake Beach--McHenry--Grayslake, IL--WI |
+| 23  | 1.00          | 208.00  | Milwaukee, WI                                |
+| 24  | 1.00          | 212.00  | Stevens Point, WI                            |
+| 25  | 1.00          | 214.00  | Milwaukee, WI                                |
+| 26  | 1.00          | 216.00  | Milwaukee, WI                                |
+| 27  | 1.00          | 217.00  | Milwaukee, WI                                |
+| 28  | 1.00          | 1004.00 | Oshkosh, WI                                  |
+| 29  | 1.00          | 1009.00 | Milwaukee, WI                                |
+| 30  | 1.00          | 1014.00 | Milwaukee, WI                                |
+| 31  | 1.00          | 1021.00 | Rhinelander, WI                              |
+| 32  | 1.00          | 1031.00 | Stevens Point, WI                            |
+| 33  | 1.00          | 1039.00 | Chetek, WI                                   |
+| 34  | 1.00          | 1051.00 | Racine, WI                                   |
+| 35  | 1.00          | 1053.00 | Tomah, WI                                    |
+| 36  | 1.00          | 1058.00 | Kenosha, WI--IL                              |
+| 37  | 1.00          | 1063.00 | Milwaukee, WI                                |
+| 38  | 1.00          | 1067.00 | Prairie du Sac--Sauk City, WI                |
+| 39  | 1.00          | 1070.00 | Madison, WI                                  |
+| 40  | 1.00          | 1072.00 | Hudson, WI--MN                               |
+| 41  | 1.00          | 1099.00 | Milwaukee, WI                                |
+| 42  | 1.00          | 1104.00 | Wausau, WI                                   |
+| 43  | 1.00          | 1119.00 | Appleton, WI                                 |
+| 44  | 1.00          | 1124.00 | Madison, WI                                  |
+| 45  | 1.00          | 1125.00 | Madison, WI                                  |
+| 46  | 1.00          | 1141.00 | Racine, WI                                   |
+| 47  | 1.00          | 1143.00 | Sturgeon Bay, WI                             |
+| 48  | 1.00          | 1144.00 | La Crosse, WI--MN                            |
+| 49  | 1.00          | 1145.00 | Eau Claire, WI                               |
+| 50  | 1.00          | 1158.00 | Milwaukee, WI                                |
+| 51  | 1.00          | 1165.00 | Milwaukee, WI                                |
+| 52  | 1.00          | 1168.00 | Kenosha, WI--IL                              |
+| 53  | 1.00          | 1169.00 | Wausau, WI                                   |
+| 54  | 1.00          | 1177.00 | Milwaukee, WI                                |
+| 55  | 1.00          | 1178.00 | Somerset, WI                                 |
+| 56  | 1.00          | 1180.00 | Stevens Point, WI                            |
+| 57  | 1.00          | 1183.00 | Madison, WI                                  |
+| 58  | 1.00          | 1188.00 | West Bend, WI                                |
+| 59  | 1.00          | 1195.00 | Green Bay, WI                                |
+| 60  | 1.00          | 1196.00 | Eau Claire, WI                               |
+| 61  | 1.00          | 1201.00 | Madison, WI                                  |
+| 62  | 1.00          | 1202.00 | Milwaukee, WI                                |
+| 63  | 1.00          | 1203.00 | Madison, WI                                  |
+| 64  | 1.00          | 1205.00 | Duluth, MN--WI                               |
+| 65  | 1.00          | 1216.00 | Tomahawk, WI                                 |
+| 66  | 1.00          | 1228.00 | Eau Claire, WI                               |
+| 67  | 1.00          | 1229.00 | Milwaukee, WI                                |
+| 68  | 1.00          | 1234.00 | Milwaukee, WI                                |
+| 69  | 1.00          | 1237.00 | Mayville, WI                                 |
+| 70  | 1.00          | 1241.00 | Osceola, WI                                  |
+| 71  | 1.00          | 1242.00 | Watertown, WI                                |
+| 72  | 1.00          | 1243.00 | Milwaukee, WI                                |
+| 73  | 1.00          | 1245.00 | Kenosha, WI--IL                              |
+| 74  | 1.00          | 1247.00 | Sheboygan, WI                                |
+| 75  | 1.00          | 1251.00 | Wausau, WI                                   |
+| 76  | 1.00          | 1252.00 | Milwaukee, WI                                |
+| 77  | 1.00          | 1258.00 | Madison, WI                                  |
+| 78  | 1.00          | 1267.00 | Appleton, WI                                 |
+| 79  | 1.00          | 1271.00 | Sheboygan, WI                                |
+| 80  | 1.00          | 1273.00 | Fond du Lac, WI                              |
+| 81  | 1.00          | 1277.00 | Rhinelander, WI                              |
+| 82  | 1.00          | 1283.00 | Madison, WI                                  |
+| 83  | 1.00          | 1285.00 | Madison, WI                                  |
+| 84  | 1.00          | 1289.00 | Burlington, WI                               |
+| 85  | 1.00          | 1295.00 | Janesville, WI                               |
+| 86  | 1.00          | 1309.00 | Fond du Lac, WI                              |
+| 87  | 1.00          | 1310.00 | Appleton, WI                                 |
+| 88  | 1.00          | 1323.00 | Manitowoc, WI                                |
+| 89  | 1.00          | 1324.00 | Duluth, MN--WI                               |
+| 90  | 1.00          | 1338.00 | Wisconsin Rapids, WI                         |
+| 91  | 1.00          | 1342.00 | Wisconsin Rapids, WI                         |
+| 92  | 1.00          | 1344.00 | Appleton, WI                                 |
+| 93  | 1.00          | 1364.00 | Milwaukee, WI                                |
+| 94  | 1.00          | 1371.00 | Milwaukee, WI                                |
+| 95  | 1.00          | 1379.00 | Milwaukee, WI                                |
+| 96  | 1.00          | 1380.00 | Madison, WI                                  |
+| 97  | 1.00          | 1387.00 | Prairie du Chien, WI--IA                     |
+| 98  | 1.00          | 1396.00 | Milwaukee, WI                                |
+| 99  | 1.00          | 1398.00 | Milwaukee, WI                                |
+| 100 | 1.00          | 1403.00 | Milwaukee, WI                                |
+| 101 | 1.00          | 1407.00 | Appleton, WI                                 |
+| 102 | 1.00          | 1424.00 | West Bend, WI                                |
+| 103 | 1.00          | 1432.00 | Eau Claire, WI                               |
+| 104 | 1.00          | 1433.00 | Kenosha, WI--IL                              |
+| 105 | 1.00          | 1436.00 | Milwaukee, WI                                |
+| 106 | 1.00          | 1454.00 | Appleton, WI                                 |
+| 107 | 1.00          | 1457.00 | Madison, WI                                  |
+| 108 | 1.00          | 1461.00 | Green Bay, WI                                |
+| 109 | 1.00          | 1463.00 | Milwaukee, WI                                |
+| 110 | 1.00          | 1467.00 | Walworth, WI                                 |
+| 111 | 1.00          | 1479.00 | Baldwin, WI                                  |
+| 112 | 1.00          | 1481.00 | Milwaukee, WI                                |
+| 113 | 1.00          | 1482.00 | Green Bay, WI                                |
+| 114 | 1.00          | 1486.00 | Union Grove, WI                              |
+| 115 | 1.00          | 1494.00 | Manitowoc, WI                                |
+| 116 | 1.00          | 1496.00 | Lake Geneva, WI                              |
+| 117 | 1.00          | 1497.00 | Milwaukee, WI                                |
+| 118 | 1.00          | 1498.00 | Janesville, WI                               |
+| 119 | 1.00          | 1500.00 | Lake Geneva, WI                              |
+| 120 | 1.00          | 1502.00 | Boscobel, WI                                 |
+| 121 | 1.00          | 1511.00 | Appleton, WI                                 |
+| 122 | 1.00          | 1520.00 | Eau Claire, WI                               |
+| 123 | 1.00          | 1524.00 | Wausau, WI                                   |
+| 124 | 1.00          | 1526.00 | Hudson, WI--MN                               |
+| 125 | 1.00          | 1564.00 | Rhinelander, WI                              |
+| 126 | 1.00          | 1568.00 | Marshfield, WI                               |
+| 127 | 1.00          | 1572.00 | Milwaukee, WI                                |
+| 128 | 1.00          | 1602.00 | Madison, WI                                  |
+| 129 | 1.00          | 1607.00 | Sheboygan, WI                                |
+| 130 | 1.00          | 1611.00 | Milwaukee, WI                                |
+| 131 | 1.00          | 1621.00 | Green Bay, WI                                |
+| 132 | 1.00          | 1625.00 | Milwaukee, WI                                |
+| 133 | 1.00          | 1626.00 | Madison, WI                                  |
+| 134 | 1.00          | 1627.00 | Wausau, WI                                   |
+| 135 | 1.00          | 1633.00 | Milwaukee, WI                                |
+| 136 | 1.00          | 1635.00 | Eau Claire, WI                               |
+| 137 | 1.00          | 1642.00 | Milwaukee, WI                                |
+| 138 | 1.00          | 1656.00 | Milwaukee, WI                                |
+| 139 | 1.00          | 1664.00 | Eau Claire, WI                               |
+| 140 | 1.00          | 1669.00 | Milwaukee, WI                                |
+| 141 | 1.00          | 1671.00 | Milwaukee, WI                                |
+| 142 | 1.00          | 1676.00 | Lake Delton, WI                              |
+| 143 | 1.00          | 1685.00 | Stevens Point, WI                            |
+| 144 | 1.00          | 1686.00 | Eau Claire, WI                               |
+| 145 | 1.00          | 1688.00 | Milwaukee, WI                                |
+| 146 | 1.00          | 1690.00 | Prairie du Sac--Sauk City, WI                |
+| 147 | 1.00          | 1718.00 | Round Lake Beach--McHenry--Grayslake, IL--WI |
+| 148 | 1.00          | 1720.00 | River Falls, WI                              |
+| 149 | 1.00          | 1725.00 | Appleton, WI                                 |
+| 150 | 1.00          | 1726.00 | Tomahawk, WI                                 |
+| 151 | 1.00          | 1730.00 | Delavan, WI                                  |
+| 152 | 1.00          | 1735.00 | Wisconsin Rapids, WI                         |
+| 153 | 1.00          | 1737.00 | Wisconsin Rapids, WI                         |
+| 154 | 1.00          | 1738.00 | Milwaukee, WI                                |
+| 155 | 1.00          | 1739.00 | Appleton, WI                                 |
+| 156 | 1.00          | 1744.00 | Madison, WI                                  |
+| 157 | 1.00          | 1747.00 | Antigo, WI                                   |
+| 158 | 1.00          | 1752.00 | Milwaukee, WI                                |
+| 159 | 1.00          | 1753.00 | Fond du Lac, WI                              |
+| 160 | 1.00          | 1767.00 | Milwaukee, WI                                |
+| 161 | 1.00          | 1778.00 | Clintonville, WI                             |
+| 162 | 1.00          | 1780.00 | Rice Lake, WI                                |
+| 163 | 1.00          | 1786.00 | Milwaukee, WI                                |
+| 164 | 1.00          | 1799.00 | Duluth, MN--WI                               |
+| 165 | 1.00          | 1808.00 | Milwaukee, WI                                |
+| 166 | 1.00          | 1809.00 | Stevens Point, WI                            |
+| 167 | 1.00          | 1813.00 | Marinette--Menominee, WI--MI                 |
+| 168 | 1.00          | 1820.00 | Madison, WI                                  |
+| 169 | 1.00          | 1826.00 | Milwaukee, WI                                |
+| 170 | 1.00          | 1830.00 | Green Bay, WI                                |
+| 171 | 1.00          | 1836.00 | Union Grove, WI                              |
+| 172 | 1.00          | 1843.00 | Madison, WI                                  |
+| 173 | 1.00          | 1846.00 | Appleton, WI                                 |
+| 174 | 1.00          | 1857.00 | Shawano, WI                                  |
+| 175 | 1.00          | 1863.00 | Milwaukee, WI                                |
+| 176 | 1.00          | 1864.00 | Kenosha, WI--IL                              |
+| 177 | 1.00          | 1866.00 | Appleton, WI                                 |
+| 178 | 1.00          | 1870.00 | Rice Lake, WI                                |
+| 179 | 1.00          | 1872.00 | Milwaukee, WI                                |
+| 180 | 1.00          | 1873.00 | La Crosse, WI--MN                            |
+| 181 | 1.00          | 1877.00 | Kenosha, WI--IL                              |
+| 182 | 1.00          | 1882.00 | Kenosha, WI--IL                              |
+| 183 | 1.00          | 1891.00 | Lake Delton, WI                              |
+| 184 | 1.00          | 1899.00 | Milwaukee, WI                                |
+| 185 | 1.00          | 1901.00 | Beaver Dam, WI                               |
+| 186 | 1.00          | 1913.00 | Madison, WI                                  |
+| 187 | 1.00          | 1914.00 | Milwaukee, WI                                |
+| 188 | 1.00          | 1924.00 | Madison, WI                                  |
+| 189 | 1.00          | 1930.00 | Monroe, WI                                   |
+| 190 | 1.00          | 1932.00 | Fort Atkinson, WI                            |
+| 191 | 1.00          | 1939.00 | Madison, WI                                  |
+| 192 | 1.00          | 1941.00 | Round Lake Beach--McHenry--Grayslake, IL--WI |
+| 193 | 1.00          | 1947.00 | Green Bay, WI                                |
+| 194 | 1.00          | 1950.00 | Minneapolis--St. Paul, MN--WI                |
+| 195 | 1.00          | 1953.00 | Sheboygan, WI                                |
+| 196 | 1.00          | 1954.00 | Sheboygan, WI                                |
+| 197 | 1.00          | 1959.00 | Stanley, WI                                  |
+| 198 | 1.00          | 1961.00 | Sheboygan, WI                                |
+| 199 | 1.00          | 1968.00 | Osceola, WI                                  |
+| 200 | 1.00          | 1987.00 | Ironwood, MI--WI                             |
+| 201 | 1.00          | 1990.00 | Janesville, WI                               |
+| 202 | 1.00          | 1994.00 | West Bend, WI                                |
+| 203 | 1.00          | 1997.00 | Madison, WI                                  |
+| 204 | 1.00          | 2006.00 | Milwaukee, WI                                |
+| 205 | 1.00          | 2010.00 | Manitowoc, WI                                |
+| 206 | 1.00          | 2024.00 | Sheboygan, WI                                |
+| 207 | 1.00          | 2028.00 | Elkhorn, WI                                  |
+| 208 | 1.00          | 2034.00 | Appleton, WI                                 |
+| 209 | 1.00          | 2035.00 | Prairie du Sac--Sauk City, WI                |
+| 210 | 1.00          | 2037.00 | Milwaukee, WI                                |
+| 211 | 1.00          | 2038.00 | Milwaukee, WI                                |
+| 212 | 1.00          | 2041.00 | Berlin, WI                                   |
+| 213 | 1.00          | 2043.00 | West Bend, WI                                |
+| 214 | 1.00          | 2056.00 | Ripon, WI                                    |
+| 215 | 1.00          | 2061.00 | Milwaukee, WI                                |
+| 216 | 1.00          | 2073.00 | Mukwonago, WI                                |
+| 217 | 1.00          | 2074.00 | Milwaukee, WI                                |
+| 218 | 1.00          | 2078.00 | Appleton, WI                                 |
+| 219 | 1.00          | 2079.00 | Sheboygan, WI                                |
+| 220 | 1.00          | 2094.00 | Wisconsin Rapids, WI                         |
+| 221 | 1.00          | 2096.00 | Green Bay, WI                                |
+| 222 | 1.00          | 2097.00 | Kewaunee, WI                                 |
+| 223 | 1.00          | 2099.00 | Milwaukee, WI                                |
+| 224 | 1.00          | 2104.00 | Milwaukee, WI                                |
+| 225 | 1.00          | 2107.00 | Milwaukee, WI                                |
+| 226 | 1.00          | 2114.00 | Madison, WI                                  |
+| 227 | 1.00          | 2115.00 | Milwaukee, WI                                |
+| 228 | 1.00          | 2132.00 | La Crosse, WI--MN                            |
+| 229 | 1.00          | 2137.00 | Milwaukee, WI                                |
+| 230 | 1.00          | 2138.00 | Milwaukee, WI                                |
+| 231 | 1.00          | 2140.00 | Watertown, WI                                |
+| 232 | 1.00          | 2143.00 | Oshkosh, WI                                  |
+| 233 | 1.00          | 2147.00 | La Crosse, WI--MN                            |
+| 234 | 1.00          | 2169.00 | Kenosha, WI--IL                              |
+| 235 | 1.00          | 2170.00 | Oshkosh, WI                                  |
+| 236 | 1.00          | 2174.00 | Sturgeon Bay, WI                             |
+| 237 | 1.00          | 2175.00 | Kenosha, WI--IL                              |
+| 238 | 1.00          | 2179.00 | Baraboo, WI                                  |
+| 239 | 1.00          | 2181.00 | Kenosha, WI--IL                              |
+| 240 | 1.00          | 2186.00 | Osceola, WI                                  |
+| 241 | 1.00          | 2198.00 | Appleton, WI                                 |
 < table of extent 0 x 0 >
 #+end_example
 
 ***** Percent of wrong points by urban area:
 #+begin_src R
       n.pts <-   error.df %>%
-         filter(seg.params == "N-35_C-18", model == "rf_prob") %>%
+         filter(seg.params == "N-30_C-15", model == "rf_prob") %>%
 #         select(overall.error, point,NAME10) %>%
           group_by(NAME10) %>%
           summarize(n.pts = n(),
@@ -5852,58 +6193,233 @@ at each hour of day" to get the seamlines_by_ua object
 
 #+results:
 #+begin_example
- |    | NAME10                                       | n.pts | error | hour  |
-|----+----------------------------------------------+-------+-------+-------|
-| 1  | Ashland, WI                                  | 1.00  | 0.00  | 9.00  |
-| 2  | Baraboo, WI                                  | 1.00  | 0.00  | 9.00  |
-| 3  | Beloit, WI--IL                               | 3.00  | 0.00  | 10.00 |
-| 4  | Burlington, WI                               | 2.00  | 0.00  | 11.00 |
-| 5  | Chetek, WI                                   | 1.00  | 0.00  | 9.00  |
-| 6  | Chilton, WI                                  | 2.00  | 0.00  | 9.00  |
-| 7  | Delavan, WI                                  | 1.00  | 0.00  | 9.00  |
-| 8  | Edgerton, WI                                 | 1.00  | 0.00  | 10.00 |
-| 9  | Evansville, WI                               | 1.00  | 0.00  | 11.00 |
-| 10 | Fort Atkinson, WI                            | 3.00  | 0.00  | 9.00  |
-| 11 | Hudson, WI--MN                               | 2.00  | 0.00  | 9.00  |
-| 12 | Iron Mountain--Kingsford, MI--WI             | 1.00  | 0.00  | 11.00 |
-| 13 | Kenosha, WI--IL                              | 4.00  | 0.00  | 9.75  |
-| 14 | Kewaunee, WI                                 | 1.00  | 0.00  | 10.00 |
-| 15 | La Crosse, WI--MN                            | 2.00  | 0.00  | 10.00 |
-| 16 | Menomonie, WI                                | 1.00  | 0.00  | 9.00  |
-| 17 | Merrill, WI                                  | 1.00  | 0.00  | 9.00  |
-| 18 | Rice Lake, WI                                | 1.00  | 0.00  | 9.00  |
-| 19 | River Falls, WI                              | 1.00  | 0.00  | 9.00  |
-| 20 | Stanley, WI                                  | 1.00  | 0.00  | 9.00  |
-| 21 | Waterloo, WI                                 | 1.00  | 0.00  | 10.00 |
-| 22 | West Bend, WI                                | 3.00  | 0.00  | 10.00 |
-| 23 | Eau Claire, WI                               | 12.00 | 0.08  | 9.50  |
-| 24 | Racine, WI                                   | 8.00  | 0.12  | 9.25  |
-| 25 | Wausau, WI                                   | 11.00 | 0.18  | 9.00  |
-| 26 | Green Bay, WI                                | 10.00 | 0.20  | 9.60  |
-| 27 | Rhinelander, WI                              | 5.00  | 0.20  | 9.60  |
-| 28 | Stevens Point, WI                            | 4.00  | 0.25  | 9.00  |
-| 29 | Appleton, WI                                 | 14.00 | 0.29  | 8.21  |
-| 30 | Milwaukee, WI                                | 52.00 | 0.29  | 10.17 |
-| 31 | Madison, WI                                  | 16.00 | 0.31  | 10.75 |
-| 32 | Fond du Lac, WI                              | 3.00  | 0.33  | 8.00  |
-| 33 | Lake Geneva, WI                              | 3.00  | 0.33  | 8.00  |
-| 34 | Manitowoc, WI                                | 3.00  | 0.33  | 8.33  |
-| 35 | Oshkosh, WI                                  | 3.00  | 0.33  | 9.00  |
-| 36 | Sheboygan, WI                                | 6.00  | 0.33  | 9.00  |
-| 37 | Wisconsin Rapids, WI                         | 3.00  | 0.33  | 9.67  |
-| 38 | Clintonville, WI                             | 2.00  | 0.50  | 9.00  |
-| 39 | Horicon, WI                                  | 2.00  | 0.50  | 9.00  |
-| 40 | Janesville, WI                               | 2.00  | 0.50  | 10.00 |
-| 41 | Round Lake Beach--McHenry--Grayslake, IL--WI | 2.00  | 0.50  | 10.50 |
-| 42 | Sparta, WI                                   | 2.00  | 0.50  | 12.00 |
-| 43 | Arcadia, WI                                  | 1.00  | 1.00  | 11.00 |
-| 44 | Brodhead, WI                                 | 1.00  | 1.00  | 10.00 |
-| 45 | Mauston, WI                                  | 1.00  | 1.00  | 11.00 |
-| 46 | Shawano, WI                                  | 2.00  | 1.00  | 8.00  |
-| 47 | Union Grove, WI                              | 1.00  | 1.00  | 10.00 |
-| 48 | Waupaca, WI                                  | 2.00  | 1.00  | 10.00 |
+ |    | NAME10                                       | n.pts  | error | hour  |
+|----+----------------------------------------------+--------+-------+-------|
+| 1  | Abbotsford, WI                               | 1.00   | 0.00  | 9.00  |
+| 2  | Algoma, WI                                   | 2.00   | 0.00  | 10.00 |
+| 3  | Ashland, WI                                  | 4.00   | 0.00  | 9.75  |
+| 4  | Beloit, WI--IL                               | 11.00  | 0.00  | 10.00 |
+| 5  | Black River Falls, WI                        | 3.00   | 0.00  | 11.00 |
+| 6  | Cambridge, WI                                | 1.00   | 0.00  | 10.00 |
+| 7  | Chilton, WI                                  | 1.00   | 0.00  | 9.00  |
+| 8  | Columbus, WI                                 | 1.00   | 0.00  | 10.00 |
+| 9  | Dodgeville, WI                               | 1.00   | 0.00  | 13.00 |
+| 10 | East Troy, WI                                | 1.00   | 0.00  | 8.00  |
+| 11 | Edgerton, WI                                 | 2.00   | 0.00  | 10.00 |
+| 12 | Ellsworth, WI                                | 1.00   | 0.00  | 8.00  |
+| 13 | Hayward, WI                                  | 1.00   | 0.00  | 10.00 |
+| 14 | Iron Mountain--Kingsford, MI--WI             | 2.00   | 0.00  | 11.00 |
+| 15 | Johnson Creek, WI                            | 1.00   | 0.00  | 8.00  |
+| 16 | Kiel--New Holstein, WI                       | 1.00   | 0.00  | 9.00  |
+| 17 | Lake Mills, WI                               | 3.00   | 0.00  | 9.00  |
+| 18 | Lancaster, WI                                | 2.00   | 0.00  | 8.00  |
+| 19 | Mauston, WI                                  | 1.00   | 0.00  | 11.00 |
+| 20 | Medford, WI                                  | 1.00   | 0.00  | 9.00  |
+| 21 | Menomonie, WI                                | 5.00   | 0.00  | 9.00  |
+| 22 | Merrill, WI                                  | 2.00   | 0.00  | 9.00  |
+| 23 | Mount Horeb, WI                              | 2.00   | 0.00  | 9.00  |
+| 24 | New London, WI                               | 2.00   | 0.00  | 8.00  |
+| 25 | New Richmond, WI                             | 1.00   | 0.00  | 8.00  |
+| 26 | Oconto Falls, WI                             | 1.00   | 0.00  | 9.00  |
+| 27 | Oconto, WI                                   | 2.00   | 0.00  | 10.00 |
+| 28 | Omro, WI                                     | 1.00   | 0.00  | 8.00  |
+| 29 | Oregon, WI                                   | 4.00   | 0.00  | 10.00 |
+| 30 | Platteville, WI                              | 2.00   | 0.00  | 10.50 |
+| 31 | Plymouth, WI                                 | 1.00   | 0.00  | 10.00 |
+| 32 | Portage, WI                                  | 4.00   | 0.00  | 10.00 |
+| 33 | Reedsburg, WI                                | 3.00   | 0.00  | 11.33 |
+| 34 | Sparta, WI                                   | 5.00   | 0.00  | 12.00 |
+| 35 | Viroqua, WI                                  | 1.00   | 0.00  | 9.00  |
+| 36 | Waterloo, WI                                 | 1.00   | 0.00  | 10.00 |
+| 37 | Waupun, WI                                   | 1.00   | 0.00  | 8.00  |
+| 38 | Whitewater, WI                               | 2.00   | 0.00  | 8.00  |
+| 39 | Racine, WI                                   | 25.00  | 0.08  | 9.52  |
+| 40 | Green Bay, WI                                | 59.00  | 0.12  | 9.51  |
+| 41 | Burlington, WI                               | 8.00   | 0.12  | 11.00 |
+| 42 | La Crosse, WI--MN                            | 32.00  | 0.12  | 10.56 |
+| 43 | West Bend, WI                                | 32.00  | 0.12  | 9.53  |
+| 44 | Wausau, WI                                   | 39.00  | 0.13  | 9.00  |
+| 45 | Oshkosh, WI                                  | 22.00  | 0.14  | 8.55  |
+| 46 | Mukwonago, WI                                | 7.00   | 0.14  | 9.71  |
+| 47 | Hudson, WI--MN                               | 13.00  | 0.15  | 9.00  |
+| 48 | Marshfield, WI                               | 6.00   | 0.17  | 12.00 |
+| 49 | Manitowoc, WI                                | 17.00  | 0.18  | 8.76  |
+| 50 | Milwaukee, WI                                | 329.00 | 0.18  | 10.22 |
+| 51 | Marinette--Menominee, WI--MI                 | 5.00   | 0.20  | 10.00 |
+| 52 | Eau Claire, WI                               | 46.00  | 0.22  | 9.93  |
+| 53 | Fort Atkinson, WI                            | 9.00   | 0.22  | 9.00  |
+| 54 | Fond du Lac, WI                              | 17.00  | 0.24  | 8.00  |
+| 55 | Madison, WI                                  | 106.00 | 0.24  | 10.43 |
+| 56 | Baldwin, WI                                  | 4.00   | 0.25  | 9.50  |
+| 57 | Janesville, WI                               | 16.00  | 0.25  | 10.00 |
+| 58 | Lake Geneva, WI                              | 12.00  | 0.25  | 8.00  |
+| 59 | Monroe, WI                                   | 4.00   | 0.25  | 9.00  |
+| 60 | Rhinelander, WI                              | 12.00  | 0.25  | 9.83  |
+| 61 | Ripon, WI                                    | 4.00   | 0.25  | 9.00  |
+| 62 | Tomah, WI                                    | 4.00   | 0.25  | 9.00  |
+| 63 | Waupaca, WI                                  | 4.00   | 0.25  | 10.00 |
+| 64 | Watertown, WI                                | 7.00   | 0.29  | 8.00  |
+| 65 | Kenosha, WI--IL                              | 33.00  | 0.30  | 9.73  |
+| 66 | Baraboo, WI                                  | 3.00   | 0.33  | 9.00  |
+| 67 | Beaver Dam, WI                               | 3.00   | 0.33  | 8.33  |
+| 68 | Boscobel, WI                                 | 3.00   | 0.33  | 8.00  |
+| 69 | Duluth, MN--WI                               | 9.00   | 0.33  | 8.33  |
+| 70 | Elkhorn, WI                                  | 3.00   | 0.33  | 8.67  |
+| 71 | Lake Delton, WI                              | 6.00   | 0.33  | 9.33  |
+| 72 | Mayville, WI                                 | 3.00   | 0.33  | 8.00  |
+| 73 | Prairie du Chien, WI--IA                     | 3.00   | 0.33  | 9.00  |
+| 74 | River Falls, WI                              | 3.00   | 0.33  | 9.00  |
+| 75 | Stanley, WI                                  | 3.00   | 0.33  | 9.00  |
+| 76 | Stevens Point, WI                            | 15.00  | 0.33  | 9.00  |
+| 77 | Walworth, WI                                 | 3.00   | 0.33  | 9.00  |
+| 78 | Appleton, WI                                 | 49.00  | 0.35  | 8.08  |
+| 79 | Wisconsin Rapids, WI                         | 17.00  | 0.35  | 9.47  |
+| 80 | Tomahawk, WI                                 | 5.00   | 0.40  | 9.00  |
+| 81 | Round Lake Beach--McHenry--Grayslake, IL--WI | 7.00   | 0.43  | 10.86 |
+| 82 | Antigo, WI                                   | 2.00   | 0.50  | 9.00  |
+| 83 | Berlin, WI                                   | 2.00   | 0.50  | 9.00  |
+| 84 | Chetek, WI                                   | 2.00   | 0.50  | 8.50  |
+| 85 | Delavan, WI                                  | 2.00   | 0.50  | 9.00  |
+| 86 | Ironwood, MI--WI                             | 2.00   | 0.50  | 8.00  |
+| 87 | Prairie du Sac--Sauk City, WI                | 6.00   | 0.50  | 9.00  |
+| 88 | Shawano, WI                                  | 6.00   | 0.50  | 8.00  |
+| 89 | Sheboygan, WI                                | 16.00  | 0.50  | 9.00  |
+| 90 | Somerset, WI                                 | 2.00   | 0.50  | 9.00  |
+| 91 | Union Grove, WI                              | 4.00   | 0.50  | 10.00 |
+| 92 | Rice Lake, WI                                | 3.00   | 0.67  | 9.00  |
+| 93 | Osceola, WI                                  | 4.00   | 0.75  | 9.00  |
+| 94 | Clintonville, WI                             | 2.00   | 1.00  | 9.00  |
+| 95 | Kewaunee, WI                                 | 1.00   | 1.00  | 10.00 |
+| 96 | Minneapolis--St. Paul, MN--WI                | 1.00   | 1.00  | 9.00  |
+| 97 | Sturgeon Bay, WI                             | 2.00   | 1.00  | 10.00 |
 #+end_example
 
+***** Percent of wrong points by hour
+#+begin_src R
+  n.pts <-   error.df %>%
+      filter(seg.params == "N-30_C-15", model == "rf_prob") %>%
+                                          #         select(overall.error, point,NAME10) %>%
+      group_by(hour) %>%
+      summarize(n.pts = n(),
+                error = sum(overall.error)/n()) %>%
+      mutate(sd_error = sqrt(error*(1-error)/n.pts)) %>%
+      arrange(error) %>%
+      ascii.nowarn.print
+
+#+end_src
+
+#+results:
+:  |   | hour  | n.pts  | error | sd_error |
+: |---+-------+--------+-------+----------|
+: | 1 | 13.00 | 1.00   | 0.00  | 0.00     |
+: | 2 | 12.00 | 25.00  | 0.12  | 0.06     |
+: | 3 | 10.00 | 435.00 | 0.16  | 0.02     |
+: | 4 | 11.00 | 224.00 | 0.23  | 0.03     |
+: | 5 | 8.00  | 181.00 | 0.24  | 0.03     |
+: | 6 | 9.00  | 279.00 | 0.26  | 0.03     |
+
+***** Percent of wrong points by month
+#+begin_src R
+  n.pts <-   error.df %>%
+      filter(seg.params == "N-30_C-15", model == "rf_prob") %>%
+                                          #         select(overall.error, point,NAME10) %>%
+      group_by(month) %>%
+      summarize(n.pts = n(),
+                error = sum(overall.error)/n()) %>%
+      mutate(sd_error = sqrt(error*(1-error)/n.pts)) %>%
+      arrange(error) %>%
+      ascii.nowarn.print
+
+#+end_src
+
+#+results:
+:  |   | month | n.pts  | error | sd_error |
+: |---+-------+--------+-------+----------|
+: | 1 | 6.00  | 578.00 | 0.21  | 0.02     |
+: | 2 | 7.00  | 490.00 | 0.21  | 0.02     |
+: | 3 | 8.00  | 69.00  | 0.23  | 0.05     |
+: | 4 | 9.00  | 8.00   | 0.25  | 0.15     |
+
+***** Percent of wrong points by sun angle  I SHOULD JUST GRAPH THESE
+#+begin_src R
+
+        sunPos <- sunPosition(
+            when = as.POSIXct(as.character(error.df$date)),
+            lat = error.df$latitude,
+            long = error.df$longitude)
+
+        error.df.wAngle <- cbind(error.df, sunPos) %>%
+          mutate(solarElevationBinned = round_any(elevation, 5),
+                 solarAzimuthBinned = round_any(azimuthJ, 5))
+
+  error.df.wAngle %>%
+    group_by(solarElevationBinned) %>%
+    summarize(n.pts = n(),
+              error = sum(overall.error)/n()) %>%
+  mutate(sd_error = sqrt(error*(1-error)/n.pts)) %>%
+      arrange(solarElevationBinned) %>%
+      ascii.nowarn.print
+
+#+end_src
+
+#+results:
+#+begin_example
+ |   | solarElevationBinned | n.pts  | error | sd_error |
+|---+----------------------+--------+-------+----------|
+| 1 | 30.00                | 129.00 | 0.28  | 0.04     |
+| 2 | 35.00                | 86.00  | 0.17  | 0.04     |
+| 3 | 40.00                | 128.00 | 0.25  | 0.04     |
+| 4 | 45.00                | 125.00 | 0.28  | 0.04     |
+| 5 | 50.00                | 266.00 | 0.15  | 0.02     |
+| 6 | 55.00                | 162.00 | 0.18  | 0.03     |
+| 7 | 60.00                | 158.00 | 0.23  | 0.03     |
+| 8 | 65.00                | 81.00  | 0.23  | 0.05     |
+| 9 | 70.00                | 10.00  | 0.00  | 0.00     |
+#+end_example
+
+#+begin_src R
+  az <- error.df.wAngle %>%
+    group_by(solarAzimuthBinned) %>%
+    summarize(n.pts = n(),
+              error = sum(overall.error)/n()) %>%
+  mutate(sd_error = sqrt(error*(1-error)/n.pts)) %>%
+      arrange(solarAzimuthBinned)
+
+az %>%
+      ascii.nowarn.print
+
+#+end_src
+
+#+results:
+#+begin_example
+ |    | solarAzimuthBinned | n.pts  | error | sd_error |
+|----+--------------------+--------+-------+----------|
+| 1  | 85.00              | 59.00  | 0.22  | 0.05     |
+| 2  | 90.00              | 125.00 | 0.26  | 0.04     |
+| 3  | 95.00              | 57.00  | 0.26  | 0.06     |
+| 4  | 100.00             | 164.00 | 0.26  | 0.03     |
+| 5  | 105.00             | 264.00 | 0.15  | 0.02     |
+| 6  | 110.00             | 52.00  | 0.27  | 0.06     |
+| 7  | 115.00             | 161.00 | 0.17  | 0.03     |
+| 8  | 120.00             | 6.00   | 0.17  | 0.15     |
+| 9  | 125.00             | 164.00 | 0.23  | 0.03     |
+| 10 | 130.00             | 21.00  | 0.24  | 0.09     |
+| 11 | 135.00             | 2.00   | 0.00  | 0.00     |
+| 12 | 140.00             | 49.00  | 0.24  | 0.06     |
+| 13 | 145.00             | 4.00   | 0.25  | 0.22     |
+| 14 | 150.00             | 1.00   | 0.00  | 0.00     |
+| 15 | 155.00             | 6.00   | 0.17  | 0.15     |
+| 16 | 170.00             | 9.00   | 0.00  | 0.00     |
+| 17 | 180.00             | 1.00   | 0.00  | 0.00     |
+#+end_example
+
+#+begin_src R :exports results :results graphics :file ./figs/Error.DF.wAngle.png
+
+  ggplot(az, aes(x = solarAzimuthBinned, y = error, size = n.pts)) + geom_point()
+#+end_src
+
+#+results:
+[[file:./figs/Error.DF.wAngle.png]]
 
 ***** Reasons for some errors:
 

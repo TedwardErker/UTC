@@ -1,7 +1,7 @@
 #+TITLE:Functions to Map Urban Tree Canopy
 #+AUTHOR: Tedward Erker
 #+email: erker@wisc.edu
-#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc*
+#+PROPERTY: header-args:R :cache no :results output :exports both :tangle utc.R :session *R:utc:krusty*
 #+LATEX_HEADER: \usepackage[margin=0.5in]{geometry}
 ------------
 * Functions
@@ -1035,7 +1035,7 @@ wrapper for slic.
                                 ratio.bands,
                                 texture = T,
                                 texture.params.df,
-                                feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
+                                feature.pattern = "_(blue|green|red|nir|ratio.blue|ratio.green|ratio.red|ratio.nir|ndvi|ratio.red_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+|ratio.nir_stat\\.\\w+_window\\.\\d+_angle\\..?\\d+).tif",
                                 pixel.df,
                                             #                              pca.features = c("blue","green","red","nir","ndvi","ratio.blue","ratio.green","ratio.red","ratio.nir"),
                                 pca.features = c("red","green","blue","nir"),
@@ -1262,56 +1262,59 @@ wrapper for slic.
 
 *** Untuned
 #+begin_src R
-       Build.and.Save.models <- function(dir = dd.training.dir,
-                                        modelBuildingData = ModelBuildingRDS,
-                                        models.dir = dd.models.dir,
-                                        image.name,
-                                        location,
-                                        model.append = model.appendage,
-                                        target.name = "class"){
+             Build.and.Save.models <- function(dir = dd.training.dir,
+                                              modelBuildingData = ModelBuildingRDS,
+                                              models.dir = dd.models.dir,
+                                              image.name,
+                                              location,
+                                              model.append = model.appendage,
+                                              target.name = "class",
+                                              n.subset = "none"){
 
-          dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
-              as.data.frame() %>%
-              dplyr::select(-image.name, -segment, -Id, -segment.id, -polygon.id, -tile.name) %>%
-              filter(complete.cases(.))
-
-
-  # convert any character columns to factor
-  #dat <- dat %>% mutate_if(is.character, as.factor)
+                dat <- readRDS(paste0(dir,"/",modelBuildingData)) %>%
+                    as.data.frame() %>%
+                    dplyr::select(-matches("image.name|segment|Id|segment.id|polygon.id|tile.name")) %>%
+                    filter(complete.cases(.))
 
 
-          seg.p <- str_extract(modelBuildingData, segmentation.pattern)
-
-          names <- colnames(dat)
-          names <- str_replace(names, "\\(",".")
-          names <- str_replace(names, "\\)",".")
-          names <- str_replace(names, "\\:",".")
-          colnames(dat) <- names
+        # convert any character columns to factor
+        #dat <- dat %>% mutate_if(is.character, as.factor)
 
 
-    #dat <- dat[sample(nrow(dat),10000),]
+                seg.p <- str_extract(modelBuildingData, segmentation.pattern)
 
-                                              # Create Tasks
-          tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = target.name)
+                names <- colnames(dat)
+                names <- str_replace(names, "\\(",".")
+                names <- str_replace(names, "\\)",".")
+                names <- str_replace(names, "\\:",".")
+                colnames(dat) <- names
 
-                                              # Make Learners
-          RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
-                                              #      RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
-          SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
-           ADA_prob <- makeLearner(id = "ada_prob", "classif.boosting", predict.type = "prob", fix.factors.prediction = TRUE)
-         GBM_prob <- makeLearner(id = "gbm_prob", "classif.gbm", predict.type = "prob", fix.factors.prediction = TRUE)
-                                   #      learner.list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
-          learner.list <- list(RF_prob = RF_prob, SVM_response = SVM_response, ADA_prob = ADA_prob,  GBM_prob = GBM_prob)
-                                              # Train Learners on Tasks, Make models
-                                              #         cl<-makeCluster(cores)
-                                              #         registerDoParallel(cl)
+    if(n.subset != "none") {
+          n.subset <- min(nrow(dat), n.subset)
+          dat <- dat[sample(nrow(dat),n.subset),]
+    }
 
-          models <- foreach(lnr = learner.list) %do% {
-              mod <- mlr::train(lnr, tsk)
-              mod
-              saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_Untuned",model.append, ".rds"))
-          }
-      }
+                                                    # Create Tasks
+                tsk <- makeClassifTask(id = paste0(location,image.name,"_all"), data = dat, target = target.name)
+
+                                                    # Make Learners
+                RF_prob <- makeLearner(id = "rf_prob","classif.randomForest", predict.type = "prob", fix.factors.prediction = TRUE)
+                                                    #      RF_response <- makeLearner(id = "rf_resp", "classif.randomForest", predict.type = "response", fix.factors.prediction = TRUE)
+                SVM_response <- makeLearner(id = "svm_resp", "classif.svm", predict.type = "response", fix.factors.prediction = TRUE)
+                 ADA_prob <- makeLearner(id = "ada_prob", "classif.boosting", predict.type = "prob", fix.factors.prediction = TRUE)
+               GBM_prob <- makeLearner(id = "gbm_prob", "classif.gbm", predict.type = "prob", fix.factors.prediction = TRUE)
+                                         #      learner.list <- list(RF_prob = RF_prob, RF_response = RF_response, SVM_response = SVM_response)
+                learner.list <- list(RF_prob = RF_prob, SVM_response = SVM_response, ADA_prob = ADA_prob,  GBM_prob = GBM_prob)
+                                                    # Train Learners on Tasks, Make models
+                                                    #         cl<-makeCluster(cores)
+                                                    #         registerDoParallel(cl)
+
+                models <- foreach(lnr = learner.list) %do% {
+                    mod <- mlr::train(lnr, tsk)
+                    mod
+                    saveRDS(mod, file = paste0(models.dir,"/",location,image.name,"_",seg.p, "_",lnr$id,"_Untuned","_Subset-",n.subset,model.append, ".rds"))
+                }
+            }
 
 #+end_src
 
@@ -1504,7 +1507,8 @@ target from the FSelector Package
                            makeDiscreteParam("fw.abs", values = seq_len(getTaskNFeats(iris.task)))))"
 Error in checkClass(x, classes, ordered) : object 'svm.ps' not found
 Error in checkClass(x, classes, ordered) : object 'rf.ps' not found
-Error in checkClass(x, classes, ordered) : object 'ada.ps' not found
+Error in requirePackages(package, why = stri_paste("learner", id, sep = " "),  :
+  For learner classif.boosting please install the following packages: adabag
 Error in assertInt(x, na.ok, lower, upper, tol, .var.name = .var.name,  :
   object 'n.cores' not found
 Error: object 'svm.lrn' not found
@@ -1513,8 +1517,8 @@ standardGeneric for "res" defined from package "raster"
 
 function (x)
 standardGeneric("res")
-<bytecode: 0x4a9d590>
-<environment: 0x4aa8348>
+<bytecode: 0x7f9a276e4790>
+<environment: 0x7f9a276edeb0>
 Methods may be defined for arguments: x
 Use  showMethods("res")  for currently available ones.
 Error: unexpected '}' in "}"
