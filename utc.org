@@ -8,7 +8,7 @@
 * Begin with end in mind
 ** End Product:
 A map of urban cover with associated model uncertainty.  For the
-Madison Area.
+Madison Area and then Wisconsin.
 
 A reproducible workflow to apply this to any city in WI (or perhaps
 country) with minimal work from user.
